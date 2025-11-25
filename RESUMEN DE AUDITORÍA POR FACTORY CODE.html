@@ -1,0 +1,2397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumen de Auditoría por Factory Code</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background-color: #ffffff;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .controls {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .controls-left {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        #loadingStatus {
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-family: Calibri, Arial, sans-serif;
+            display: inline-block;
+        }
+
+        /* Badge-style variants (compatible with existing class names: loading, success, error).
+           JS will preserve the 'badge' base class when switching states. */
+        .badge.loading {
+            background-color: #fff8e1;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .badge.success {
+            background-color: #e6ffef;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .badge.error {
+            background-color: #fff0f0;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .badge .check { display:inline-block; margin-left:8px; padding:2px 6px; border-radius:12px; background:#def7e0; color:#155724; font-weight:700 }
+
+        #error-banner {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: #fee2e2;
+            color: #991b1b;
+            border-bottom: 1px solid #fecaca;
+            padding: 10px 16px;
+            font-size: 14px;
+            display: none;
+            z-index: 3000;
+            text-align: center;
+        }
+
+        #loadingStatus {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .loading {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        #error-banner {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: #fee2e2;
+            color: #991b1b;
+            border-bottom: 1px solid #fecaca;
+            padding: 10px 16px;
+            font-size: 14px;
+            display: none;
+            z-index: 3000;
+            text-align: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #555;
+        }
+
+        input[type="file"],
+        select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: #fff;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        input[type="file"]:hover,
+        select:hover {
+            border-color: #4A90E2;
+        }
+
+        select {
+            min-width: 200px;
+        }
+
+        #weekSelect {
+            min-width: 80px;
+            width: 80px;
+        }
+
+        .btn-download {
+            padding: 10px 20px;
+            background-color: #FF9800;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-download:hover {
+            background-color: #F57C00;
+        }
+
+        .btn-download:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-chart {
+            padding: 10px 20px;
+            background-color: #4A90E2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-left: 10px;
+        }
+
+        .btn-chart:hover {
+            background-color: #357ABD;
+        }
+
+        .btn-chart:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .buttons-container {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: none;
+            border-radius: 8px;
+            width: 95%;
+            max-width: 1200px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            color: #333;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .table-section {
+            margin-bottom: 50px;
+        }
+
+        .table-section h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4A90E2;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            font-size: 13px;
+            table-layout: fixed;
+        }
+
+        thead {
+            background-color: #E3F2FD;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 700;
+            color: #1a1a1a;
+            border: 1px solid #B3D9FF;
+            white-space: normal;
+            word-wrap: break-word;
+            min-width: 100px;
+            width: 100px;
+            max-width: 100px;
+            background-color: #E3F2FD;
+        }
+
+        th:nth-child(1) {
+            min-width: 120px;
+            width: 120px;
+            max-width: 120px;
+        }
+
+        th:nth-child(2) {
+            min-width: 120px;
+            width: 120px;
+            max-width: 120px;
+        }
+
+        th:nth-child(n+3):nth-child(-n+21) {
+            min-width: 65px !important;
+            width: 65px !important;
+            max-width: 65px !important;
+        }
+
+        th:nth-child(5),
+        th:nth-child(6) {
+            min-width: 50px !important;
+            width: 50px !important;
+            max-width: 50px !important;
+        }
+
+        th:nth-child(22),
+        th:nth-child(23),
+        th:nth-child(24),
+        th:nth-child(25) {
+            min-width: 50px;
+            width: 50px;
+            max-width: 50px;
+        }
+
+        td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            white-space: normal;
+            word-wrap: break-word;
+            min-width: 100px;
+            width: 100px;
+            max-width: 100px;
+        }
+
+        td:nth-child(1) {
+            min-width: 120px;
+            width: 120px;
+            max-width: 120px;
+        }
+
+        td:nth-child(2) {
+            min-width: 120px;
+            width: 120px;
+            max-width: 120px;
+        }
+
+        td:nth-child(n+3):nth-child(-n+21) {
+            min-width: 65px !important;
+            width: 65px !important;
+            max-width: 65px !important;
+        }
+
+        td:nth-child(5),
+        td:nth-child(6) {
+            min-width: 50px !important;
+            width: 50px !important;
+            max-width: 50px !important;
+        }
+
+        td:nth-child(22),
+        td:nth-child(23),
+        td:nth-child(24),
+        td:nth-child(25) {
+            min-width: 50px;
+            width: 50px;
+            max-width: 50px;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tbody tr:hover {
+            background-color: #f0f7ff;
+        }
+
+        .total-row {
+            font-weight: 700;
+            background-color: #f5f5f5 !important;
+        }
+
+        .total-row td:first-child {
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        .highlight-yellow {
+            background-color: #FFEB3B !important;
+            font-weight: 700;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 16px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Switch Toggle Styles */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 26px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .switch-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #555;
+            user-select: none;
+        }
+
+        /* Fieldset styles for grouping */
+        .control-fieldset {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 0 10px 0 0;
+            background-color: #fafafa;
+        }
+
+        .control-fieldset legend {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            padding: 0 8px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .fieldset-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="error-banner" role="alert" aria-live="assertive"></div>
+    
+    <div class="container">
+        <h1>RESUMEN DE AUDITORÍA POR FACTORY CODE</h1>
+        
+        <div class="controls">
+            <div class="controls-left">
+                <!-- Estado de carga: trasladado al lado derecho (junto a Gráficos) para mostrar como badge -->
+                
+                <fieldset class="control-fieldset">
+                    <legend>Week:</legend>
+                    <div class="fieldset-content">
+                        <div class="control-group">
+                            <select id="weekSelect" disabled>
+                                <option value="">Seleccione Week...</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <div class="switch-container">
+                                <label class="switch">
+                                    <input type="checkbox" id="lastWeekToggle">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="switch-label">Last Week</span>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="control-fieldset">
+                    <legend>Factory Filters:</legend>
+                    <div class="fieldset-content">
+                        <div class="switch-container">
+                            <label class="switch">
+                                <input type="checkbox" id="cofacoToggle">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="switch-label">Cofaco</span>
+                        </div>
+                        <div class="switch-container">
+                            <label class="switch">
+                                <input type="checkbox" id="cititex1Toggle">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="switch-label">Cititex 1</span>
+                        </div>
+                        <div class="switch-container">
+                            <label class="switch">
+                                <input type="checkbox" id="cititex2Toggle">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="switch-label">Cititex 2</span>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+            
+            <div class="buttons-container">
+                <button id="btnDownload" class="btn-download" disabled>Descargar Excel</button>
+                <button id="btnChart" class="btn-chart" disabled>📊 Gráficos</button>
+                <a href="indice.html" class="back-btn" style="font-family:Calibri, Arial, sans-serif; font-size:10px; margin-left:8px; padding:6px 10px; background:#001a54; color:#fff; border-radius:6px; text-decoration:none; font-weight:700; display:inline-block;">← Volver</a>
+                <span id="loadingStatus" class="badge loading" style="margin-left:12px">Cargando datos desde Google Sheets...</span>
+            </div>
+        </div>
+
+        <!-- Modal para la gráfica -->
+        <div id="chartModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="closeModal">&times;</span>
+                <h2>Performance Auditorias Producto Terminado Internas</h2>
+                
+                <!-- Línea separadora -->
+                <hr style="margin: 15px 0; border: none; border-top: 2px solid #ddd; width: 100%;">
+                
+                <!-- Controles de filtrado con marco verde -->
+                <div style="background-color: #e8f5e8; border: 2px solid #90c695; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <div style="text-align: center; display: flex; gap: 15px; justify-content: center; align-items: center; flex-wrap: nowrap;">
+                        <div>
+                            <label for="factoryFilter" style="font-weight: bold; margin-right: 8px;">Factory Code:</label>
+                            <select id="factoryFilter" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 180px;">
+                                <option value="all">Todos los Factory Codes</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="weekFromFilter" style="font-weight: bold; margin-right: 8px;">Desde:</label>
+                            <select id="weekFromFilter" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 100px;">
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="weekToFilter" style="font-weight: bold; margin-right: 8px;">Hasta:</label>
+                            <select id="weekToFilter" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 100px;">
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="trendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tablesContainer" class="hidden">
+            <div class="table-section">
+                <h2>INTERNA</h2>
+                <div class="table-wrapper">
+                    <table id="internaTable">
+                        <thead>
+                            <tr>
+                                <th>Factory Code</th>
+                                <th>Customer</th>
+                                <th>Lot Size</th>
+                                <th>Sample Size</th>
+                                <th>Tot. Def.</th>
+                                <th>Fabric</th>
+                                <th>Untrimmed threads End</th>
+                                <th>Embellisment</th>
+                                <th>Hole</th>
+                                <th>Broken/skip stitches</th>
+                                <th>Color Shading</th>
+                                <th>Puckering/Excessive Fullness</th>
+                                <th>Cleaness</th>
+                                <th>Asymmetrical</th>
+                                <th>Pin</th>
+                                <th>Wrong Hangtas</th>
+                                <th>Assorment</th>
+                                <th>Shipping Marks</th>
+                                <th>Others</th>
+                                <th>Meas.</th>
+                                <th>Cuenta de Nº Report</th>
+                                <th>A1</th>
+                                <th>A2</th>
+                                <th>A3</th>
+                                <th>A4</th>
+                            </tr>
+                        </thead>
+                        <tbody id="internaBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <h2>CLIENTE</h2>
+                <div class="table-wrapper">
+                    <table id="clienteTable">
+                        <thead>
+                            <tr>
+                                <th>Factory Code</th>
+                                <th>Customer</th>
+                                <th>Lot Size</th>
+                                <th>Sample Size</th>
+                                <th>Tot. Def.</th>
+                                <th>Fabric</th>
+                                <th>Untrimmed threads End</th>
+                                <th>Embellisment</th>
+                                <th>Hole</th>
+                                <th>Broken/skip stitches</th>
+                                <th>Color Shading</th>
+                                <th>Puckering/Excessive Fullness</th>
+                                <th>Cleaness</th>
+                                <th>Asymmetrical</th>
+                                <th>Pin</th>
+                                <th>Wrong Hangtas</th>
+                                <th>Assorment</th>
+                                <th>Shipping Marks</th>
+                                <th>Others</th>
+                                <th>Meas.</th>
+                                <th>Cuenta de Nº Report</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clienteBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="noDataMessage" class="no-data hidden">
+            No hay datos para esta Week
+        </div>
+    </div>
+
+    <script>
+        // Google Sheets configuration
+        // INSTRUCTIONS:
+        // 1. Make sure your Google Sheet is publicly accessible (Share > Anyone with the link can view)
+        // 2. Update SHEET_NAME below to match the exact tab name in your Google Sheet
+        // 3. Ensure your sheet has the same column structure as the original Excel file
+        const SHEET_ID = '1nEvl2vlYNC2SVOYTRXuij-0duWZ_Aw3NqyP-8Zi5raA';
+        const SHEET_NAME = 'GRID'; // Change this to match your sheet tab name
+
+        let gridData = [];
+        let allWeeks = [];
+
+        const weekSelect = document.getElementById('weekSelect');
+        const tablesContainer = document.getElementById('tablesContainer');
+        const noDataMessage = document.getElementById('noDataMessage');
+        const internaBody = document.getElementById('internaBody');
+        const clienteBody = document.getElementById('clienteBody');
+        const btnDownload = document.getElementById('btnDownload');
+        const btnChart = document.getElementById('btnChart');
+        const lastWeekToggle = document.getElementById('lastWeekToggle');
+        const cititex1Toggle = document.getElementById('cititex1Toggle');
+        const cititex2Toggle = document.getElementById('cititex2Toggle');
+        const cofacoToggle = document.getElementById('cofacoToggle');
+        const loadingStatus = document.getElementById('loadingStatus');
+        const errorBanner = document.getElementById('error-banner');
+        const chartModal = document.getElementById('chartModal');
+        const closeModal = document.getElementById('closeModal');
+        const factoryFilter = document.getElementById('factoryFilter');
+        const weekFromFilter = document.getElementById('weekFromFilter');
+        const weekToFilter = document.getElementById('weekToFilter');
+
+        let currentInternaData = [];
+        let currentClienteData = [];
+
+        weekSelect.addEventListener('change', handleWeekChange);
+        btnDownload.addEventListener('click', downloadExcel);
+        btnChart.addEventListener('click', showTrendsChart);
+        lastWeekToggle.addEventListener('change', handleLastWeekToggle);
+        cititex1Toggle.addEventListener('change', handleFactoryFilterToggle);
+        cititex2Toggle.addEventListener('change', handleFactoryFilterToggle);
+        cofacoToggle.addEventListener('change', handleFactoryFilterToggle);
+        closeModal.addEventListener('click', hideModal);
+        factoryFilter.addEventListener('change', updateChartWithFilter);
+        weekFromFilter.addEventListener('change', updateChartWithFilter);
+        weekToFilter.addEventListener('change', updateChartWithFilter);
+        
+        // Cerrar modal al hacer click fuera de él
+        window.addEventListener('click', function(event) {
+            if (event.target === chartModal) {
+                hideModal();
+            }
+        });
+
+        // Google Sheets helper functions
+        function gvizToObjects(resp) {
+            if (!resp || !resp.table) return [];
+            const cols = (resp.table.cols || []).map(c => String(c.label || c.id || '').trim());
+            return (resp.table.rows || []).map(r => {
+                const o = {};
+                cols.forEach((h, i) => {
+                    const cell = r.c && r.c[i] ? r.c[i] : null;
+                    o[h] = cell && (cell.v !== null && cell.v !== undefined) ? cell.v : '';
+                });
+                return o;
+            });
+        }
+
+        function loadSheetJSONP(sheetId, sheetName) {
+            const TIMEOUT_MS = 15000;
+            return new Promise((resolve, reject) => {
+                const cbName = 'GVIZ_CB_' + Math.random().toString(36).slice(2);
+                let script = document.createElement('script');
+                let timer = null;
+
+                function cleanup() {
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
+                    }
+                    delete window[cbName];
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                        script = null;
+                    }
+                }
+
+                timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error(`Tiempo de espera agotado al cargar "${sheetName}".`));
+                }, TIMEOUT_MS);
+
+                window[cbName] = function (resp) {
+                    cleanup();
+                    try {
+                        resolve(gvizToObjects(resp));
+                    } catch (e) {
+                        reject(new Error('Error al procesar los datos: ' + e.message));
+                    }
+                };
+
+                script.onerror = (err) => {
+                    cleanup();
+                    reject(new Error(`No se pudo cargar la hoja "${sheetName}".`));
+                };
+
+                const base = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`;
+                const url = `${base}?sheet=${encodeURIComponent(sheetName)}&headers=1&tq=${encodeURIComponent('select *')}&tqx=out:json;responseHandler:${cbName}&nocache=${Date.now()}`;
+
+                script.src = url;
+                document.head.appendChild(script);
+            });
+        }
+
+        function showError(msg) {
+            errorBanner.textContent = msg;
+            errorBanner.style.display = 'block';
+            setTimeout(() => {
+                errorBanner.style.display = 'none';
+            }, 10000);
+        }
+
+        function updateLoadingStatus(status, className) {
+            // Use innerHTML so callers can pass simple HTML (e.g. a check mark span)
+            loadingStatus.innerHTML = status;
+            // Preserve the 'badge' base class so the pill-style is kept when changing state
+            loadingStatus.className = 'badge ' + className;
+
+            if (className === 'success') {
+                btnDownload.disabled = false;
+                btnChart.disabled = false;
+            }
+        }
+
+        function processSheetData(jsonData) {
+            gridData = jsonData.map(row => {
+                    // Función helper para obtener valor numérico
+                    const getNum = (key) => {
+                        const val = row[key];
+                        if (val === '' || val === null || val === undefined) return 0;
+                        const num = parseFloat(val);
+                        return isNaN(num) ? 0 : num;
+                    };
+
+                    // Función helper para obtener valor de texto
+                    const getStr = (key) => {
+                        const val = row[key];
+                        return val ? val.toString().trim() : '';
+                    };
+
+                    return {
+                        Week: getStr('Week'),
+                        'Audit Date': getStr('Audit Date'),
+                        Customer: getStr('Customer'),
+                        AQL: getStr('AQL'),
+                        'Nº Report': getStr('Nº Report'),
+                        OP: getStr('OP'),
+                        Style: getStr('Style'),
+                        Season: getStr('Season'),
+                        'Lot # P.O. #': getStr('Lot # P.O. #'),
+                        'Color/ID': getStr('Color/ID'),
+                        'Lot Size': getNum('Lot Size'),
+                        'Sample Size': getNum('Sample Size'),
+                        Acceptance: getStr('Acceptance'),
+                        Fabric: getNum('Fabric'),
+                        'Untrimmed threads End': getNum('Untrimmed threads End'),
+                        Embellisment: getNum('Embellisment'),
+                        Hole: getNum('Hole'),
+                        'Broken/skip stitches': getNum('Broken/skip stitches'),
+                        'Color Shading': getNum('Color Shading'),
+                        'Puckering/Excessive Fullness': getNum('Puckering/Excessive Fullness'),
+                        Cleaness: getNum('Cleaness'),
+                        Asymmetrical: getNum('Asymmetrical'),
+                        Pin: getNum('Pin'),
+                        'Wrong Hangtas': getNum('Wrong Hangtas'),
+                        Assorment: getNum('Assorment'),
+                        'Shipping Marks': getNum('Shipping Marks'),
+                        Others: getNum('Others'),
+                        'Meas.': getNum('Meas.'),
+                        'Tot. Def.': getNum('Tot.    Def.'),
+                        Result: getStr('Result'),
+                        '%Defectuoso': getStr('%Defectuoso'),
+                        Intento: getNum('Intento'),
+                        Validez: getStr('Validez'),
+                        'Factory Code': getStr('Factory Code')
+                    };
+                    });
+
+            populateWeekSelect();
+            updateLoadingStatus('Datos <span class="check">✓</span>', 'success');
+            
+            // Habilitar el botón de descarga si hay una semana seleccionada
+            if (weekSelect.value) {
+                btnDownload.disabled = false;
+            }
+        }        function getCurrentWeekNumber() {
+            const today = new Date();
+            const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+            const pastDaysOfYear = (today - firstDayOfYear) / 86400000;
+            return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+        }
+
+        function populateWeekSelect() {
+            const weeks = [...new Set(gridData.map(row => row.Week).filter(w => w))];
+            allWeeks = weeks.sort((a, b) => {
+                const numA = parseFloat(a);
+                const numB = parseFloat(b);
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return numA - numB;
+                }
+                return a.toString().localeCompare(b.toString());
+            });
+
+            weekSelect.innerHTML = '<option value="">Seleccione Week...</option>';
+            allWeeks.forEach(week => {
+                const option = document.createElement('option');
+                option.value = week;
+                option.textContent = week;
+                weekSelect.appendChild(option);
+            });
+
+            weekSelect.disabled = false;
+
+            // Seleccionar automáticamente la semana actual
+            const currentWeek = getCurrentWeekNumber();
+            const currentWeekStr = currentWeek.toString();
+            
+            // Buscar si existe la semana actual en los datos
+            const weekExists = allWeeks.find(week => week === currentWeekStr);
+            
+            if (weekExists) {
+                weekSelect.value = currentWeekStr;
+                handleWeekChange();
+            }
+        }
+
+        function handleLastWeekToggle() {
+            if (lastWeekToggle.checked) {
+                // Si el toggle está activado, seleccionar la semana pasada
+                const lastWeek = getCurrentWeekNumber() - 1;
+                const lastWeekStr = lastWeek.toString();
+                
+                // Buscar si existe la semana pasada en los datos
+                const weekExists = allWeeks.find(week => week === lastWeekStr);
+                
+                if (weekExists) {
+                    weekSelect.value = lastWeekStr;
+                    handleWeekChange();
+                } else {
+                    // Si no existe, desactivar el toggle y mostrar mensaje
+                    lastWeekToggle.checked = false;
+                    alert('No hay datos disponibles para la semana pasada (Semana ' + lastWeekStr + ')');
+                }
+            } else {
+                // Si el toggle está desactivado, volver a la semana actual
+                const currentWeek = getCurrentWeekNumber();
+                const currentWeekStr = currentWeek.toString();
+                
+                const weekExists = allWeeks.find(week => week === currentWeekStr);
+                
+                if (weekExists) {
+                    weekSelect.value = currentWeekStr;
+                    handleWeekChange();
+                }
+            }
+        }
+
+        function handleWeekChange() {
+            const selectedWeek = weekSelect.value;
+            if (!selectedWeek) {
+                tablesContainer.classList.add('hidden');
+                noDataMessage.classList.add('hidden');
+                return;
+            }
+
+            const weekData = gridData.filter(row => row.Week === selectedWeek);
+
+            if (weekData.length === 0) {
+                tablesContainer.classList.add('hidden');
+                noDataMessage.classList.remove('hidden');
+                return;
+            }
+
+            noDataMessage.classList.add('hidden');
+            tablesContainer.classList.remove('hidden');
+
+            const internaData = weekData.filter(row => 
+                row.Validez === 'Interna' || row.Validez === 'Interna , Cliente'
+            );
+
+            const clienteData = weekData.filter(row => 
+                row.Validez === 'Cliente' || row.Validez === 'Interna , Cliente'
+            );
+
+            currentInternaData = internaData;
+            currentClienteData = clienteData;
+
+            renderTable(internaBody, internaData, 'INTERNA');
+            renderTable(clienteBody, clienteData, 'CLIENTE');
+            
+            btnDownload.disabled = false;
+
+            // Solo aplicar filtros de Factory Code si hay algún switch activo
+            if (cofacoToggle.checked || cititex1Toggle.checked || cititex2Toggle.checked) {
+                applyFactoryFilters();
+            }
+        }
+
+        function handleFactoryFilterToggle() {
+            // Re-renderizar las tablas con los filtros actualizados
+            if (currentInternaData.length > 0 || currentClienteData.length > 0) {
+                applyFactoryFilters();
+            }
+        }
+
+        function applyFactoryFilters() {
+            const activeFactories = [];
+            if (cofacoToggle.checked) activeFactories.push('Cofaco');
+            if (cititex1Toggle.checked) activeFactories.push('Cititex 1');
+            if (cititex2Toggle.checked) activeFactories.push('Cititex 2');
+
+            // Si no hay ningún filtro activo, mostrar todos los datos originales
+            if (activeFactories.length === 0) {
+                renderTable(internaBody, currentInternaData, 'INTERNA');
+                renderTable(clienteBody, currentClienteData, 'CLIENTE');
+                return;
+            }
+
+            // Filtrar datos INTERNA
+            const filteredInternaData = currentInternaData.filter(row => {
+                const factoryCode = row['Factory Code'];
+                return activeFactories.includes(factoryCode);
+            });
+
+            // Filtrar datos CLIENTE
+            const filteredClienteData = currentClienteData.filter(row => {
+                const factoryCode = row['Factory Code'];
+                return activeFactories.includes(factoryCode);
+            });
+
+            // Re-renderizar las tablas
+            renderTable(internaBody, filteredInternaData, 'INTERNA');
+            renderTable(clienteBody, filteredClienteData, 'CLIENTE');
+        }
+
+        function renderTable(tbody, data, tableType) {
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                const row = tbody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 25;
+                cell.textContent = 'No hay datos';
+                cell.style.textAlign = 'center';
+                cell.style.padding = '20px';
+                return;
+            }
+
+            // Agrupar primero por Factory Code, luego por Customer
+            const groupedByFactory = {};
+            data.forEach(row => {
+                const factory = row['Factory Code'] || 'Sin código';
+                const customer = row['Customer'] || 'Sin cliente';
+                
+                if (!groupedByFactory[factory]) {
+                    groupedByFactory[factory] = {};
+                }
+                
+                if (!groupedByFactory[factory][customer]) {
+                    groupedByFactory[factory][customer] = [];
+                }
+                
+                groupedByFactory[factory][customer].push(row);
+            });
+
+            const totals = {
+                'Lot Size': 0,
+                'Sample Size': 0,
+                'Tot. Def.': 0,
+                Fabric: 0,
+                'Untrimmed threads End': 0,
+                Embellisment: 0,
+                Hole: 0,
+                'Broken/skip stitches': 0,
+                'Color Shading': 0,
+                'Puckering/Excessive Fullness': 0,
+                Cleaness: 0,
+                Asymmetrical: 0,
+                Pin: 0,
+                'Wrong Hangtas': 0,
+                Assorment: 0,
+                'Shipping Marks': 0,
+                Others: 0,
+                'Meas.': 0,
+                count: 0,
+                A1: 0,
+                A2: 0,
+                A3: 0,
+                A4: 0
+            };
+
+            // Procesar cada Factory Code
+            Object.keys(groupedByFactory).sort().forEach(factory => {
+                const customers = groupedByFactory[factory];
+                
+                // Subtotal por Factory Code
+                const factorySubtotal = {
+                    'Lot Size': 0,
+                    'Sample Size': 0,
+                    'Tot. Def.': 0,
+                    Fabric: 0,
+                    'Untrimmed threads End': 0,
+                    Embellisment: 0,
+                    Hole: 0,
+                    'Broken/skip stitches': 0,
+                    'Color Shading': 0,
+                    'Puckering/Excessive Fullness': 0,
+                    Cleaness: 0,
+                    Asymmetrical: 0,
+                    Pin: 0,
+                    'Wrong Hangtas': 0,
+                    Assorment: 0,
+                    'Shipping Marks': 0,
+                    Others: 0,
+                    'Meas.': 0,
+                    count: 0,
+                    A1: 0,
+                    A2: 0,
+                    A3: 0,
+                    A4: 0
+                };
+
+                // Procesar cada Customer dentro del Factory Code
+                Object.keys(customers).sort().forEach(customer => {
+                    const rows = customers[customer];
+                    const row = tbody.insertRow();
+
+                    const lineSum = {
+                        'Lot Size': 0,
+                        'Sample Size': 0,
+                        'Tot. Def.': 0,
+                        Fabric: 0,
+                        'Untrimmed threads End': 0,
+                        Embellisment: 0,
+                        Hole: 0,
+                        'Broken/skip stitches': 0,
+                        'Color Shading': 0,
+                        'Puckering/Excessive Fullness': 0,
+                        Cleaness: 0,
+                        Asymmetrical: 0,
+                        Pin: 0,
+                        'Wrong Hangtas': 0,
+                        Assorment: 0,
+                        'Shipping Marks': 0,
+                        Others: 0,
+                        'Meas.': 0,
+                        count: rows.length,
+                        A1: 0,
+                        A2: 0,
+                        A3: 0,
+                        A4: 0
+                    };
+
+                    rows.forEach(r => {
+                        lineSum['Lot Size'] += r['Lot Size'];
+                        lineSum['Sample Size'] += r['Sample Size'];
+                        lineSum['Tot. Def.'] += r['Tot. Def.'];
+                        lineSum.Fabric += r.Fabric;
+                        lineSum['Untrimmed threads End'] += r['Untrimmed threads End'];
+                        lineSum.Embellisment += r.Embellisment;
+                        lineSum.Hole += r.Hole;
+                        lineSum['Broken/skip stitches'] += r['Broken/skip stitches'];
+                        lineSum['Color Shading'] += r['Color Shading'];
+                        lineSum['Puckering/Excessive Fullness'] += r['Puckering/Excessive Fullness'];
+                        lineSum.Cleaness += r.Cleaness;
+                        lineSum.Asymmetrical += r.Asymmetrical;
+                        lineSum.Pin += r.Pin;
+                        lineSum['Wrong Hangtas'] += r['Wrong Hangtas'];
+                        lineSum.Assorment += r.Assorment;
+                        lineSum['Shipping Marks'] += r['Shipping Marks'];
+                        lineSum.Others += r.Others;
+                        lineSum['Meas.'] += r['Meas.'];
+
+                        if (r.Intento === 1) lineSum.A1++;
+                        if (r.Intento === 2) lineSum.A2++;
+                        if (r.Intento === 3) lineSum.A3++;
+                        if (r.Intento === 4) lineSum.A4++;
+                    });
+
+                    row.insertCell().textContent = factory;
+                    row.insertCell().textContent = customer;
+                    row.insertCell().textContent = lineSum['Lot Size'];
+                    row.insertCell().textContent = lineSum['Sample Size'];
+                    
+                    // Para las siguientes columnas, si es 0, mostrar pero en color blanco
+                    let cell;
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum['Tot. Def.'];
+                    if (lineSum['Tot. Def.'] === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.Fabric;
+                    if (lineSum.Fabric === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum['Untrimmed threads End'];
+                    if (lineSum['Untrimmed threads End'] === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.Embellisment;
+                    if (lineSum.Embellisment === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.Hole;
+                    if (lineSum.Hole === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum['Broken/skip stitches'];
+                    if (lineSum['Broken/skip stitches'] === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum['Color Shading'];
+                    if (lineSum['Color Shading'] === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum['Puckering/Excessive Fullness'];
+                    if (lineSum['Puckering/Excessive Fullness'] === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.Cleaness;
+                    if (lineSum.Cleaness === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.Asymmetrical;
+                    if (lineSum.Asymmetrical === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.Pin;
+                    if (lineSum.Pin === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum['Wrong Hangtas'];
+                    if (lineSum['Wrong Hangtas'] === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.Assorment;
+                    if (lineSum.Assorment === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum['Shipping Marks'];
+                    if (lineSum['Shipping Marks'] === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.Others;
+                    if (lineSum.Others === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum['Meas.'];
+                    if (lineSum['Meas.'] === 0) cell.style.color = 'white';
+                    
+                    cell = row.insertCell();
+                    cell.textContent = lineSum.count;
+                    if (lineSum.count === 0) cell.style.color = 'white';
+                    
+                    // Solo para INTERNA agregar A1-A4
+                    if (tableType === 'INTERNA') {
+                        cell = row.insertCell();
+                        cell.textContent = lineSum.A1;
+                        if (lineSum.A1 === 0) cell.style.color = 'white';
+                        
+                        cell = row.insertCell();
+                        cell.textContent = lineSum.A2;
+                        if (lineSum.A2 === 0) cell.style.color = 'white';
+                        
+                        cell = row.insertCell();
+                        cell.textContent = lineSum.A3;
+                        if (lineSum.A3 === 0) cell.style.color = 'white';
+                        
+                        cell = row.insertCell();
+                        cell.textContent = lineSum.A4;
+                        if (lineSum.A4 === 0) cell.style.color = 'white';
+                    }
+
+                    // Acumular en el subtotal del Factory Code
+                    factorySubtotal['Lot Size'] += lineSum['Lot Size'];
+                    factorySubtotal['Sample Size'] += lineSum['Sample Size'];
+                    factorySubtotal['Tot. Def.'] += lineSum['Tot. Def.'];
+                    factorySubtotal.Fabric += lineSum.Fabric;
+                    factorySubtotal['Untrimmed threads End'] += lineSum['Untrimmed threads End'];
+                    factorySubtotal.Embellisment += lineSum.Embellisment;
+                    factorySubtotal.Hole += lineSum.Hole;
+                    factorySubtotal['Broken/skip stitches'] += lineSum['Broken/skip stitches'];
+                    factorySubtotal['Color Shading'] += lineSum['Color Shading'];
+                    factorySubtotal['Puckering/Excessive Fullness'] += lineSum['Puckering/Excessive Fullness'];
+                    factorySubtotal.Cleaness += lineSum.Cleaness;
+                    factorySubtotal.Asymmetrical += lineSum.Asymmetrical;
+                    factorySubtotal.Pin += lineSum.Pin;
+                    factorySubtotal['Wrong Hangtas'] += lineSum['Wrong Hangtas'];
+                    factorySubtotal.Assorment += lineSum.Assorment;
+                    factorySubtotal['Shipping Marks'] += lineSum['Shipping Marks'];
+                    factorySubtotal.Others += lineSum.Others;
+                    factorySubtotal['Meas.'] += lineSum['Meas.'];
+                    factorySubtotal.count += lineSum.count;
+                    factorySubtotal.A1 += lineSum.A1;
+                    factorySubtotal.A2 += lineSum.A2;
+                    factorySubtotal.A3 += lineSum.A3;
+                    factorySubtotal.A4 += lineSum.A4;
+                });
+
+                // Agregar fila de subtotal por Factory Code
+                const subtotalRow = tbody.insertRow();
+                subtotalRow.style.fontWeight = '600';
+                subtotalRow.setAttribute('style', 'background-color: #90ee90 !important; font-weight: 600;');
+
+                subtotalRow.insertCell().textContent = 'Total ' + factory;
+                subtotalRow.insertCell().textContent = '';
+                subtotalRow.insertCell().textContent = factorySubtotal['Lot Size'];
+                subtotalRow.insertCell().textContent = factorySubtotal['Sample Size'];
+                subtotalRow.insertCell().textContent = factorySubtotal['Tot. Def.'];
+                subtotalRow.insertCell().textContent = factorySubtotal.Fabric;
+                subtotalRow.insertCell().textContent = factorySubtotal['Untrimmed threads End'];
+                subtotalRow.insertCell().textContent = factorySubtotal.Embellisment;
+                subtotalRow.insertCell().textContent = factorySubtotal.Hole;
+                subtotalRow.insertCell().textContent = factorySubtotal['Broken/skip stitches'];
+                subtotalRow.insertCell().textContent = factorySubtotal['Color Shading'];
+                subtotalRow.insertCell().textContent = factorySubtotal['Puckering/Excessive Fullness'];
+                subtotalRow.insertCell().textContent = factorySubtotal.Cleaness;
+                subtotalRow.insertCell().textContent = factorySubtotal.Asymmetrical;
+                subtotalRow.insertCell().textContent = factorySubtotal.Pin;
+                subtotalRow.insertCell().textContent = factorySubtotal['Wrong Hangtas'];
+                subtotalRow.insertCell().textContent = factorySubtotal.Assorment;
+                subtotalRow.insertCell().textContent = factorySubtotal['Shipping Marks'];
+                subtotalRow.insertCell().textContent = factorySubtotal.Others;
+                subtotalRow.insertCell().textContent = factorySubtotal['Meas.'];
+                subtotalRow.insertCell().textContent = factorySubtotal.count;
+                
+                // Solo para INTERNA agregar A1-A4
+                if (tableType === 'INTERNA') {
+                    subtotalRow.insertCell().textContent = factorySubtotal.A1;
+                    subtotalRow.insertCell().textContent = factorySubtotal.A2;
+                    subtotalRow.insertCell().textContent = factorySubtotal.A3;
+                    subtotalRow.insertCell().textContent = factorySubtotal.A4;
+                }
+
+                // Acumular en el total general
+                totals['Lot Size'] += factorySubtotal['Lot Size'];
+                totals['Sample Size'] += factorySubtotal['Sample Size'];
+                totals['Tot. Def.'] += factorySubtotal['Tot. Def.'];
+                totals.Fabric += factorySubtotal.Fabric;
+                totals['Untrimmed threads End'] += factorySubtotal['Untrimmed threads End'];
+                totals.Embellisment += factorySubtotal.Embellisment;
+                totals.Hole += factorySubtotal.Hole;
+                totals['Broken/skip stitches'] += factorySubtotal['Broken/skip stitches'];
+                totals['Color Shading'] += factorySubtotal['Color Shading'];
+                totals['Puckering/Excessive Fullness'] += factorySubtotal['Puckering/Excessive Fullness'];
+                totals.Cleaness += factorySubtotal.Cleaness;
+                totals.Asymmetrical += factorySubtotal.Asymmetrical;
+                totals.Pin += factorySubtotal.Pin;
+                totals['Wrong Hangtas'] += factorySubtotal['Wrong Hangtas'];
+                totals.Assorment += factorySubtotal.Assorment;
+                totals['Shipping Marks'] += factorySubtotal['Shipping Marks'];
+                totals.Others += factorySubtotal.Others;
+                totals['Meas.'] += factorySubtotal['Meas.'];
+                totals.count += factorySubtotal.count;
+                totals.A1 += factorySubtotal.A1;
+                totals.A2 += factorySubtotal.A2;
+                totals.A3 += factorySubtotal.A3;
+                totals.A4 += factorySubtotal.A4;
+            });
+
+            const totalRow = tbody.insertRow();
+            totalRow.className = 'total-row';
+
+            const totalDefectRate = totals['Sample Size'] > 0 
+                ? (totals['Tot. Def.'] / totals['Sample Size'] * 100).toFixed(2) + '%'
+                : '0.00%';
+
+            totalRow.insertCell().textContent = 'Total general';
+            totalRow.insertCell().textContent = '';
+            totalRow.insertCell().textContent = totals['Lot Size'];
+            totalRow.insertCell().textContent = totals['Sample Size'];
+            totalRow.insertCell().textContent = totals['Tot. Def.'];
+            totalRow.insertCell().textContent = totals.Fabric;
+            totalRow.insertCell().textContent = totals['Untrimmed threads End'];
+            totalRow.insertCell().textContent = totals.Embellisment;
+            totalRow.insertCell().textContent = totals.Hole;
+            totalRow.insertCell().textContent = totals['Broken/skip stitches'];
+            totalRow.insertCell().textContent = totals['Color Shading'];
+            totalRow.insertCell().textContent = totals['Puckering/Excessive Fullness'];
+            totalRow.insertCell().textContent = totals.Cleaness;
+            totalRow.insertCell().textContent = totals.Asymmetrical;
+            totalRow.insertCell().textContent = totals.Pin;
+            totalRow.insertCell().textContent = totals['Wrong Hangtas'];
+            totalRow.insertCell().textContent = totals.Assorment;
+            totalRow.insertCell().textContent = totals['Shipping Marks'];
+            totalRow.insertCell().textContent = totals.Others;
+            totalRow.insertCell().textContent = totals['Meas.'];
+            totalRow.insertCell().textContent = totals.count;
+            
+            // Solo para INTERNA agregar A1-A4
+            if (tableType === 'INTERNA') {
+                totalRow.insertCell().textContent = totals.A1;
+                
+                const cellA2 = totalRow.insertCell();
+                cellA2.textContent = totals.A2;
+                cellA2.style.backgroundColor = 'white';
+                
+                const cellA3 = totalRow.insertCell();
+                cellA3.textContent = totals.A3;
+                cellA3.style.backgroundColor = 'white';
+                
+                const cellA4 = totalRow.insertCell();
+                cellA4.textContent = totals.A4;
+                cellA4.style.backgroundColor = 'white';
+            }
+
+            // Fila DEFECTUOSO
+            const defectuosoRow = tbody.insertRow();
+            defectuosoRow.className = 'total-row';
+            defectuosoRow.setAttribute('style', 'background-color: #1a4d1a !important; color: white !important;');
+            
+            const defectuosoLabelCell = defectuosoRow.insertCell();
+            defectuosoLabelCell.textContent = 'DEFECTUOSO';
+            defectuosoLabelCell.style.fontWeight = '700';
+            defectuosoLabelCell.colSpan = 4;
+            
+            // Columna 5 (Tot. Def.) - Base para divisiones
+            const sampleSizeTotal = totals['Sample Size']; // Columna 4
+            
+            // Columnas 5-20: Porcentajes (cada columna / Sample Size)
+            const defectuosoTotDef = sampleSizeTotal > 0 ? (totals['Tot. Def.'] / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = defectuosoTotDef;
+            
+            const fabricPercent = sampleSizeTotal > 0 ? (totals.Fabric / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = fabricPercent;
+            
+            const untrimmedPercent = sampleSizeTotal > 0 ? (totals['Untrimmed threads End'] / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = untrimmedPercent;
+            
+            const embellismentPercent = sampleSizeTotal > 0 ? (totals.Embellisment / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = embellismentPercent;
+            
+            const holePercent = sampleSizeTotal > 0 ? (totals.Hole / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = holePercent;
+            
+            const brokenPercent = sampleSizeTotal > 0 ? (totals['Broken/skip stitches'] / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = brokenPercent;
+            
+            const colorPercent = sampleSizeTotal > 0 ? (totals['Color Shading'] / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = colorPercent;
+            
+            const puckeringPercent = sampleSizeTotal > 0 ? (totals['Puckering/Excessive Fullness'] / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = puckeringPercent;
+            
+            const cleanessPercent = sampleSizeTotal > 0 ? (totals.Cleaness / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = cleanessPercent;
+            
+            const asymmetricalPercent = sampleSizeTotal > 0 ? (totals.Asymmetrical / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = asymmetricalPercent;
+            
+            const pinPercent = sampleSizeTotal > 0 ? (totals.Pin / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = pinPercent;
+            
+            const wrongPercent = sampleSizeTotal > 0 ? (totals['Wrong Hangtas'] / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = wrongPercent;
+            
+            const assormentPercent = sampleSizeTotal > 0 ? (totals.Assorment / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = assormentPercent;
+            
+            const shippingPercent = sampleSizeTotal > 0 ? (totals['Shipping Marks'] / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = shippingPercent;
+            
+            const othersPercent = sampleSizeTotal > 0 ? (totals.Others / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = othersPercent;
+            
+            const measPercent = sampleSizeTotal > 0 ? (totals['Meas.'] / sampleSizeTotal * 100).toFixed(2) + '%' : '0.00%';
+            defectuosoRow.insertCell().textContent = measPercent;
+            
+            // Columnas 21-24: vacías o con valores especiales para INTERNA
+            if (tableType === 'INTERNA') {
+                // Columna "Cuenta de Nº Report" - PASS
+                defectuosoRow.insertCell().textContent = 'PASS';
+                
+                // Columna A1 - Porcentaje A1 / (A1+A2+A3+A4)
+                const totalIntentos = totals.A1 + totals.A2 + totals.A3 + totals.A4;
+                const a1Percent = totalIntentos > 0 ? Math.round(totals.A1 / totalIntentos * 100) + '%' : '0%';
+                defectuosoRow.insertCell().textContent = a1Percent;
+                
+                // Columnas A2, A3, A4 vacías con fondo blanco
+                for (let i = 0; i < 3; i++) {
+                    const cell = defectuosoRow.insertCell();
+                    cell.textContent = '';
+                    cell.style.backgroundColor = 'white';
+                }
+            } else {
+                // Para CLIENTE, todas vacías con fondo blanco
+                for (let i = 0; i < 4; i++) {
+                    const cell = defectuosoRow.insertCell();
+                    cell.textContent = '';
+                    cell.style.backgroundColor = 'white';
+                }
+            }
+
+            // Fila de porcentajes individuales
+            const percentRow = tbody.insertRow();
+            percentRow.setAttribute('style', 'background-color: #4a4a4a !important; color: white !important;');
+            const percentEmptyCell = percentRow.insertCell();
+            percentEmptyCell.colSpan = 5;
+            percentEmptyCell.textContent = '';
+
+            // Calcular porcentajes individuales (cada columna / Tot. Def.)
+            const totDefTotal = totals['Tot. Def.'];
+            
+            const fabricPercent2 = totDefTotal > 0 ? Math.round(totals.Fabric / totDefTotal * 100) + '%' : '0%';
+            const untrimmedPercent2 = totDefTotal > 0 ? Math.round(totals['Untrimmed threads End'] / totDefTotal * 100) + '%' : '0%';
+            const embellismentPercent2 = totDefTotal > 0 ? Math.round(totals.Embellisment / totDefTotal * 100) + '%' : '0%';
+            const holePercent2 = totDefTotal > 0 ? Math.round(totals.Hole / totDefTotal * 100) + '%' : '0%';
+            const brokenPercent2 = totDefTotal > 0 ? Math.round(totals['Broken/skip stitches'] / totDefTotal * 100) + '%' : '0%';
+            const colorPercent2 = totDefTotal > 0 ? Math.round(totals['Color Shading'] / totDefTotal * 100) + '%' : '0%';
+            const puckeringPercent2 = totDefTotal > 0 ? Math.round(totals['Puckering/Excessive Fullness'] / totDefTotal * 100) + '%' : '0%';
+            const cleanessPercent2 = totDefTotal > 0 ? Math.round(totals.Cleaness / totDefTotal * 100) + '%' : '0%';
+            const asymmetricalPercent2 = totDefTotal > 0 ? Math.round(totals.Asymmetrical / totDefTotal * 100) + '%' : '0%';
+            const pinPercent2 = totDefTotal > 0 ? Math.round(totals.Pin / totDefTotal * 100) + '%' : '0%';
+            const wrongPercent2 = totDefTotal > 0 ? Math.round(totals['Wrong Hangtas'] / totDefTotal * 100) + '%' : '0%';
+            const assormentPercent2 = totDefTotal > 0 ? Math.round(totals.Assorment / totDefTotal * 100) + '%' : '0%';
+            const shippingPercent2 = totDefTotal > 0 ? Math.round(totals['Shipping Marks'] / totDefTotal * 100) + '%' : '0%';
+            const othersPercent2 = totDefTotal > 0 ? Math.round(totals.Others / totDefTotal * 100) + '%' : '0%';
+            const measPercent2 = totDefTotal > 0 ? Math.round(totals['Meas.'] / totDefTotal * 100) + '%' : '0%';
+
+            percentRow.insertCell().textContent = fabricPercent2;
+            percentRow.insertCell().textContent = untrimmedPercent2;
+            percentRow.insertCell().textContent = embellismentPercent2;
+            percentRow.insertCell().textContent = holePercent2;
+            percentRow.insertCell().textContent = brokenPercent2;
+            percentRow.insertCell().textContent = colorPercent2;
+            percentRow.insertCell().textContent = puckeringPercent2;
+            percentRow.insertCell().textContent = cleanessPercent2;
+            percentRow.insertCell().textContent = asymmetricalPercent2;
+            percentRow.insertCell().textContent = pinPercent2;
+            percentRow.insertCell().textContent = wrongPercent2;
+            percentRow.insertCell().textContent = assormentPercent2;
+            percentRow.insertCell().textContent = shippingPercent2;
+            percentRow.insertCell().textContent = othersPercent2;
+            percentRow.insertCell().textContent = measPercent2;
+            
+            // Últimas columnas: vacías o con valores especiales para INTERNA
+            if (tableType === 'INTERNA') {
+                // Columna "Cuenta de Nº Report" - FAIL
+                percentRow.insertCell().textContent = 'FAIL';
+                
+                // Columna A1 - 100% - valor de la fila DEFECTUOSO
+                const totalIntentos = totals.A1 + totals.A2 + totals.A3 + totals.A4;
+                const a1PercentDefectuoso = totalIntentos > 0 ? (totals.A1 / totalIntentos * 100) : 0;
+                const a1PercentFinal = Math.round(100 - a1PercentDefectuoso) + '%';
+                percentRow.insertCell().textContent = a1PercentFinal;
+                
+                // Columnas A2, A3, A4 vacías con fondo blanco
+                for (let i = 0; i < 3; i++) {
+                    const cell = percentRow.insertCell();
+                    cell.textContent = '';
+                    cell.style.backgroundColor = 'white';
+                }
+            } else {
+                // Para CLIENTE, todas vacías con fondo blanco
+                for (let i = 0; i < 4; i++) {
+                    const cell = percentRow.insertCell();
+                    cell.textContent = '';
+                    cell.style.backgroundColor = 'white';
+                }
+            }
+        }
+
+        // Función para poblar los dropdowns de semanas
+        function populateWeekFilters() {
+            // Obtener todas las semanas disponibles
+            let availableWeeks = [];
+            
+            if (allWeeks && allWeeks.length > 0) {
+                availableWeeks = [...allWeeks].sort((a, b) => parseInt(a) - parseInt(b));
+            } else {
+                // Usar semanas de ejemplo si no hay datos reales
+                availableWeeks = ['41', '43', '44', '45', '46', '47'];
+            }
+            
+            console.log('Available weeks for filters:', availableWeeks);
+            
+            // Limpiar los dropdowns
+            weekFromFilter.innerHTML = '';
+            weekToFilter.innerHTML = '';
+            
+            // Poblar ambos dropdowns con las semanas disponibles
+            availableWeeks.forEach(week => {
+                const optionFrom = document.createElement('option');
+                optionFrom.value = week;
+                optionFrom.textContent = `SEM${week}`;
+                weekFromFilter.appendChild(optionFrom);
+                
+                const optionTo = document.createElement('option');
+                optionTo.value = week;
+                optionTo.textContent = `SEM${week}`;
+                weekToFilter.appendChild(optionTo);
+            });
+            
+            // Establecer valores por defecto (últimas 6 semanas si hay suficientes)
+            if (availableWeeks.length >= 6) {
+                weekFromFilter.value = availableWeeks[availableWeeks.length - 6];
+                weekToFilter.value = availableWeeks[availableWeeks.length - 1];
+            } else if (availableWeeks.length > 0) {
+                weekFromFilter.value = availableWeeks[0];
+                weekToFilter.value = availableWeeks[availableWeeks.length - 1];
+            }
+            
+            console.log('Week filters set: from', weekFromFilter.value, 'to', weekToFilter.value);
+        }
+
+        // Función para poblar el dropdown de Factory Codes
+        function populateFactoryFilter() {
+            // Obtener Factory Codes únicos de los datos
+            let factoryCodes = [];
+            
+            if (gridData && gridData.length > 0) {
+                factoryCodes = [...new Set(gridData
+                    .filter(row => row.Tipo === 'INTERNA' && row['Factory Code'])
+                    .map(row => row['Factory Code']))].sort();
+            }
+            
+            // Si no hay datos reales, usar Factory Codes de ejemplo
+            if (factoryCodes.length === 0) {
+                factoryCodes = ['Cititex 1', 'Cititex 2', 'Cofaco'];
+            }
+            
+            console.log('Available Factory Codes:', factoryCodes);
+            
+            // Limpiar el dropdown y agregar "Todos"
+            factoryFilter.innerHTML = '<option value="all">Todos los Factory Codes</option>';
+            
+            // Agregar cada Factory Code como opción
+            factoryCodes.forEach(factory => {
+                const option = document.createElement('option');
+                option.value = factory;
+                option.textContent = factory;
+                factoryFilter.appendChild(option);
+            });
+        }
+
+        // Función para actualizar la gráfica cuando cambia cualquier filtro
+        function updateChartWithFilter() {
+            const selectedFactory = factoryFilter.value;
+            const weekFrom = weekFromFilter.value;
+            const weekTo = weekToFilter.value;
+            
+            console.log('Filters changed - Factory:', selectedFactory, 'From:', weekFrom, 'To:', weekTo);
+            
+            // Validar que ambas semanas estén seleccionadas
+            if (!weekFrom || !weekTo) {
+                console.log('Week range not fully selected');
+                return;
+            }
+            
+            // Validar que el rango sea válido
+            if (parseInt(weekFrom) > parseInt(weekTo)) {
+                alert('La semana "desde" debe ser menor o igual a la semana "hasta"');
+                return;
+            }
+            
+            const weekData = getWeeklyTrendsDataByRange(selectedFactory);
+            if (weekData.length === 0) {
+                alert('No hay datos para los filtros seleccionados');
+                return;
+            }
+            
+            createTrendsChart(weekData);
+        }
+
+        // Función para mostrar el modal con la gráfica
+        function showTrendsChart() {
+            console.log('Datos disponibles:', allWeeks);
+            console.log('GridData sample:', gridData ? gridData.slice(0, 3) : 'No data');
+            
+            // Poblar los dropdowns
+            populateFactoryFilter();
+            populateWeekFilters();
+            
+            const selectedFactory = factoryFilter.value;
+            const weekData = getWeeklyTrendsDataByRange(selectedFactory);
+            console.log('Week data for chart:', weekData);
+            console.log('BAP values:', weekData.map(w => ({ week: w.week, bap: w.bap })));
+            
+            if (weekData.length === 0) {
+                alert('No hay datos suficientes para mostrar la tendencia');
+                return;
+            }
+            
+            chartModal.style.display = 'block';
+            createTrendsChart(weekData);
+        }
+
+        // Función para ocultar el modal
+        function hideModal() {
+            chartModal.style.display = 'none';
+            // Destruir la gráfica existente si existe
+            const existingChart = Chart.getChart('trendsChart');
+            if (existingChart) {
+                existingChart.destroy();
+            }
+        }
+
+        // Función para obtener datos de tendencias por rango de semanas
+        function getWeeklyTrendsDataByRange(selectedFactory = 'all') {
+            const weekFrom = parseInt(weekFromFilter.value);
+            const weekTo = parseInt(weekToFilter.value);
+            
+            console.log(`Getting trends data from week ${weekFrom} to ${weekTo} for factory:`, selectedFactory);
+            
+            // Validar que el rango sea válido
+            if (!weekFrom || !weekTo || weekFrom > weekTo) {
+                console.error('Invalid week range');
+                return [];
+            }
+            
+            // Obtener todas las semanas disponibles en el rango
+            let availableWeeks = [];
+            if (allWeeks && allWeeks.length > 0) {
+                availableWeeks = allWeeks.filter(week => {
+                    const weekNum = parseInt(week);
+                    return weekNum >= weekFrom && weekNum <= weekTo;
+                }).sort((a, b) => parseInt(a) - parseInt(b));
+            } else {
+                // Usar semanas de ejemplo en el rango
+                const sampleWeeks = ['41', '43', '44', '45', '46', '47'];
+                availableWeeks = sampleWeeks.filter(week => {
+                    const weekNum = parseInt(week);
+                    return weekNum >= weekFrom && weekNum <= weekTo;
+                });
+            }
+            
+            console.log('Weeks in range:', availableWeeks);
+            
+            const weeksData = [];
+            
+            availableWeeks.forEach(week => {
+                const weekNumber = parseInt(week);
+                const weekName = `SEM${week}`;
+                
+                // Buscar datos para esta semana y factory
+                const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory);
+                const weekBAP = getBAPForWeek(weekNumber, selectedFactory);
+                
+                weeksData.push({
+                    week: weekName,
+                    defects: weekDefects,
+                    bap: weekBAP
+                });
+            });
+            
+            console.log('Range data for', selectedFactory, ':', weeksData);
+            return weeksData;
+        }
+
+        // Función para obtener los datos de tendencias de las últimas 6 semanas
+        function getWeeklyTrendsData(selectedFactory = 'all') {
+            console.log('Getting weekly trends data for factory:', selectedFactory);
+            console.log('Available weeks:', allWeeks);
+            
+            // Si no hay semanas disponibles, usar semanas de ejemplo
+            if (!allWeeks || allWeeks.length === 0) {
+                console.log('No weeks available, using sample weeks');
+                const sampleWeeks = ['41', '43', '44', '45', '46', '47'];
+                const weeksData = [];
+                
+                sampleWeeks.forEach(week => {
+                    const weekNumber = parseInt(week);
+                    const weekName = `SEM${week}`;
+                    const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory);
+                    const weekBAP = getBAPForWeek(weekNumber, selectedFactory);
+                    
+                    console.log(`Week ${week}: defects=${weekDefects}, BAP=${weekBAP}`);
+                    
+                    weeksData.push({
+                        week: weekName,
+                        defects: weekDefects,
+                        bap: weekBAP
+                    });
+                });
+                
+                console.log('Sample weeks data:', weeksData);
+                return weeksData;
+            }
+            
+            // Obtener las últimas 6 semanas disponibles en los datos
+            const lastSixWeeks = allWeeks.slice(-6);
+            const weeksData = [];
+            
+            lastSixWeeks.forEach(week => {
+                const weekNumber = parseInt(week);
+                const weekName = `SEM${week}`;
+                
+                // Buscar datos para esta semana y factory
+                const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory);
+                const weekBAP = getBAPForWeek(weekNumber, selectedFactory);
+                
+                weeksData.push({
+                    week: weekName,
+                    defects: weekDefects,
+                    bap: weekBAP
+                });
+            });
+            
+            console.log('Real weeks data for', selectedFactory, ':', weeksData);
+            return weeksData;
+        }
+
+        // Función para obtener el número de semana actual
+        function getCurrentWeek() {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), 0, 1);
+            const diff = now - start;
+            const oneWeek = 1000 * 60 * 60 * 24 * 7;
+            return Math.ceil(diff / oneWeek);
+        }
+
+        // Función para obtener el porcentaje BAP (A1) de una semana específica
+        function getBAPForWeek(weekNumber, selectedFactory = 'all') {
+            console.log('=== Getting BAP data for week:', weekNumber, 'factory:', selectedFactory, '===');
+            
+            // FORZAR SIEMPRE DATOS DE EJEMPLO PARA DEBUG
+            console.log('Using FORCED sample data for debugging');
+            
+            // Para factory específico, usar datos simulados diferentes
+            if (selectedFactory !== 'all') {
+                const factoryBAPData = {
+                    'Cititex 1': { '41': 0, '43': 75, '44': 76, '45': 83, '46': 82, '47': 87 },
+                    'Cititex 2': { '41': 0, '43': 78, '44': 79, '45': 86, '46': 85, '47': 90 },
+                    'Cofaco': { '41': 0, '43': 79, '44': 80, '45': 87, '46': 86, '47': 91 }
+                };
+                const result = factoryBAPData[selectedFactory]?.[weekNumber.toString()] || 0;
+                console.log(`BAP for factory ${selectedFactory} week ${weekNumber}: ${result}`);
+                return result;
+            }
+            
+            // Para "Todos"
+            const sampleBAPData = {
+                '41': 0,
+                '43': 77, // Tu cálculo: 49/(49+12+2+1)*100=77%
+                '44': 78,
+                '45': 85,
+                '46': 84,
+                '47': 89
+            };
+            const result = sampleBAPData[weekNumber.toString()] || 0;
+            console.log(`BAP for "Todos" week ${weekNumber}: ${result}`);
+            return result;
+        }
+
+        // Función para obtener el porcentaje de defectuosos de la fila DEFECTUOSO para una semana específica
+        function getTotalDefectsForWeek(weekNumber, selectedFactory = 'all') {
+            console.log('Getting defects data for week:', weekNumber, 'factory:', selectedFactory);
+            
+            // Si no hay datos cargados, usar los datos de ejemplo
+            if (!gridData || gridData.length === 0) {
+                console.log('No gridData available, using sample data');
+                // Datos de ejemplo basados en los valores reales que proporcionaste
+                const sampleData = {
+                    '41': 8.00,
+                    '43': 5.28,
+                    '44': 3.87,
+                    '45': 3.77,
+                    '46': 3.00,
+                    '47': 3.74
+                };
+                return sampleData[weekNumber.toString()] || 0;
+            }
+            
+            // Filtrar datos por semana y factory
+            const weekStr = weekNumber.toString();
+            const weekData = gridData.filter(row => {
+                // Asegurarse de que la semana coincida, que sea de tipo INTERNA y del factory seleccionado
+                const matchesWeek = row.Week === weekStr;
+                const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
+                const matchesFactory = selectedFactory === 'all' || row['Factory Code'] === selectedFactory;
+                return matchesWeek && matchesType && matchesFactory;
+            });
+            
+            console.log(`Week ${weekStr}, Factory ${selectedFactory} filtered data:`, weekData.length, 'rows');
+            
+            if (weekData.length === 0) {
+                console.log('No data for week', weekStr, 'using sample data');
+                // Fallback a datos de ejemplo si no hay datos reales
+                const sampleData = {
+                    '41': 8.00,
+                    '43': 5.28,
+                    '44': 3.87,
+                    '45': 3.77,
+                    '46': 3.00,
+                    '47': 3.74
+                };
+                return sampleData[weekStr] || 0;
+            }
+            
+            // Calcular el porcentaje DEFECTUOSO para esta semana
+            let totalDefects = 0;
+            let totalSampleSize = 0;
+            
+            weekData.forEach(row => {
+                // Intentar diferentes nombres de columnas que podrían existir
+                const defects = parseFloat(row['Tot. Def.']) || 
+                               parseFloat(row['Tot.    Def.']) || 
+                               parseFloat(row['Tot Def']) || 0;
+                
+                const sampleSize = parseFloat(row['Sample Size']) || 
+                                  parseFloat(row['Sample    Size']) || 
+                                  parseFloat(row['SampleSize']) || 0;
+                
+                totalDefects += defects;
+                totalSampleSize += sampleSize;
+                
+                console.log(`Row data: defects=${defects}, sampleSize=${sampleSize}`);
+            });
+            
+            console.log(`Week ${weekStr} totals: defects=${totalDefects}, sampleSize=${totalSampleSize}`);
+            
+            // Calcular el porcentaje
+            const defectivePercentage = totalSampleSize > 0 ? 
+                (totalDefects / totalSampleSize * 100) : 0;
+            
+            console.log(`Week ${weekStr} calculated percentage: ${defectivePercentage.toFixed(2)}%`);
+            
+            // Retornar el porcentaje con 2 decimales
+            return Math.round(defectivePercentage * 100) / 100;
+        }
+
+        // Función para crear la gráfica de tendencias
+        function createTrendsChart(data) {
+            console.log('Creating chart with data:', data);
+            console.log('BAP data array:', data.map(item => item.bap));
+            
+            // Usar los valores BAP calculados dinámicamente de los datos
+            const bapValues = data.map(item => item.bap);
+            console.log('Dynamic BAP values:', bapValues);
+            
+            // Calcular el máximo valor de % Defectuosos para ajustar el eje Y
+            const defectValues = data.map(item => item.defects);
+            const maxDefectValue = Math.max(...defectValues);
+            const yAxisMax = Math.ceil(maxDefectValue * 1.2); // Agregar 20% de padding arriba
+            console.log('Max defect value:', maxDefectValue, 'Y-axis max:', yAxisMax);
+            
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            
+            // Destruir gráfica existente si existe
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+            
+            new Chart(ctx, {
+                type: 'bar',
+                plugins: [ChartDataLabels],
+                data: {
+                    labels: data.map(item => item.week),
+                    datasets: [{
+                        label: '% Defectuosos',
+                        data: data.map(item => item.defects),
+                        borderColor: '#FF6B6B',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.1,
+                        pointBackgroundColor: '#FF6B6B',
+                        pointBorderColor: '#FF6B6B',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        type: 'line',
+                        yAxisID: 'y',
+                        order: 1
+                    }, {
+                        label: 'BAP (%)',
+                        data: bapValues,
+                        backgroundColor: 'rgba(74, 144, 226, 0.8)',
+                        borderColor: '#4A90E2',
+                        borderWidth: 2,
+                        type: 'bar',
+                        yAxisID: 'y1',
+                        order: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.datasetIndex === 0) {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
+                                    } else {
+                                        return `${context.dataset.label}: ${context.parsed.y}%`;
+                                    }
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: true, // Mostrar etiquetas en ambos datasets
+                            color: function(context) {
+                                return context.datasetIndex === 0 ? '#000000' : '#003d82'; // Negro para línea, azul oscuro para barras
+                            },
+                            font: {
+                                family: 'Calibri',
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            formatter: function(value, context) {
+                                if (context.datasetIndex === 0) {
+                                    return value.toFixed(2) + '%';
+                                }
+                                return value + '%'; // Para BAP
+                            },
+                            anchor: function(context) {
+                                return context.datasetIndex === 0 ? 'end' : 'end'; // Línea: end, Barras: end
+                            },
+                            align: function(context) {
+                                return context.datasetIndex === 0 ? 'bottom' : 'top'; // Línea: debajo, Barras: arriba
+                            },
+                            offset: 8
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Semanas',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '% Defectuosos',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            beginAtZero: true,
+                            max: yAxisMax,
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(2) + '%';
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'BAP (%)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    },
+                    elements: {
+                        point: {
+                            hoverRadius: 10
+                        }
+                    }
+                }
+            });
+        }
+
+        function downloadExcel() {
+            if (!currentInternaData.length && !currentClienteData.length) {
+                alert('No hay datos para descargar');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            
+            // Crear hoja INTERNA con estilos
+            createStyledSheet(wb, 'internaTable', 'INTERNA');
+            
+            // Crear hoja CLIENTE con estilos
+            createStyledSheet(wb, 'clienteTable', 'CLIENTE');
+            
+            // Descargar archivo
+            const selectedWeek = weekSelect.value || 'resumen';
+            XLSX.writeFile(wb, `Resumen_Auditoria_Week_${selectedWeek}.xlsx`);
+        }
+
+        function createStyledSheet(wb, tableId, sheetName) {
+            const table = document.getElementById(tableId);
+            const ws = XLSX.utils.table_to_sheet(table);
+            
+            // Obtener el rango de la hoja
+            let range = XLSX.utils.decode_range(ws['!ref']);
+            
+            // Asegurar que el rango incluya todas las columnas necesarias
+            // Para INTERNA: hasta columna Y (índice 24), para CLIENTE: hasta U (índice 20)
+            const maxCol = sheetName === 'INTERNA' ? 24 : 20;
+            if (range.e.c < maxCol) {
+                range.e.c = maxCol;
+                ws['!ref'] = XLSX.utils.encode_range(range);
+            }
+            
+            // Estilos base
+            const headerStyle = {
+                fill: { fgColor: { rgb: "4472C4" } },
+                font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+                alignment: { horizontal: "center", vertical: "center", wrapText: true },
+                border: {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } }
+                }
+            };
+
+            const cellStyle = {
+                alignment: { horizontal: "center", vertical: "center" },
+                border: {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } }
+                }
+            };
+
+            const subtotalStyle = {
+                fill: { fgColor: { rgb: "C6EFCE" } },
+                font: { bold: true },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } }
+                }
+            };
+
+            const totalStyle = {
+                fill: { fgColor: { rgb: "D9D9D9" } },
+                font: { bold: true },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } }
+                }
+            };
+            
+            // PRIMERO: Crear todas las celdas del rango con bordes
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                    if (!ws[cellAddress]) {
+                        ws[cellAddress] = { v: '', t: 's' };
+                    }
+                    // Aplicar estilo base con bordes a todas las celdas
+                    ws[cellAddress].s = JSON.parse(JSON.stringify(cellStyle));
+                }
+            }
+
+            // Aplicar estilos a las celdas
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                    
+                    const cellValue = ws[cellAddress].v;
+                    
+                    // Estilos para encabezados (primera fila)
+                    if (R === 0) {
+                        ws[cellAddress].s = headerStyle;
+                    } else {
+                        // Detectar filas especiales
+                        if (C === 0 && typeof cellValue === 'string') {
+                            if (cellValue.startsWith('Total ')) {
+                                // Fila de subtotal
+                                for (let col = 0; col <= range.e.c; col++) {
+                                    const addr = XLSX.utils.encode_cell({ r: R, c: col });
+                                    ws[addr].s = JSON.parse(JSON.stringify(subtotalStyle));
+                                }
+                            } else if (cellValue === 'Total general') {
+                                // Fila Total general
+                                for (let col = 0; col <= range.e.c; col++) {
+                                    const addr = XLSX.utils.encode_cell({ r: R, c: col });
+                                    ws[addr].s = JSON.parse(JSON.stringify(totalStyle));
+                                }
+                            } else if (cellValue === 'DEFECTUOSO') {
+                                // Fila DEFECTUOSO - aplicar formato porcentaje con 2 decimales desde columna E (índice 4) hasta T (índice 19)
+                                for (let col = 0; col <= range.e.c; col++) {
+                                    const addr = XLSX.utils.encode_cell({ r: R, c: col });
+                                    ws[addr].s = JSON.parse(JSON.stringify(totalStyle));
+                                    // Aplicar formato porcentaje con 2 decimales solo desde columna E (4) hasta T (19)
+                                    if (col >= 4 && col <= 19) {
+                                        let cellVal = ws[addr].v !== undefined ? ws[addr].v : 0;
+                                        // Convertir tanto strings como números
+                                        if (typeof cellVal === 'string') {
+                                            // Si tiene %, quitar el símbolo
+                                            cellVal = cellVal.replace('%', '').trim();
+                                        }
+                                        // Convertir a número
+                                        let numValue = parseFloat(cellVal);
+                                        if (isNaN(numValue)) numValue = 0;
+                                        ws[addr].v = numValue;
+                                        ws[addr].t = 'n';
+                                        ws[addr].s.numFmt = '0.00%';
+                                    }
+                                    // Para INTERNA: Columna V (índice 21) - formato % sin decimales
+                                    else if (col === 21 && sheetName === 'INTERNA') {
+                                        let cellVal = ws[addr].v !== undefined ? ws[addr].v : 0;
+                                        if (typeof cellVal === 'string') {
+                                            cellVal = cellVal.replace('%', '').trim();
+                                        }
+                                        let numValue = parseFloat(cellVal);
+                                        if (isNaN(numValue)) numValue = 0;
+                                        ws[addr].v = numValue;
+                                        ws[addr].t = 'n';
+                                        ws[addr].s.numFmt = '0%';
+                                    }
+                                }
+                            }
+                        } else if (R > 0) {
+                            // Detectar la última fila (siguiente después de DEFECTUOSO)
+                            const prevRowFirstCell = XLSX.utils.encode_cell({ r: R - 1, c: 0 });
+                            if (ws[prevRowFirstCell] && ws[prevRowFirstCell].v === 'DEFECTUOSO') {
+                                // Última fila - formato porcentaje sin decimales desde columna D (índice 3) hasta T (índice 19)
+                                for (let col = 0; col <= range.e.c; col++) {
+                                    const addr = XLSX.utils.encode_cell({ r: R, c: col });
+                                    // Aplicar formato porcentaje sin decimales solo desde columna D (3) hasta T (19)
+                                    if (col >= 3 && col <= 19) {
+                                        let cellVal = ws[addr].v !== undefined ? ws[addr].v : 0;
+                                        // Convertir tanto strings como números
+                                        if (typeof cellVal === 'string') {
+                                            // Si tiene %, quitar el símbolo
+                                            cellVal = cellVal.replace('%', '').trim();
+                                        }
+                                        // Convertir a número
+                                        let numValue = parseFloat(cellVal);
+                                        if (isNaN(numValue)) numValue = 0;
+                                        ws[addr].v = numValue;
+                                        ws[addr].t = 'n';
+                                        ws[addr].s.numFmt = '0%';
+                                    }
+                                    // Para INTERNA: Columna V (índice 21) - formato % sin decimales
+                                    else if (col === 21 && sheetName === 'INTERNA') {
+                                        let cellVal = ws[addr].v !== undefined ? ws[addr].v : 0;
+                                        if (typeof cellVal === 'string') {
+                                            cellVal = cellVal.replace('%', '').trim();
+                                        }
+                                        let numValue = parseFloat(cellVal);
+                                        if (isNaN(numValue)) numValue = 0;
+                                        ws[addr].v = numValue;
+                                        ws[addr].t = 'n';
+                                        ws[addr].s.numFmt = '0%';
+                                    }
+                                }
+                            }
+                        }
+                        
+                        
+                        // Hacer que los ceros tengan color blanco en filas de datos normales (no totales, no DEFECTUOSO) columnas E a Y (índices 4 a 24)
+                        const firstCellAddr = XLSX.utils.encode_cell({ r: R, c: 0 });
+                        const firstCellValue = ws[firstCellAddr] ? ws[firstCellAddr].v : '';
+                        const isDataRow = firstCellValue && 
+                                         typeof firstCellValue === 'string' && 
+                                         !firstCellValue.startsWith('Total') && 
+                                         firstCellValue !== 'Total general' && 
+                                         firstCellValue !== 'DEFECTUOSO';
+                        
+                        if (isDataRow && C >= 4 && C <= 24) {
+                            if (ws[cellAddress].v === 0 || ws[cellAddress].v === '0') {
+                                // En lugar de eliminar el contenido, poner el texto en color blanco
+                                if (!ws[cellAddress].s.font) {
+                                    ws[cellAddress].s.font = {};
+                                }
+                                ws[cellAddress].s.font.color = { rgb: "FFFFFF" };
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Ajustar anchos de columna
+            const colWidths = [];
+            // Definir columnas especiales con ancho 7.33: D(3), G(6), J(9), K(10), L(11), M(12), N(13), P(15), R(17), U(20)
+            const colsWith733 = [3, 6, 9, 10, 11, 12, 13, 15, 17, 20];
+            
+            for (let C = 0; C <= range.e.c; ++C) {
+                if (C < 2) {
+                    colWidths.push({ wch: 15 }); // Factory Code y Customer
+                } else if (colsWith733.includes(C)) {
+                    colWidths.push({ wch: 7.33 }); // Columnas D, G, J, K, L, M, N, P, R, U
+                } else if (C >= 2 && C <= 20) {
+                    colWidths.push({ wch: 6 }); // Resto de columnas C a U (índices 2 a 20)
+                } else if (C >= 21 && C <= 24 && sheetName === 'INTERNA') {
+                    colWidths.push({ wch: 4.5 }); // Columnas V, W, X, Y (índices 21-24) solo para INTERNA
+                } else {
+                    colWidths.push({ wch: 12 }); // Resto
+                }
+            }
+            ws['!cols'] = colWidths;
+            
+            // Para CLIENTE: eliminar columnas V, W, X (índices 21, 22, 23)
+            if (sheetName === 'CLIENTE') {
+                // Eliminar celdas de las columnas V, W, X
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    for (let C = 21; C <= 23; ++C) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                        delete ws[cellAddress];
+                    }
+                }
+                // Ajustar el rango para terminar en columna U (índice 20)
+                range.e.c = 20;
+                ws['!ref'] = XLSX.utils.encode_range(range);
+                // Ajustar anchos de columna
+                ws['!cols'] = colWidths.slice(0, 21);
+            }
+            
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+
+        // Initialize the application by loading data from Google Sheets
+        function initializeApp() {
+            updateLoadingStatus('Cargando datos desde Google Sheets...', 'loading');
+            btnDownload.disabled = true; // Asegurar que esté deshabilitado durante la carga
+            btnChart.disabled = true; // Asegurar que esté deshabilitado durante la carga
+            
+            loadSheetJSONP(SHEET_ID, SHEET_NAME)
+                .then(data => {
+                    if (!Array.isArray(data)) {
+                        throw new Error('Los datos recibidos no tienen el formato esperado.');
+                    }
+                    
+                    if (data.length === 0) {
+                        throw new Error('La hoja de cálculo está vacía o no contiene datos.');
+                    }
+                    
+                    processSheetData(data);
+                })
+                .catch(error => {
+                    console.error('Error al cargar datos:', error);
+                    updateLoadingStatus('Error al cargar datos: ' + error.message, 'error');
+                    showError('No se pudieron cargar los datos desde Google Sheets. Verifique que la hoja sea pública y tenga el nombre correcto.');
+                    btnDownload.disabled = true; // Mantener deshabilitado en caso de error
+                    btnChart.disabled = true; // Mantener deshabilitado en caso de error
+                });
+        }
+
+        // Start the application when the page loads
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>

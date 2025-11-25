@@ -1,0 +1,2128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>SEGUNDAS Y TERCERAS - Reporte de defectos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 20px;
+            color: #222;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 26px;
+            letter-spacing: 0.03em;
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            font-size: 16px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .status-bar {
+            margin: 20px 0 8px 0;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .badge-loading {
+            background: #fff7e6;
+            color: #8a6d3b;
+            border: 1px solid #ffecb5;
+        }
+
+        .badge-ok {
+            background: #e6ffed;
+            color: #1f7a3a;
+            border: 1px solid #b7f7c2;
+        }
+
+        .badge-error {
+            background: #ffe6e6;
+            color: #a94442;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Check verde dentro del badge */
+        .badge .check {
+            display: inline-block;
+            color: #16a34a; /* verde */
+            font-weight: 700;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .pill {
+            background: #fff;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 12px;
+            border: 1px solid #ddd;
+        }
+
+        .table-wrapper {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+            padding: 0; /* tabla pegada al contenedor */
+            overflow-x: auto;
+        }
+
+        /* Estilos para selects de filtro */
+        #filters select {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: #fff;
+            color: #111827;
+            height: 26px;
+        }
+
+        /* Switches SEGUNDA / TERCERA junto a los filtros */
+        .tipo-switches {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 8px;
+        }
+        .tipo-switches label { display: flex; align-items: center; gap: 6px; font-size: 9pt; color: #333; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .2s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; top: 2px; background-color: white; transition: .2s; border-radius: 50%; }
+        .switch input:checked + .slider { background-color: #2196F3; }
+        .switch input:checked + .slider:before { transform: translateX(18px); }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 900px;
+            font-size: 9pt;
+            font-family: Calibri, Arial, sans-serif;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 3px 6px;
+            text-align: center;
+            white-space: nowrap;
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 7.5pt;
+        }
+
+        /* Alinear la columna DEFECTOS a la izquierda */
+        th.col-defecto,
+        td.col-defecto {
+            text-align: left;
+            padding-left: 8px;
+        }
+
+        th {
+            background: #e3f2fd;
+            font-weight: 700;
+        }
+
+        thead tr:nth-child(1) th {
+            background: #d0e7ff;
+            font-size: 9pt;
+        }
+
+        thead tr:nth-child(2) th {
+            background: #e8f3ff;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        tbody tr:hover {
+            background: #e0f2fe;
+        }
+
+        /* Sombreado por AREA: aplicar color específico a filas de áreas seleccionadas */
+        tbody tr.area-shaded {
+            background: #eef6ff; /* tono azul muy claro */
+        }
+        tbody tr.area-shaded:hover {
+            background: #dbeffd; /* hover ligeramente más oscuro */
+        }
+
+        /* Evitar cambio de color al pasar el mouse sobre la fila de totales */
+        tbody tr.row-total:hover {
+            background: rgb(85,211,145) !important;
+        }
+
+        /* Eliminadas las columnas sticky */
+
+        .row-total {
+            font-weight: 700;
+            background: rgb(85,211,145);
+        }
+
+        .row-percent {
+            font-weight: 600;
+            background: #334155;
+            color: #fff;
+        }
+
+
+        /* Eliminada la fila fijada */
+
+        .footer-summary {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #475569;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .footer-summary span {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #f1f5f9;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error-banner {
+            display: none;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+    <style>
+        .btn-graficos {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(180deg,#4f9ef7,#3b82f6);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.25);
+        }
+        .btn-graficos .ico { width:18px; height:18px; display:inline-block; }
+        .modal.modal-large { max-width: 900px; width: 90%; }
+    .charts-controls { display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; margin-bottom:6px; }
+        /* Compact filters: Calibri 10px */
+        .charts-controls label { display:flex; align-items:center; gap:6px; white-space:nowrap; font-family: Calibri, Arial, sans-serif; font-size:10px; margin:0; }
+        .charts-controls select, .charts-controls button { height:24px; padding:2px 6px; font-size:10px; font-family: Calibri, Arial, sans-serif; }
+        .charts-controls select { min-width:70px; max-width:120px; }
+        .charts-controls .small-select { min-width:60px; }
+        /* Limitar la altura del canvas dentro del modal para que no sea demasiado largo */
+        .modal.modal-large #chartsCanvas { width: 100% !important; max-height: 60vh; height: auto; }
+        /* Ajuste adicional: cuerpo del modal con padding reducido para optimizar espacio */
+        .modal.modal-large #chartsModalBody { padding: 8px 12px; }
+        /* Pareto canvas: más corta para evitar scroll vertical */
+        .modal.modal-large #paretoCanvas { width: 100% !important; max-height: 70vh; height: 480px !important; }
+    </style>
+    <!-- Modal styles -->
+    <style>
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal {
+            background: #fff;
+            border-radius: 8px;
+            /* Reducido a 50% del ancho previo (900px -> 450px) */
+            max-width: 450px;
+            width: 50%;
+            max-height: 90vh;
+            overflow: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 16px;
+        }
+        .modal header {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:8px;
+        }
+        .modal h3 { margin:0; font-size:16px }
+        .modal .close-btn {
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    /* Ajustar la tabla al ancho del modal */
+    /* Asegurar que la tabla del modal no herede el min-width global y respete los anchos fijos */
+    .modal table { width:100%; max-width:100%; min-width: 0 !important; border-collapse: collapse; font-size: 12px; table-layout: fixed; box-sizing: border-box; }
+    .modal th, .modal td { border:1px solid #e2e8f0; padding:6px; text-align:left; white-space: normal; overflow-wrap: break-word; word-break: break-word; box-sizing: border-box; }
+    /* Anchos por columna en el modal en píxeles */
+    .modal table th:nth-child(1), .modal table td:nth-child(1) { width: 35px; min-width:35px; }
+    .modal table th:nth-child(2), .modal table td:nth-child(2) { width: 60px; min-width:60px; }
+    .modal table th:nth-child(3), .modal table td:nth-child(3) { width: 35px; min-width:35px; }
+    .modal table th:nth-child(4), .modal table td:nth-child(4) { width: 50px; min-width:50px; }
+        .modal .no-data { padding: 12px; color:#666 }
+        </style>
+        <!-- Ensure .modal.modal-large wins over the generic .modal rules so the charts modal is large on first open -->
+        <style>
+            .modal.modal-large {
+                max-width: 900px !important;
+                width: 90% !important;
+            }
+        </style>
+    </head>
+<body>
+<div class="container">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 16px;">
+        <div style="display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h1 style="text-align: left; margin: 0; font-size: 26px; letter-spacing: 0.03em;">SEGUNDAS Y TERCERAS</h1>
+
+                <!-- Controles de filtro: Año y Semana (a la derecha del título) -->
+                <div id="filters" style="display: flex; align-items: center; gap: 8px; margin-left: 12px;">
+                    <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; color: #333;">Año
+                        <select id="filterYear" style="margin-left:4px; font-family: Calibri, Arial, sans-serif; font-size:9pt; padding:2px 6px;"></select>
+                    </label>
+                    <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; color: #333;">Semana
+                        <select id="filterWeek" style="margin-left:4px; font-family: Calibri, Arial, sans-serif; font-size:9pt; padding:2px 6px;"></select>
+                    </label>
+                    <!-- Switches SEGUNDA / TERCERA -->
+                    <div class="tipo-switches" aria-label="Mostrar tipo">
+                        <label for="switchSeg">SEGUNDA
+                            <span class="switch">
+                                <input id="switchSeg" type="checkbox" aria-checked="false">
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+                        <label for="switchTer">TERCERA
+                            <span class="switch">
+                                <input id="switchTer" type="checkbox" aria-checked="false">
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <span id="subtitle" style="font-family: Calibri, Arial, sans-serif; font-size: 7pt; color: #666; font-weight: 500;">Distribución de defectos por cliente y tipo</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button id="paretoBtn" class="btn-graficos" title="Pareto" style="background: linear-gradient(180deg,#f59e0b,#f97316);">
+                <span class="ico" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="3" height="18" rx="1" fill="#fff"/><rect x="9" y="7" width="3" height="14" rx="1" fill="#fff"/><rect x="15" y="13" width="3" height="8" rx="1" fill="#fff"/></svg>
+                </span>
+                Pareto
+            </button>
+            <button id="graficosBtn" class="btn-graficos" title="Gráficos">
+                <span class="ico" aria-hidden="true">
+                    <!-- simple icon -->
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="3" height="10" rx="1" fill="#fff"/><rect x="9" y="6" width="3" height="15" rx="1" fill="#fff"/><rect x="15" y="2" width="3" height="19" rx="1" fill="#fff"/></svg>
+                </span>
+                Gráficos
+            </button>
+            <a href="indice.html" class="back-btn" style="font-family:Calibri, Arial, sans-serif; font-size:10px; margin-left:4px; padding:6px 10px; background:#001a54; color:#fff; border-radius:6px; text-decoration:none; font-weight:700; display:inline-block;">← Volver</a>
+            <span id="statusBadge" class="badge badge-loading">Cargando datos desde Google Sheets…</span>
+        </div>
+    </div>
+
+    <div id="errorBanner" class="error-banner"></div>
+
+    <!-- status-bar eliminado por solicitud -->
+
+    <!-- RESUMEN GLOBAL MOVIDO AQUÍ (debajo del estado y fuente) -->
+    <div id="resumenGlobal" class="footer-summary hidden"></div>
+
+    <div id="tableContainer" class="table-wrapper hidden">
+        <table id="tablaReporte"></table>
+    </div>
+
+    <!-- Modal para detalle por cliente/segundo-tercera -->
+    <div id="detailModalOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true">
+            <header>
+                <h3 id="detailModalTitle">Detalle</h3>
+                <button id="detailModalClose" class="close-btn">Cerrar</button>
+            </header>
+            <div id="detailModalBody">
+                <!-- tabla de detalles -->
+            </div>
+        </div>
+    </div>
+
+    <div id="noData" class="footer-summary hidden">
+        <span>No se encontraron datos en la hoja Defectos.</span>
+    </div>
+
+    <!-- Modal para GRÁFICOS -->
+    <div id="chartsModalOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal modal-large" role="dialog" aria-modal="true">
+            <header>
+                <h3 id="chartsModalTitle">% DEFECTOS vs INGRESO</h3>
+                <button id="chartsModalClose" class="close-btn">Cerrar</button>
+            </header>
+            <div id="chartsModalBody">
+                <div class="charts-controls">
+                    <label style="display:flex;align-items:center;gap:8px;">Tipo:
+                        <label for="chartSwitchSeg" style="margin:0;display:flex;align-items:center;gap:6px;font-size:10px;">
+                            <span style="font-size:10px;">SEGUNDA</span>
+                            <span class="switch">
+                                <input id="chartSwitchSeg" type="checkbox">
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+                        <label for="chartSwitchTer" style="margin:0;display:flex;align-items:center;gap:6px;font-size:10px;">
+                            <span style="font-size:10px;">TERCERA</span>
+                            <span class="switch">
+                                <input id="chartSwitchTer" type="checkbox">
+                                <span class="slider"></span>
+                            </span>
+                        </label>
+                    </label>
+                    <label>Desde Año:
+                        <select id="chartDesdeYear"></select>
+                    </label>
+                    <label>Desde Semana:
+                        <select id="chartDesdeWeek"></select>
+                    </label>
+                    <label>Hasta Año:
+                        <select id="chartHastaYear"></select>
+                    </label>
+                    <label>Hasta Semana:
+                        <select id="chartHastaWeek"></select>
+                    </label>
+                    <!-- Removed Update button and 'Últimas 10 semanas' checkbox; chart updates on select change and defaults to last 10 weeks -->
+                </div>
+
+                <canvas id="chartsCanvas" height="360"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para PARETO -->
+<div id="paretoModalOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal modal-large" role="dialog" aria-modal="true">
+        <header>
+            <h3 id="paretoModalTitle">Pareto - Distribución de defectos</h3>
+            <button id="paretoModalClose" class="close-btn">Cerrar</button>
+        </header>
+            <div id="paretoModalBody">
+            <div class="charts-controls">
+                <label style="display:flex;align-items:center;gap:8px;">Tipo:
+                    <label style="margin:0;display:flex;align-items:center;gap:6px;font-size:10px;">
+                        <span style="font-size:10px;">SEGUNDA</span>
+                        <span class="switch">
+                            <input id="paretoSwitchSeg" type="checkbox">
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                    <label style="margin:0;display:flex;align-items:center;gap:6px;font-size:10px;">
+                        <span style="font-size:10px;">TERCERA</span>
+                        <span class="switch">
+                            <input id="paretoSwitchTer" type="checkbox">
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                </label>
+                <label>Periodo:
+                    <select id="paretoGroupBy" class="small-select">
+                        <option value="SEMANA">Semana</option>
+                        <option value="MES">Mes</option>
+                    </select>
+                </label>
+                <label>Seleccionar:
+                    <select id="paretoPeriodSelect" class="small-select"></select>
+                </label>
+            </div>
+            <canvas id="paretoCanvas" height="480"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js DataLabels plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+<script>
+    /*************************************************************
+     * CONFIGURACIÓN
+     *************************************************************/
+    const SHEET_ID = "1CicFN8Csk9D8rebBJMzshvqMaCCmcb7GmcNrhqUL4yc";
+    const DEFECTOS_SHEET = "Defectos";
+    const INGRESO_SHEET = "ingreso a linea";
+
+    // Nombre fallback si no se detecta automáticamente la columna de cantidad en "ingreso a linea"
+    const INGRESO_QTY_FALLBACK_COL = "TOTAL";
+
+    // Definición de cada defecto (según tu Excel "REPORTE")
+    const DEFECT_DEFS = [
+        { area: "HILANDERIA",   defecto: "CONTAMINADO",                               codigo: "01", col: "CONTAMINADO" },
+        { area: "HILANDERIA",   defecto: "HILO Irregular",                            codigo: "02", col: "HILO Irregular" },
+        { area: "HILANDERIA",   defecto: "MOTAS",                                      codigo: "03", col: "MOTAS" },
+
+        { area: "TEJEDURIA",    defecto: "ANILLADOS",                                  codigo: "04", col: "ANILLADOS" },
+        { area: "TEJEDURIA",    defecto: "FALLA DE LYCRA",                             codigo: "05", col: "FALLA DE LYCRA" },
+        { area: "TEJEDURIA",    defecto: "FALLA DE AGUJA",                             codigo: "06", col: "FALLA DE AGUJA" },
+
+        { area: "TINTORERIA",   defecto: "MALA IGUALACION",                            codigo: "07", col: "MALA IGUALACION" },
+        { area: "TINTORERIA",   defecto: "MANCHAS DE COLORANTES O AUXILIARES",         codigo: "08", col: "MANCHAS DE COLORANTES O AUXILIARES" },
+        { area: "TINTORERIA",   defecto: "QUEBRADURAS",                                codigo: "09", col: "QUEBRADURAS" },
+        { area: "TINTORERIA",   defecto: "TRANSPARENCIA",                              codigo: "10", col: "TRANSPARENCIA" },
+
+        { area: "VARIOS",       defecto: "HUECO POR PRUEBA",                           codigo: "11", col: "HUECO POR PRUEBA" },
+        { area: "VARIOS",       defecto: "JALADURAS",                                  codigo: "12", col: "JALADURAS" },
+        { area: "VARIOS",       defecto: "REVIRADO",                                   codigo: "13", col: "REVIRADO" },
+
+        { area: "COSTURA",      defecto: "HUECOS - DESC",                              codigo: "14", col: "HUECOS - DESC" },
+        { area: "COSTURA",      defecto: "MANCHAS DIFICILES",                          codigo: "15", col: "MANCHAS DIFICILES" },
+        { area: "COSTURA",      defecto: "MEDIDAS",                                    codigo: "16", col: "MEDIDAS" },
+        { area: "COSTURA",      defecto: "PICADOS POR AGUJA",                          codigo: "17", col: "PICADOS POR AGUJA" },
+
+        { area: "OTROS PROCESOS", defecto: "BORDADO",                                  codigo: "18", col: "BORDADO" },
+        { area: "OTROS PROCESOS", defecto: "ESTAMPADO",                                codigo: "19", col: "ESTAMPADO" },
+        { area: "OTROS PROCESOS", defecto: "MANCHA DE ESTAMPADO",                      codigo: "20", col: "MANCHA DE ESTAMPADO" },
+        { area: "OTROS PROCESOS", defecto: "PIGMENTO / LAVADO",                        codigo: "21", col: "PIGMENTO / LAVADO" },
+        { area: "OTROS PROCESOS", defecto: "TRANSFER",                                 codigo: "22", col: "TRANSFER" }
+    ];
+
+    /*************************************************************
+     * UTILIDADES GVIZ (similar a tu index.html)
+     *************************************************************/
+    function gvizToObjects(resp) {
+        if (!resp || !resp.table) return [];
+        const cols = (resp.table.cols || []).map(c => String(c.label || c.id || "").trim());
+        return (resp.table.rows || []).map(r => {
+            const o = {};
+            cols.forEach((h, i) => {
+                const cell = r.c && r.c[i] ? r.c[i] : null;
+                o[h] = cell && (cell.v !== null && cell.v !== undefined) ? cell.v : "";
+            });
+            return o;
+        });
+    }
+
+    function loadSheetJSONP(sheetId, sheetName) {
+        const TIMEOUT_MS = 15000;
+        return new Promise((resolve, reject) => {
+            const cbName = "GVIZ_CB_" + Math.random().toString(36).slice(2);
+            let script = document.createElement("script");
+            let timer = null;
+
+            function cleanup() {
+                if (timer) clearTimeout(timer);
+                timer = null;
+                delete window[cbName];
+                if (script && script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+            }
+
+            timer = setTimeout(() => {
+                cleanup();
+                reject(new Error(`Tiempo de espera agotado al cargar "${sheetName}".`));
+            }, TIMEOUT_MS);
+
+            window[cbName] = function(resp) {
+                cleanup();
+                try {
+                    resolve(gvizToObjects(resp));
+                } catch (e) {
+                    reject(new Error("Error al procesar los datos: " + e.message));
+                }
+            };
+
+            const base = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`;
+            const url = `${base}?sheet=${encodeURIComponent(sheetName)}&headers=1&tq=${encodeURIComponent("select *")}&tqx=out:json;responseHandler:${cbName}&nocache=${Date.now()}`;
+
+            script.src = url;
+            document.head.appendChild(script);
+        });
+    }
+
+    /*************************************************************
+     * LÓGICA DEL REPORTE
+     *************************************************************/
+    const statusBadge   = document.getElementById("statusBadge");
+    const tableContainer = document.getElementById("tableContainer");
+    const tablaReporte   = document.getElementById("tablaReporte");
+    const resumenGlobal  = document.getElementById("resumenGlobal");
+    const noData         = document.getElementById("noData");
+    const errorBanner    = document.getElementById("errorBanner");
+    // Tipo activo para filtrar la vista: null | 'SEGUNDA' | 'TERCERA'
+    let activeTipoFilter = null;
+
+    function setStatus(text, type = "loading") {
+        // Por defecto usar texto simple
+        statusBadge.className = "badge";
+        if (type === "loading") {
+            statusBadge.classList.add("badge-loading");
+            statusBadge.textContent = text;
+        } else if (type === "ok") {
+            statusBadge.classList.add("badge-ok");
+            // Mostrar texto corto y un check verde
+            // Usamos innerHTML para incluir el símbolo check
+            statusBadge.innerHTML = 'Datos <span class="check">✓</span>';
+        } else if (type === "error") {
+            statusBadge.classList.add("badge-error");
+            statusBadge.textContent = text;
+        }
+    }
+
+    function showError(msg) {
+        errorBanner.textContent = msg;
+        errorBanner.style.display = "block";
+    }
+
+    function toUpperTrim(value) {
+        if (value === null || value === undefined) return "";
+        return String(value).trim().toUpperCase();
+    }
+
+    function toNumber(value) {
+        if (value === null || value === undefined || value === "") return 0;
+        let s = String(value).trim();
+        if (s === '') return 0;
+        // eliminar espacios
+        s = s.replace(/\s+/g, '');
+        // caso: contiene ambos '.' y ',' -> asumir '.' como miles y ',' como decimal
+        if (s.indexOf('.') > -1 && s.indexOf(',') > -1) {
+            s = s.replace(/\./g, '').replace(/,/g, '.');
+        } else if (s.indexOf(',') > -1) {
+            // si solo tiene comas: decidir si es separador de miles (grupo de 3) o decimal
+            const parts = s.split(',');
+            if (parts[parts.length - 1].length === 3) {
+                // probable separador de miles
+                s = parts.join('');
+            } else {
+                // probable decimal
+                s = s.replace(/,/g, '.');
+            }
+        } else if (s.indexOf('.') > -1) {
+            // solo puntos: si la parte final tiene 3 dígitos, podría ser miles
+            const parts = s.split('.');
+            if (parts[parts.length - 1].length === 3) {
+                s = parts.join('');
+            }
+        }
+        const n = parseFloat(s);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function formatNumber(n) {
+        return n.toLocaleString("es-PE", { maximumFractionDigits: 0 });
+    }
+
+    function formatPercent(p, decimals = 2) {
+        if (!isFinite(p)) return "0.00%";
+        return p.toLocaleString("es-PE", {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        }) + "%";
+    }
+
+    // Obtiene lista de clientes (CLIENTE) a partir de la hoja Defectos
+    function getClientes(defectosRows) {
+        const set = new Set();
+        defectosRows.forEach(row => {
+            const cliente = toUpperTrim(row["CLIENTE"]);
+            if (cliente) set.add(cliente);
+        });
+        return Array.from(set).sort();
+    }
+
+    // Agrega por tipo de TIPO (SEGUNDA / TERCERA)
+    function aggregateByTipo(defectosRows, tipo, clientes) {
+        const rowsTipo = defectosRows.filter(r => toUpperTrim(r["TIPO"]) === tipo);
+
+        const result = {};
+        DEFECT_DEFS.forEach(def => {
+            result[def.col] = {
+                area: def.area,
+                defecto: def.defecto,
+                codigo: def.codigo,
+                porCliente: {},       // { cliente: cantidad }
+                subtotal: 0
+            };
+            clientes.forEach(c => result[def.col].porCliente[c] = 0);
+        });
+
+        rowsTipo.forEach(r => {
+            const cliente = toUpperTrim(r["CLIENTE"]);
+            if (!cliente) return;
+
+            DEFECT_DEFS.forEach(def => {
+                const val = toNumber(r[def.col]);
+                if (!val) return;
+
+                const entry = result[def.col];
+                if (entry.porCliente[cliente] === undefined) {
+                    entry.porCliente[cliente] = 0; // por si aparece algún cliente nuevo
+                }
+                entry.porCliente[cliente] += val;
+                entry.subtotal += val;
+            });
+        });
+
+        return result;
+    }
+
+    // Suma total de defectos en todas las filas
+    function totalDefectosFromAggregates(aggSegunda, aggTercera) {
+        let total = 0;
+        DEFECT_DEFS.forEach(def => {
+            const dSeg = aggSegunda[def.col] ? aggSegunda[def.col].subtotal : 0;
+            const dTer = aggTercera[def.col] ? aggTercera[def.col].subtotal : 0;
+            total += dSeg + dTer;
+        });
+        return total;
+    }
+
+    // Detecta automáticamente la columna de cantidad en "ingreso a linea"
+
+    // Detecta la columna "INGRESO A LINEA" en la hoja de ingreso
+    function detectarColumnaIngreso(ingresoRows) {
+        if (!ingresoRows.length) return "INGRESO A LINEA";
+        const headers = Object.keys(ingresoRows[0]);
+        const byIngreso = headers.find(h => toUpperTrim(h) === "INGRESO A LINEA");
+        return byIngreso || "INGRESO A LINEA";
+    }
+
+    function totalIngresoLinea(ingresoRows) {
+        if (!ingresoRows.length) return 0;
+        const col = detectarColumnaIngreso(ingresoRows);
+        let total = 0;
+        ingresoRows.forEach(r => {
+            total += toNumber(r[col]);
+        });
+        return total;
+    }
+
+    // Construye la tabla HTML principal
+    function buildTable(defectosRows, ingresoRows) {
+        if (!defectosRows.length) {
+            tableContainer.classList.add("hidden");
+            noData.classList.remove("hidden");
+            return;
+        }
+
+        const clientes = getClientes(defectosRows);
+        if (!clientes.length) {
+            tableContainer.classList.add("hidden");
+            noData.classList.remove("hidden");
+            return;
+        }
+
+        const aggSegunda = aggregateByTipo(defectosRows, "SEGUNDA", clientes);
+        const aggTercera = aggregateByTipo(defectosRows, "TERCERA", clientes);
+        const totalIngreso = totalIngresoLinea(ingresoRows);
+
+        // total visible depende del filtro activo (SEGUNDA / TERCERA / null)
+        let totalDefectos = 0;
+        if (activeTipoFilter === 'SEGUNDA') {
+            DEFECT_DEFS.forEach(def => { totalDefectos += (aggSegunda[def.col] ? aggSegunda[def.col].subtotal : 0); });
+        } else if (activeTipoFilter === 'TERCERA') {
+            DEFECT_DEFS.forEach(def => { totalDefectos += (aggTercera[def.col] ? aggTercera[def.col].subtotal : 0); });
+        } else {
+            DEFECT_DEFS.forEach(def => { totalDefectos += ((aggSegunda[def.col] ? aggSegunda[def.col].subtotal : 0) + (aggTercera[def.col] ? aggTercera[def.col].subtotal : 0)); });
+        }
+
+        tableContainer.classList.remove("hidden");
+        noData.classList.add("hidden");
+        tablaReporte.innerHTML = "";
+
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
+
+        /*********** ENCABEZADOS ***********/
+        const tr1 = document.createElement("tr");
+        const tr2 = document.createElement("tr");
+
+        // 1a fila: AREA, DEFECTOS, CODIGO
+        const thArea1 = document.createElement("th");
+        thArea1.rowSpan = 2;
+        thArea1.textContent = "AREA";
+        thArea1.classList.add("col-area");
+        tr1.appendChild(thArea1);
+
+        const thDef1 = document.createElement("th");
+        thDef1.rowSpan = 2;
+        thDef1.textContent = "DEFECTOS";
+        thDef1.classList.add("col-defecto");
+        tr1.appendChild(thDef1);
+
+        const thCod1 = document.createElement("th");
+        thCod1.rowSpan = 2;
+        thCod1.textContent = "CODIGO";
+        thCod1.classList.add("col-codigo");
+        tr1.appendChild(thCod1);
+
+        // Bloque SEGUNDA (solo si no estamos mostrando exclusivamente TERCERA)
+        if (activeTipoFilter !== 'TERCERA') {
+            const thSeg = document.createElement("th");
+            thSeg.colSpan = clientes.length + 1; // clientes + SUB-TOTAL
+            thSeg.textContent = "SEGUNDA";
+            thSeg.classList.add('group-seg');
+            tr1.appendChild(thSeg);
+        }
+
+        // Bloque TERCERA (solo si no estamos mostrando exclusivamente SEGUNDA)
+        if (activeTipoFilter !== 'SEGUNDA') {
+            const thTer = document.createElement("th");
+            thTer.colSpan = clientes.length + 1;
+            thTer.textContent = "TERCERA";
+            thTer.classList.add('group-ter');
+            tr1.appendChild(thTer);
+        }
+
+        // Bloque final (DEFECTOS + %)
+        const thRest = document.createElement("th");
+        thRest.colSpan = 3;
+        thRest.textContent = "";
+        tr1.appendChild(thRest);
+
+        // 2a fila encabezados: clientes + SUB-TOTAL
+        // Encabezados de clientes para SEGUNDA (si aplica)
+        if (activeTipoFilter !== 'TERCERA') {
+            clientes.forEach(c => {
+                const th = document.createElement("th");
+                th.textContent = c;
+                th.classList.add('col-seg');
+                tr2.appendChild(th);
+            });
+            const thSubSeg = document.createElement("th");
+            thSubSeg.textContent = "SUB-TOTAL";
+            thSubSeg.classList.add('col-seg');
+            tr2.appendChild(thSubSeg);
+        }
+
+        // Encabezados de clientes para TERCERA (si aplica)
+        if (activeTipoFilter !== 'SEGUNDA') {
+            clientes.forEach(c => {
+                const th = document.createElement("th");
+                th.textContent = c;
+                th.classList.add('col-ter');
+                tr2.appendChild(th);
+            });
+            const thSubTer = document.createElement("th");
+            thSubTer.textContent = "SUB-TOTAL";
+            thSubTer.classList.add('col-ter');
+            tr2.appendChild(thSubTer);
+        }
+
+        const thDefectos = document.createElement("th");
+        thDefectos.textContent = "DEFECTOS";
+        tr2.appendChild(thDefectos);
+
+        const thDefLote = document.createElement("th");
+        thDefLote.textContent = "Defectos en lote";
+        tr2.appendChild(thDefLote);
+
+        const thDistrib = document.createElement("th");
+        thDistrib.textContent = "Distribución de defectos";
+        tr2.appendChild(thDistrib);
+
+        thead.appendChild(tr1);
+        thead.appendChild(tr2);
+
+        /*********** CUERPO ***********/
+        // Totales por cliente (SEG y TER)
+        const totSegPorCliente = {};
+        const totTerPorCliente = {};
+        clientes.forEach(c => {
+            totSegPorCliente[c] = 0;
+            totTerPorCliente[c] = 0;
+        });
+
+        DEFECT_DEFS.forEach((def, idx) => {
+            const segEntry = aggSegunda[def.col] || {
+                porCliente: {},
+                subtotal: 0
+            };
+            const terEntry = aggTercera[def.col] || {
+                porCliente: {},
+                subtotal: 0
+            };
+            // total por defecto visible según el filtro
+            // (usado más abajo para % y para columna DEFECTOS si no hay filtro)
+            const totalDefectoAll = segEntry.subtotal + terEntry.subtotal;
+
+            const tr = document.createElement("tr");
+
+            // Aplicar sombreado selectivo según el área
+            try {
+                const areaUpper = toUpperTrim(def.area || '');
+                const _shaded = new Set(['TEJEDURIA', 'VARIOS', 'OTROS PROCESOS']);
+                if (_shaded.has(areaUpper)) {
+                    tr.classList.add('area-shaded');
+                }
+            } catch (e) {
+                // si por alguna razón falla la comprobación, no interrumpir la construcción de la tabla
+            }
+
+            // No fijar ninguna fila
+
+            // Área, defecto, código
+            const tdArea = document.createElement("td");
+            tdArea.textContent = def.area;
+            tdArea.classList.add("col-area");
+            tr.appendChild(tdArea);
+
+            const tdDef = document.createElement("td");
+            tdDef.textContent = def.defecto;
+            tdDef.classList.add("col-defecto");
+            tr.appendChild(tdDef);
+
+            const tdCod = document.createElement("td");
+            tdCod.textContent = def.codigo;
+            tdCod.classList.add("col-codigo");
+            tr.appendChild(tdCod);
+
+            let subtotalSeg = 0;
+            if (activeTipoFilter !== 'TERCERA') {
+                clientes.forEach(c => {
+                    const val = segEntry.porCliente ? segEntry.porCliente[c] || 0 : 0;
+                    subtotalSeg += val;
+                    totSegPorCliente[c] += val;
+
+                    const td = document.createElement("td");
+                    td.textContent = val ? formatNumber(val) : "";
+                    // datos para el modal
+                    td.classList.add('cliente-cell', 'col-seg');
+                    td.setAttribute('data-tipo', 'SEGUNDA');
+                    td.setAttribute('data-cliente', c);
+                    td.setAttribute('data-defcol', def.col);
+                    td.setAttribute('data-defecto', def.defecto);
+                    if (val) td.setAttribute('data-cantidad', String(val));
+                    tr.appendChild(td);
+                });
+
+                const tdSubSeg = document.createElement("td");
+                tdSubSeg.textContent = subtotalSeg ? formatNumber(subtotalSeg) : "";
+                // marcar como subtotal para evitar abrir modal al hacer click
+                tdSubSeg.classList.add('subtotal-cell', 'col-seg');
+                tr.appendChild(tdSubSeg);
+            }
+
+            let subtotalTer = 0;
+            if (activeTipoFilter !== 'SEGUNDA') {
+                clientes.forEach(c => {
+                    const val = terEntry.porCliente ? terEntry.porCliente[c] || 0 : 0;
+                    subtotalTer += val;
+                    totTerPorCliente[c] += val;
+
+                    const td = document.createElement("td");
+                    td.textContent = val ? formatNumber(val) : "";
+                    // datos para el modal
+                    td.classList.add('cliente-cell', 'col-ter');
+                    td.setAttribute('data-tipo', 'TERCERA');
+                    td.setAttribute('data-cliente', c);
+                    td.setAttribute('data-defcol', def.col);
+                    td.setAttribute('data-defecto', def.defecto);
+                    if (val) td.setAttribute('data-cantidad', String(val));
+                    tr.appendChild(td);
+                });
+
+                const tdSubTer = document.createElement("td");
+                tdSubTer.textContent = subtotalTer ? formatNumber(subtotalTer) : "";
+                // marcar como subtotal para evitar abrir modal al hacer click
+                tdSubTer.classList.add('subtotal-cell', 'col-ter');
+                tr.appendChild(tdSubTer);
+            }
+
+            // DEFECTOS (visibles según filtro)
+            const visibleTotalPorDefecto = (activeTipoFilter === 'SEGUNDA') ? subtotalSeg : ((activeTipoFilter === 'TERCERA') ? subtotalTer : (subtotalSeg + subtotalTer));
+            const tdDefectos = document.createElement("td");
+            tdDefectos.textContent = visibleTotalPorDefecto ? formatNumber(visibleTotalPorDefecto) : "";
+            tr.appendChild(tdDefectos);
+
+            // Defectos en lote = visibleTotalPorDefecto / totalIngreso
+            const tdDefLote = document.createElement("td");
+            if (totalIngreso > 0 && visibleTotalPorDefecto > 0) {
+                tdDefLote.textContent = formatPercent((visibleTotalPorDefecto / totalIngreso) * 100);
+            } else {
+                tdDefLote.textContent = "-";
+            }
+            tr.appendChild(tdDefLote);
+
+            // Distribución de defectos = visibleTotalPorDefecto / totalDefectos (visible)
+            const tdDistrib = document.createElement("td");
+            if (totalDefectos > 0 && visibleTotalPorDefecto > 0) {
+                tdDistrib.textContent = formatPercent((visibleTotalPorDefecto / totalDefectos) * 100);
+            } else {
+                tdDistrib.textContent = "-";
+            }
+            tr.appendChild(tdDistrib);
+
+            tbody.appendChild(tr);
+        });
+
+        /*********** FILA TOTAL DEFECTOS ***********/
+        const trTotal = document.createElement("tr");
+        trTotal.classList.add("row-total");
+
+        const tdTArea = document.createElement("td");
+        tdTArea.textContent = "";
+        tdTArea.classList.add("col-area");
+        trTotal.appendChild(tdTArea);
+
+        const tdTDef = document.createElement("td");
+    tdTDef.textContent = "TOTAL DEFECTOS";
+        tdTDef.classList.add("col-defecto");
+        trTotal.appendChild(tdTDef);
+
+        const tdTCod = document.createElement("td");
+        tdTCod.textContent = "";
+        tdTCod.classList.add("col-codigo");
+        trTotal.appendChild(tdTCod);
+        // Totales SEGUNDA (si muestra SEGUNDA)
+        let totalSeg = 0;
+        if (activeTipoFilter !== 'TERCERA') {
+            clientes.forEach(c => {
+                const v = totSegPorCliente[c] || 0;
+                totalSeg += v;
+                const td = document.createElement("td");
+                td.textContent = v ? formatNumber(v) : "";
+                trTotal.appendChild(td);
+            });
+
+            const tdSubSegTot = document.createElement("td");
+            tdSubSegTot.textContent = totalSeg ? formatNumber(totalSeg) : "";
+            // marcar como subtotal en la fila total (no debe abrir modal)
+            tdSubSegTot.classList.add('subtotal-cell', 'col-seg');
+            trTotal.appendChild(tdSubSegTot);
+        }
+
+        // Totales TERCERA (si muestra TERCERA)
+        let totalTer = 0;
+        if (activeTipoFilter !== 'SEGUNDA') {
+            clientes.forEach(c => {
+                const v = totTerPorCliente[c] || 0;
+                totalTer += v;
+                const td = document.createElement("td");
+                td.textContent = v ? formatNumber(v) : "";
+                trTotal.appendChild(td);
+            });
+
+            const tdSubTerTot = document.createElement("td");
+            tdSubTerTot.textContent = totalTer ? formatNumber(totalTer) : "";
+            // marcar como subtotal en la fila total (no debe abrir modal)
+            tdSubTerTot.classList.add('subtotal-cell', 'col-ter');
+            trTotal.appendChild(tdSubTerTot);
+        }
+
+        // Columna TOTAL DEFECTOS (visibles)
+        const tdDefTot = document.createElement("td");
+        tdDefTot.textContent = totalDefectos ? formatNumber(totalDefectos) : "";
+        trTotal.appendChild(tdDefTot);
+
+        // Defectos en lote total
+        const tdDefLoteTot = document.createElement("td");
+        if (totalIngreso > 0 && totalDefectos > 0) {
+            tdDefLoteTot.textContent = formatPercent((totalDefectos / totalIngreso) * 100);
+        } else {
+            tdDefLoteTot.textContent = "-";
+        }
+        trTotal.appendChild(tdDefLoteTot);
+
+        const tdDistribTot = document.createElement("td");
+        tdDistribTot.textContent = "100.00%";
+        trTotal.appendChild(tdDistribTot);
+
+        tbody.appendChild(trTotal);
+
+
+
+        tablaReporte.appendChild(thead);
+        tablaReporte.appendChild(tbody);
+
+        /*********** RESUMEN GLOBAL (debajo del estado y fuente) ***********/
+        resumenGlobal.classList.remove("hidden");
+        resumenGlobal.innerHTML = "";
+    const spanDef = document.createElement("span");
+    // Poner en negrita y añadir ' pds' al valor
+    spanDef.innerHTML = `<strong>TOTAL DEFECTOS: ${formatNumber(totalDefectos)} pds</strong>`;
+
+    const spanIng = document.createElement("span");
+    spanIng.innerHTML = `<strong>TOTAL INGRESO A LINEA: ${formatNumber(totalIngreso)} pds</strong>`;
+
+    const spanRate = document.createElement("span");
+    const rate = (totalIngreso > 0) ? (totalDefectos / totalIngreso) * 100 : 0;
+    // Poner en negrita el texto completo (sin 'pds' para el porcentaje)
+    spanRate.innerHTML = `<strong>% DEFECTOS vs INGRESO: ${formatPercent(rate)}</strong>`;
+
+    resumenGlobal.appendChild(spanDef);
+    resumenGlobal.appendChild(spanIng);
+    resumenGlobal.appendChild(spanRate);
+    }
+
+    /* ------------------ FILTRADO POR AÑO / SEMANA ------------------ */
+    let _originalDefectos = [];
+    let _originalIngreso = [];
+
+    function tryParseDate(v) {
+        if (v === null || v === undefined || v === "") return null;
+        // Si ya es Date
+        if (Object.prototype.toString.call(v) === '[object Date]') {
+            return isNaN(v.getTime()) ? null : v;
+        }
+        // Manejar strings del tipo "Date(2025,6,8)" que a veces devuelve la API GViz
+        if (typeof v === 'string') {
+            const sraw = v.trim();
+            const dateMatch = sraw.match(/^Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})(?:,\s*(\d{1,2}),\s*(\d{1,2}),\s*(\d{1,2}))?\)$/);
+            if (dateMatch) {
+                const year = parseInt(dateMatch[1], 10);
+                const month = parseInt(dateMatch[2], 10);
+                const day = parseInt(dateMatch[3], 10);
+                const dd = new Date(year, month, day);
+                if (!isNaN(dd.getTime())) return dd;
+            }
+        }
+        // Si es número (serial de sheets) tratar como fecha JS aproximada
+        if (typeof v === 'number') {
+            // Excel/Sheets serial -> convert to JS Date (days since 1899-12-30)
+            const jsDate = new Date((v - 25569) * 86400000);
+            return isNaN(jsDate.getTime()) ? null : jsDate;
+        }
+        // Intentar parse con Date
+        const s = String(v).trim();
+        // Priorizar formato inglés MM/DD/YYYY o MM-DD-YYYY (Sheets en inglés)
+        const mUS = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (mUS) {
+            const month = parseInt(mUS[1], 10) - 1;
+            const day = parseInt(mUS[2], 10);
+            let year = parseInt(mUS[3], 10);
+            if (year < 100) year += 2000;
+            const dd = new Date(year, month, day);
+            if (!isNaN(dd.getTime())) return dd;
+        }
+        // Fallback: intentar con Date parser
+        let d = new Date(s);
+        if (!isNaN(d.getTime())) return d;
+        // Intentar dd/mm/yyyy o dd-mm-yyyy como último recurso
+        const mEU = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (mEU) {
+            const day = parseInt(mEU[1], 10);
+            const month = parseInt(mEU[2], 10) - 1;
+            let year = parseInt(mEU[3], 10);
+            if (year < 100) year += 2000;
+            const dd = new Date(year, month, day);
+            return isNaN(dd.getTime()) ? null : dd;
+        }
+        return null;
+    }
+
+    // ISO week number
+    function getISOWeek(d) {
+        const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        const dayNum = date.getUTCDay() || 7;
+        date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+        const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+        return weekNo;
+    }
+
+    function detectFechaKey(rows) {
+        if (!rows || !rows.length) return null;
+        const keys = Object.keys(rows[0] || {});
+        const match = keys.find(k => toUpperTrim(k) === 'FECHA DE TIMBRADO');
+        if (match) return match;
+        const includesMatch = keys.find(k => toUpperTrim(k).includes('FECHA') && toUpperTrim(k).includes('TIMBRADO'));
+        if (includesMatch) return includesMatch;
+        // fallback: try any key that contains 'FECHA'
+        const fechaOnly = keys.find(k => toUpperTrim(k).includes('FECHA'));
+        return fechaOnly || null;
+    }
+
+    function getYearsFromRows(rows, fechaKey) {
+        const s = new Set();
+        if (!fechaKey) return [];
+        rows.forEach(r => {
+            const d = tryParseDate(r[fechaKey]);
+            if (d) s.add(d.getFullYear());
+        });
+        return Array.from(s).sort((a,b) => a-b);
+    }
+
+    function getWeeksForYear(rows, year, fechaKey) {
+        const s = new Set();
+        if (!fechaKey) return [];
+        rows.forEach(r => {
+            const d = tryParseDate(r[fechaKey]);
+            if (d && d.getFullYear() === Number(year)) s.add(getISOWeek(d));
+        });
+        return Array.from(s).sort((a,b) => a-b);
+    }
+
+    function populateFilters(rows) {
+        const yearSel = document.getElementById('filterYear');
+        const weekSel = document.getElementById('filterWeek');
+        yearSel.innerHTML = '';
+        weekSel.innerHTML = '';
+
+        const fechaKey = detectFechaKey(rows);
+        const years = getYearsFromRows(rows, fechaKey);
+        const optAllY = document.createElement('option'); optAllY.value = ''; optAllY.textContent = 'Todas';
+        yearSel.appendChild(optAllY);
+        years.forEach(y => {
+            const o = document.createElement('option'); o.value = String(y); o.textContent = String(y);
+            yearSel.appendChild(o);
+        });
+
+        // Llenar semanas disponibles
+        const weeks = Array.from(new Set(rows.map(r => {
+            const d = fechaKey ? tryParseDate(r[fechaKey]) : null;
+            return d ? getISOWeek(d) : null;
+        }).filter(x=>x!==null))).sort((a,b)=>a-b);
+        const optAllW = document.createElement('option'); optAllW.value = ''; optAllW.textContent = 'Todas';
+        weekSel.appendChild(optAllW);
+        weeks.forEach(w => {
+            const o = document.createElement('option'); o.value = String(Number(w)); o.textContent = String(Number(w));
+            weekSel.appendChild(o);
+        });
+
+        yearSel.addEventListener('change', () => {
+            const y = yearSel.value;
+            weekSel.innerHTML = '';
+            const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = 'Todas';
+            weekSel.appendChild(optAll);
+            if (!y) {
+                weeks.forEach(w => {
+                    const o = document.createElement('option'); o.value = String(Number(w)); o.textContent = String(Number(w));
+                    weekSel.appendChild(o);
+                });
+            } else {
+                const ws = getWeeksForYear(rows, y, fechaKey);
+                ws.forEach(w => {
+                    const o = document.createElement('option'); o.value = String(Number(w)); o.textContent = String(Number(w));
+                    weekSel.appendChild(o);
+                });
+            }
+            applyFiltersAndBuild();
+        });
+
+        weekSel.addEventListener('change', () => {
+            applyFiltersAndBuild();
+        });
+
+        // --------- SELECCIÓN POR DEFECTO ---------
+        // Selección por defecto: preferir la ÚLTIMA semana con datos del AÑO ACTUAL
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        let defaultYear = currentYear;
+        // obtener semanas disponibles para el año actual a partir de los datos
+        const weeksThisYear = getWeeksForYear(rows, currentYear, fechaKey);
+        let defaultWeek = null;
+        if (weeksThisYear && weeksThisYear.length > 0) {
+            // seleccionar la última semana disponible del año actual
+            defaultWeek = Math.max(...weeksThisYear);
+        } else {
+            // fallback: usar la semana anterior a la actual (como antes)
+            let currentWeek = getISOWeek(now);
+            defaultWeek = currentWeek - 1;
+            if (defaultWeek < 1) {
+                // si queda fuera de rango, intentar usar la última semana del año anterior
+                defaultYear = currentYear - 1;
+                const prevYearWeeks = getWeeksForYear(rows, defaultYear, fechaKey);
+                if (prevYearWeeks.length > 0) {
+                    defaultWeek = Math.max(...prevYearWeeks);
+                } else {
+                    defaultWeek = 1;
+                }
+            }
+        }
+        // Seleccionar año y semana por defecto si existen
+        if ([...yearSel.options].some(opt => opt.value === String(defaultYear))) {
+            yearSel.value = String(defaultYear);
+        }
+        if ([...weekSel.options].some(opt => opt.value === String(defaultWeek))) {
+            weekSel.value = String(defaultWeek);
+        }
+        // Aplicar filtro inicial
+        applyFiltersAndBuild();
+    }
+
+    /* ------------------ MODAL DE DETALLES ------------------ */
+    const detailModalOverlay = document.getElementById('detailModalOverlay');
+    const detailModalTitle = document.getElementById('detailModalTitle');
+    const detailModalBody = document.getElementById('detailModalBody');
+    const detailModalClose = document.getElementById('detailModalClose');
+
+    function detectKey(rows, candidates) {
+        if (!rows || !rows.length) return null;
+        const keys = Object.keys(rows[0]);
+        const up = keys.map(k => k.toUpperCase());
+        for (const cand of candidates) {
+            const idx = up.findIndex(k => k === cand.toUpperCase() || k.includes(cand.toUpperCase()));
+            if (idx !== -1) return keys[idx];
+        }
+        return null;
+    }
+
+    // Normalizar valor OP: quitar prefijo '10' inicial si existe, eliminar no-dígitos,
+    // y convertir a número para quitar ceros a la izquierda.
+    function normalizeOp(v) {
+        if (v === null || v === undefined) return '';
+        let s = String(v).trim();
+        if (s === '') return '';
+        // Eliminar espacios y caracteres no numéricos excepto dígitos
+        s = s.replace(/\s+/g, '');
+        // Si comienza con '10', quitar ese prefijo
+        if (s.startsWith('10')) s = s.slice(2);
+        // Extraer solo dígitos restantes
+        const digits = s.replace(/\D/g, '');
+        if (digits === '') return '';
+        // Convertir a número para eliminar ceros a la izquierda
+        return String(Number(digits));
+    }
+
+    function openDetailModal(tipo, cliente, defCol, defectoNombre) {
+    // Título en 2 líneas: 1) TIPO - CLIENTE  2) Defecto
+    detailModalTitle.innerHTML = `<div style="font-weight:700">${tipo} - ${cliente}</div><div style="font-size:13px;color:#444;margin-top:4px">${defectoNombre}</div>`;
+        // detectar claves útiles
+        const temporadaKey = detectKey(_originalDefectos, ['TEMPORADA', 'TEMP', 'SEASON']);
+        const estiloKey = detectKey(_originalDefectos, ['ESTILO', 'STYLE']);
+        const opKey = detectKey(_originalDefectos, ['OP', 'ORDEN', 'ORDER']);
+
+        // leer filtros actuales (si aplicados)
+        const yearFilter = document.getElementById('filterYear') ? document.getElementById('filterYear').value : '';
+        const weekFilter = document.getElementById('filterWeek') ? document.getElementById('filterWeek').value : '';
+        const fechaKey = detectFechaKey(_originalDefectos);
+
+        // filtrar filas relevantes teniendo en cuenta año/semana
+        const rows = (_originalDefectos || []).filter(r => {
+            if (toUpperTrim(r['TIPO']) !== tipo) return false;
+            if (toUpperTrim(r['CLIENTE']) !== toUpperTrim(cliente)) return false;
+            const cantidad = toNumber(r[defCol]);
+            if (cantidad <= 0) return false;
+
+            // Si hay fechaKey y se aplicó algún filtro, validar año/semana
+            if (fechaKey && (yearFilter || weekFilter)) {
+                const d = tryParseDate(r[fechaKey]);
+                if (!d) return false;
+                if (yearFilter && String(d.getFullYear()) !== String(yearFilter)) return false;
+                if (weekFilter && String(getISOWeek(d)) !== String(weekFilter)) return false;
+            }
+
+            return true;
+        });
+
+        if (!rows.length) {
+            detailModalBody.innerHTML = `<div class="no-data">No hay detalles para este cliente/defecto en el periodo seleccionado.</div>`;
+            detailModalOverlay.classList.add('open');
+            detailModalOverlay.setAttribute('aria-hidden', 'false');
+            return;
+        }
+
+        // Ordenar las filas por la cantidad del defecto (defCol) de mayor a menor
+        rows.sort((a, b) => {
+            return toNumber(b[defCol]) - toNumber(a[defCol]);
+        });
+
+        // construir tabla
+        const tbl = document.createElement('table');
+        const thead = document.createElement('thead');
+        const trh = document.createElement('tr');
+    const h1 = document.createElement('th'); h1.textContent = 'TEMP'; trh.appendChild(h1);
+        const h2 = document.createElement('th'); h2.textContent = estiloKey ? estiloKey : 'ESTILO'; trh.appendChild(h2);
+        const h3 = document.createElement('th'); h3.textContent = opKey ? opKey : 'OP'; trh.appendChild(h3);
+        const h4 = document.createElement('th'); h4.textContent = defectoNombre; trh.appendChild(h4);
+        thead.appendChild(trh);
+        tbl.appendChild(thead);
+
+        const tb = document.createElement('tbody');
+        rows.forEach(r => {
+            const tr = document.createElement('tr');
+            const td1 = document.createElement('td'); td1.textContent = temporadaKey ? (r[temporadaKey] || '') : (r['TEMPORADA'] || r['Temporada'] || ''); tr.appendChild(td1);
+            const td2 = document.createElement('td'); td2.textContent = estiloKey ? (r[estiloKey] || '') : (r['ESTILO'] || r['Estilo'] || ''); tr.appendChild(td2);
+            const td3 = document.createElement('td');
+            const rawOp = opKey ? (r[opKey] || '') : (r['OP'] || '');
+            td3.textContent = normalizeOp(rawOp);
+            tr.appendChild(td3);
+            const td4 = document.createElement('td'); td4.textContent = formatNumber(toNumber(r[defCol])) || ''; tr.appendChild(td4);
+            tb.appendChild(tr);
+        });
+        tbl.appendChild(tb);
+        detailModalBody.innerHTML = '';
+        detailModalBody.appendChild(tbl);
+        detailModalOverlay.classList.add('open');
+        detailModalOverlay.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDetailModal() {
+        detailModalOverlay.classList.remove('open');
+        detailModalOverlay.setAttribute('aria-hidden', 'true');
+        detailModalBody.innerHTML = '';
+    }
+
+    detailModalClose.addEventListener('click', closeDetailModal);
+    detailModalOverlay.addEventListener('click', (ev) => {
+        if (ev.target === detailModalOverlay) closeDetailModal();
+    });
+
+    // Delegation: manejar CLICK en celdas cliente (abrir modal con un solo click)
+    // Excluir celdas marcadas como 'subtotal-cell' y la fila de totales
+    document.addEventListener('click', function (ev) {
+        const td = ev.target.closest && ev.target.closest('td.cliente-cell');
+        if (!td) return;
+        // Si la celda está marcada como subtotal, no abrir modal
+        if (td.classList.contains('subtotal-cell')) return;
+        const tr = td.closest && td.closest('tr');
+        if (tr && tr.classList.contains('row-total')) return; // ignorar fila total
+
+        const tipo = td.getAttribute('data-tipo');
+        const cliente = td.getAttribute('data-cliente');
+        const defcol = td.getAttribute('data-defcol');
+        const defectoNombre = td.getAttribute('data-defecto') || defcol;
+        openDetailModal(tipo, cliente, defcol, defectoNombre);
+    });
+
+    function filterByYearWeek(rows, year, week) {
+        const fechaKey = detectFechaKey(rows);
+        if ((!year || year === '') && (!week || week === '')) return rows.slice();
+        return rows.filter(r => {
+            const d = fechaKey ? tryParseDate(r[fechaKey]) : null;
+            if (!d) return false;
+            if (year && String(d.getFullYear()) !== String(year)) return false;
+            if (week && String(getISOWeek(d)) !== String(week)) return false;
+            return true;
+        });
+    }
+
+    // Filtra las filas de la hoja `ingreso a linea`.
+    // Si la hoja tiene columnas `AÑO` y `SEMANA` las usa directamente (más rápido y fiable).
+    // En otro caso intenta filtrar por fecha como fallback.
+    function filterIngresoRowsByYearWeek(rows, year, week) {
+        if (!rows || !rows.length) return [];
+        // buscar claves año/semana (insensible a mayúsculas y tildes)
+        const keys = Object.keys(rows[0] || {});
+        const keyAno = keys.find(k => toUpperTrim(k).replace(/\s+/g,'') === 'AÑO' || toUpperTrim(k).replace(/\s+/g,'') === 'ANO' || toUpperTrim(k) === 'AÑO');
+        const keySemana = keys.find(k => toUpperTrim(k).includes('SEMANA'));
+
+        if (keyAno && keySemana) {
+            // usar columnas año/semana directamente
+            return rows.filter(r => {
+                const rv = r[keyAno];
+                const sv = r[keySemana];
+                const rvn = rv === null || rv === undefined || rv === '' ? null : Number(String(rv).toString().replace(/\s+/g, ''));
+                const svn = sv === null || sv === undefined || sv === '' ? null : Number(String(sv).toString().replace(/\s+/g, ''));
+                if ((!year || year === '') && (!week || week === '')) return true;
+                if (year && String(rvn) !== String(year)) return false;
+                if (week && String(svn) !== String(week)) return false;
+                return true;
+            });
+        }
+
+        // fallback: filtrar por fecha similar a filterByYearWeek
+        return filterByYearWeek(rows, year, week);
+    }
+
+    function applyFiltersAndBuild() {
+        const y = document.getElementById('filterYear').value;
+        const w = document.getElementById('filterWeek').value;
+        const filteredDefectos = filterByYearWeek(_originalDefectos, y, w);
+        const filteredIngreso = filterIngresoRowsByYearWeek(_originalIngreso, y, w);
+        buildTable(filteredDefectos, filteredIngreso);
+    }
+
+    // Switches SEGUNDA / TERCERA: comportamiento y exclusividad
+    (function setupTipoSwitches(){
+        const elSegSwitch = document.getElementById('switchSeg');
+        const elTerSwitch = document.getElementById('switchTer');
+        function updateTipoFromSwitches(){
+            const segOn = elSegSwitch && elSegSwitch.checked;
+            const terOn = elTerSwitch && elTerSwitch.checked;
+            // Hacerlos mutuamente excluyentes: si uno se activa, desactivar el otro
+            if (segOn && elTerSwitch) elTerSwitch.checked = false;
+            if (terOn && elSegSwitch) elSegSwitch.checked = false;
+            activeTipoFilter = segOn ? 'SEGUNDA' : (terOn ? 'TERCERA' : null);
+            applyFiltersAndBuild();
+        }
+        if (elSegSwitch) elSegSwitch.addEventListener('change', updateTipoFromSwitches);
+        if (elTerSwitch) elTerSwitch.addEventListener('change', updateTipoFromSwitches);
+    })();
+
+    /* ------------------ PARETO: Distribución de defectos (barras + linea acumulada) ------------------ */
+    (function setupPareto(){
+        const paretoBtn = document.getElementById('paretoBtn');
+        const paretoModalOverlay = document.getElementById('paretoModalOverlay');
+        const paretoModalClose = document.getElementById('paretoModalClose');
+        const paretoSwitchSeg = document.getElementById('paretoSwitchSeg');
+        const paretoSwitchTer = document.getElementById('paretoSwitchTer');
+        const paretoGroupBy = document.getElementById('paretoGroupBy');
+        const paretoPeriodSelect = document.getElementById('paretoPeriodSelect');
+        const paretoCanvas = document.getElementById('paretoCanvas');
+        let paretoChart = null;
+        // Ensure chartjs-plugin-datalabels is registered (some CDN builds require manual registration)
+        try {
+            if (window && window.Chart && window.ChartDataLabels) {
+                try { Chart.register(window.ChartDataLabels); } catch(e) { /* ignore if already registered */ }
+            }
+        } catch(e) { /* ignore */ }
+
+        function openParetoModal(){
+            populateParetoPeriodOptions();
+            paretoModalOverlay.classList.add('open');
+            paretoModalOverlay.setAttribute('aria-hidden','false');
+            requestAnimationFrame(()=>{
+                if (paretoChart) { try { paretoChart.resize(); paretoChart.update(); } catch(e){} }
+                renderParetoFromControls();
+            });
+        }
+
+        function closeParetoModal(){
+            paretoModalOverlay.classList.remove('open');
+            paretoModalOverlay.setAttribute('aria-hidden','true');
+        }
+
+        function populateParetoPeriodOptions(){
+            paretoPeriodSelect.innerHTML = '';
+            const group = paretoGroupBy.value || 'SEMANA';
+            const fechaKey = detectFechaKey(_originalDefectos);
+            if (!fechaKey) {
+                const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'Todas'; paretoPeriodSelect.appendChild(opt); return;
+            }
+            if (group === 'SEMANA'){
+                const set = new Set();
+                (_originalDefectos||[]).forEach(r=>{
+                    const d = tryParseDate(r[fechaKey]); if (!d) return; const y=d.getFullYear(); const w=getISOWeek(d); set.add(`${y}|${String(w).padStart(2,'0')}`);
+                });
+                const arr = Array.from(set).sort();
+                const optAll = document.createElement('option'); optAll.value=''; optAll.textContent='Todas'; paretoPeriodSelect.appendChild(optAll);
+                arr.forEach(k=>{ const [y,w]=k.split('|'); const o=document.createElement('option'); o.value=k; o.textContent=`${y}-SEM${Number(w)}`; paretoPeriodSelect.appendChild(o); });
+                // seleccionar la última por defecto
+                if (arr.length) paretoPeriodSelect.value = arr[arr.length-1];
+            } else {
+                // MES: formato YYYY|MM
+                const set = new Set();
+                const monthsNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+                (_originalDefectos||[]).forEach(r=>{
+                    const d = tryParseDate(r[fechaKey]); if (!d) return; const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); set.add(`${y}|${m}`);
+                });
+                const arr = Array.from(set).sort();
+                const optAll = document.createElement('option'); optAll.value=''; optAll.textContent='Todas'; paretoPeriodSelect.appendChild(optAll);
+                arr.forEach(k=>{ const [y,m]=k.split('|'); const o=document.createElement('option'); o.value=k; o.textContent=`${monthsNames[Number(m)-1]} ${y}`; paretoPeriodSelect.appendChild(o); });
+                if (arr.length) paretoPeriodSelect.value = arr[arr.length-1];
+            }
+        }
+
+        function parseParetoControls(){
+            let tipo = 'AMBOS';
+            if (paretoSwitchSeg && paretoSwitchSeg.checked) tipo = 'SEGUNDA';
+            else if (paretoSwitchTer && paretoSwitchTer.checked) tipo = 'TERCERA';
+            const group = paretoGroupBy.value || 'SEMANA';
+            const period = paretoPeriodSelect.value || '';
+            return { tipo, group, period };
+        }
+
+        function computeParetoData(){
+            const opts = parseParetoControls();
+            const rows = (_originalDefectos||[]).filter(r=>{
+                if (opts.tipo !== 'AMBOS' && toUpperTrim(r['TIPO']) !== opts.tipo) return false;
+                if (!opts.period) return true; // Todas
+                const fechaKey = detectFechaKey(_originalDefectos);
+                const d = tryParseDate(r[fechaKey]); if (!d) return false;
+                if (opts.group === 'SEMANA'){
+                    const [y,w] = opts.period.split('|'); if (String(d.getFullYear()) !== String(y)) return false; if (String(getISOWeek(d)).padStart(2,'0') !== String(w)) return false; return true;
+                } else {
+                    const [y,m] = opts.period.split('|'); const mm = String(d.getMonth()+1).padStart(2,'0'); if (String(d.getFullYear()) !== String(y)) return false; if (mm !== String(m)) return false; return true;
+                }
+            });
+
+            const counts = {};
+            DEFECT_DEFS.forEach(def => counts[def.col] = 0);
+            rows.forEach(r=>{
+                DEFECT_DEFS.forEach(def => { counts[def.col] += toNumber(r[def.col]); });
+            });
+
+            const arr = DEFECT_DEFS.map(def => {
+                let label = def.defecto;
+                if (toUpperTrim(def.defecto) === 'MANCHAS DE COLORANTES O AUXILIARES') label = 'MANCHAS TINTO';
+                return { codigo: def.codigo, label: label, col: def.col, value: counts[def.col] || 0 };
+            });
+            const total = arr.reduce((s,a)=>s + (a.value||0), 0);
+            arr.sort((a,b)=>b.value - a.value);
+            let running = 0;
+            const labels = [];
+            const values = [];
+            const cumPerc = [];
+            arr.forEach(item => {
+                labels.push(item.label);
+                values.push(item.value);
+                running += item.value;
+                const pct = total > 0 ? (running / total) * 100 : 0;
+                cumPerc.push(Number(pct.toFixed(2)));
+            });
+            return { labels, values, cumPerc, total };
+        }
+
+        function drawPareto(){
+            const data = computeParetoData();
+            if (paretoChart) { try { paretoChart.destroy(); } catch(e){} paretoChart = null; }
+            const ctx = paretoCanvas.getContext('2d');
+
+            // Local plugin to draw base labels for bars (Pareto) - avoids relying on chartjs-plugin-datalabels for bars
+            const paretoBarLabeler = {
+                id: 'paretoBarLabeler',
+                afterDatasetsDraw: function(chart) {
+                    if (!chart || !chart.ctx) return;
+                    // only run for paretoCanvas
+                    if (!chart.canvas || chart.canvas.id !== 'paretoCanvas') return;
+                    const ctx2 = chart.ctx;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta || !meta.data) return;
+                    ctx2.save();
+                    ctx2.fillStyle = '#0b5394';
+                    ctx2.font = '700 14px Calibri, Arial, sans-serif';
+                    ctx2.textAlign = 'center';
+                    ctx2.textBaseline = 'bottom';
+                    meta.data.forEach((bar, i) => {
+                        try {
+                            const val = chart.data.datasets[0].data[i];
+                            if (val === null || val === undefined) return;
+                            const txt = Number(val) ? Number(val).toLocaleString() : '0';
+                            const baseY = (bar.base !== undefined) ? bar.base : (chart.chartArea ? chart.chartArea.bottom : (bar.y || 0));
+                            const x = (bar.x !== undefined) ? bar.x : (bar.getCenterPoint ? bar.getCenterPoint().x : 0);
+                            ctx2.fillText(txt, x, baseY - 4);
+                        } catch (e) { /* ignore per-bar errors */ }
+                    });
+                    // Draw line labels to the right of points when value <= 83
+                    try {
+                        const lineMeta = chart.getDatasetMeta(1);
+                        if (lineMeta && lineMeta.data) {
+                            ctx2.save();
+                            ctx2.fillStyle = 'rgba(220,53,69,1)';
+                            ctx2.font = '400 12px Calibri, Arial, sans-serif';
+                            ctx2.textAlign = 'left';
+                            ctx2.textBaseline = 'middle';
+                            lineMeta.data.forEach((pt, i) => {
+                                try {
+                                    const v = chart.data.datasets[1].data[i];
+                                    if (v === null || v === undefined) return;
+                                    // only show labels when value <= 83
+                                    if (typeof v === 'number' && v <= 83) {
+                                        const xpt = (pt.x !== undefined) ? pt.x : (pt.getCenterPoint ? pt.getCenterPoint().x : 0);
+                                        const ypt = (pt.y !== undefined) ? pt.y : (pt.getCenterPoint ? pt.getCenterPoint().y : 0);
+                                        const labelTxt = Number(v).toFixed(2) + '%';
+                                        ctx2.fillText(labelTxt, xpt + 8, ypt);
+                                    }
+                                } catch (e) { /* ignore per-point errors */ }
+                            });
+                            ctx2.restore();
+                        }
+                    } catch(e) { /* ignore */ }
+                    ctx2.restore();
+                }
+            };
+
+            // build plugins array: include paretoBarLabeler and chartjs-plugin-datalabels if available
+            const _paretoPlugins = [paretoBarLabeler];
+            if (window && window.ChartDataLabels) _paretoPlugins.push(window.ChartDataLabels);
+            try { console.debug && console.debug('pareto: plugins count', _paretoPlugins.length, 'ChartDataLabels present:', !!(window && window.ChartDataLabels)); } catch(e) {}
+
+            paretoChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        { type: 'bar', label: 'DEFECTOS', data: data.values, backgroundColor: 'rgba(54,162,235,0.7)', yAxisID: 'y1' },
+                        { type: 'line', label: 'Distribución de defectos', data: data.cumPerc, borderColor: 'rgba(220,53,69,0.9)', backgroundColor: 'rgba(220,53,69,0.2)', tension: 0.2, pointRadius:4, yAxisID: 'y',
+                            datalabels: {
+                                display: function(ctx){ return (typeof ctx.raw === 'number') ? (ctx.raw <= 83) : false; },
+                                align: 'right',
+                                anchor: 'start',
+                                color: 'rgba(220,53,69,1)',
+                                font: { family: 'Calibri, Arial, sans-serif', size: 12, weight: 'normal' },
+                                formatter: function(value) { return Number(value).toFixed(2) + '%'; }
+                            }
+                        }
+                    ]
+                },
+                plugins: _paretoPlugins,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: function(ctx){ const ds = ctx.dataset; const val = ctx.raw; if (ds.type === 'bar') return ds.label + ': ' + (Number(val) ? Number(val).toLocaleString() : '0'); else return ds.label + ': ' + (Number(val) ? Number(val).toFixed(2) + '%' : '0.00%'); } } }, datalabels: { display: false, clamp: true, clip: false } },
+                    scales: {
+                        x: { ticks: { maxRotation: 90, minRotation: 90, font: { family: 'Calibri, Arial, sans-serif', size: 14, weight: 'normal' } } },
+                        y: { type: 'linear', position: 'left', beginAtZero: true, suggestedMax: 100, ticks: { callback: function(v){ return v + '%'; } }, title: { display: true, text: 'Distribución acumulada (%)' } },
+                        y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { callback: function(v){ return Math.round(v).toLocaleString(); } }, title: { display: true, text: 'DEFECTOS (cantidad)' } }
+                    }
+                }
+            });
+        }
+
+        function renderParetoFromControls(){ drawPareto(); }
+
+        // Events
+        paretoBtn && paretoBtn.addEventListener('click', openParetoModal);
+        paretoModalClose && paretoModalClose.addEventListener('click', closeParetoModal);
+        paretoModalOverlay && paretoModalOverlay.addEventListener('click', (ev)=>{ if (ev.target === paretoModalOverlay) closeParetoModal(); });
+        paretoGroupBy && paretoGroupBy.addEventListener('change', ()=>{ populateParetoPeriodOptions(); renderParetoFromControls(); });
+        paretoPeriodSelect && paretoPeriodSelect.addEventListener('change', ()=>{ renderParetoFromControls(); });
+        if (paretoSwitchSeg && paretoSwitchTer){
+            paretoSwitchSeg.addEventListener('change', ()=>{ if (paretoSwitchSeg.checked) paretoSwitchTer.checked = false; renderParetoFromControls(); });
+            paretoSwitchTer.addEventListener('change', ()=>{ if (paretoSwitchTer.checked) paretoSwitchSeg.checked = false; renderParetoFromControls(); });
+        }
+    })();
+
+    /* ------------------ GRÁFICOS: % DEFECTOS vs INGRESO (últimas 10 semanas) ------------------ */
+    (function setupCharts(){
+        const graficosBtn = document.getElementById('graficosBtn');
+        const chartsModalOverlay = document.getElementById('chartsModalOverlay');
+        const chartsModalClose = document.getElementById('chartsModalClose');
+    const chartSwitchSeg = document.getElementById('chartSwitchSeg');
+    const chartSwitchTer = document.getElementById('chartSwitchTer');
+    const chartDesdeYear = document.getElementById('chartDesdeYear');
+    const chartDesdeWeek = document.getElementById('chartDesdeWeek');
+    const chartHastaYear = document.getElementById('chartHastaYear');
+    const chartHastaWeek = document.getElementById('chartHastaWeek');
+        const chartsCanvas = document.getElementById('chartsCanvas');
+        let chartInstance = null;
+
+        function openChartsModal(){
+            populateChartYearWeekSelectors();
+            chartsModalOverlay.classList.add('open');
+            chartsModalOverlay.setAttribute('aria-hidden', 'false');
+            // Ensure the modal's layout is fully applied before drawing the chart.
+            // Use double requestAnimationFrame and a forced reflow to make this robust across browsers.
+            const modalEl = chartsModalOverlay.querySelector('.modal.modal-large');
+            // first rAF to let the browser apply the 'open' class, then force reflow and a second rAF
+            requestAnimationFrame(() => {
+                // force a synchronous reflow
+                if (modalEl) void modalEl.offsetWidth;
+                requestAnimationFrame(() => {
+                    renderChartFromControls();
+                    // If Chart.js instance exists, force a resize/update to ensure correct dimensions
+                    if (chartInstance && typeof chartInstance.resize === 'function') {
+                        try { chartInstance.resize(); chartInstance.update(); } catch(e) { /* ignore */ }
+                    }
+                });
+            });
+        }
+
+        function closeChartsModal(){
+            chartsModalOverlay.classList.remove('open');
+            chartsModalOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        graficosBtn && graficosBtn.addEventListener('click', openChartsModal);
+        chartsModalClose && chartsModalClose.addEventListener('click', closeChartsModal);
+        chartsModalOverlay && chartsModalOverlay.addEventListener('click', (ev)=>{ if (ev.target === chartsModalOverlay) closeChartsModal(); });
+
+        function getWeekKey(year, week){ return `${year}|${String(week).padStart(2,'0')}`; }
+
+        function lastNWeeks(n){
+            const out = [];
+            const now = new Date();
+            for (let i = n-1; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (i*7));
+                const w = getISOWeek(d);
+                const y = d.getFullYear();
+                const key = getWeekKey(y,w);
+                if (!out.find(o=>o.key===key)) out.push({year:y, week:w, key});
+            }
+            return out;
+        }
+
+        function populateChartYearWeekSelectors(){
+            // reuse detectFechaKey/getYearsFromRows/getWeeksForYear
+            chartDesdeYear.innerHTML = '';
+            chartDesdeWeek.innerHTML = '';
+            chartHastaYear.innerHTML = '';
+            chartHastaWeek.innerHTML = '';
+
+            // Preferir años extraídos de la hoja de ingreso (si existen), sino usar defectos
+            const fechaKeyDef = detectFechaKey(_originalDefectos);
+            const fechaKeyIng = detectFechaKey(_originalIngreso);
+            const yearsFromIngreso = getYearsFromRows(_originalIngreso, fechaKeyIng);
+            const yearsFromDef = getYearsFromRows(_originalDefectos, fechaKeyDef);
+            const years = (yearsFromIngreso && yearsFromIngreso.length) ? yearsFromIngreso : yearsFromDef;
+
+            const optAllY = document.createElement('option'); optAllY.value=''; optAllY.textContent='Todas';
+            chartDesdeYear.appendChild(optAllY.cloneNode(true));
+            chartHastaYear.appendChild(optAllY.cloneNode(true));
+            years.forEach(y => {
+                const o = document.createElement('option'); o.value = String(y); o.textContent = String(y);
+                chartDesdeYear.appendChild(o);
+                chartHastaYear.appendChild(o.cloneNode(true));
+            });
+
+            // semanas: inicialmente añadir opción 'Todas'
+            const allOpt = document.createElement('option'); allOpt.value=''; allOpt.textContent='Todas';
+            chartDesdeWeek.appendChild(allOpt.cloneNode(true));
+            chartHastaWeek.appendChild(allOpt.cloneNode(true));
+
+            // Asegurar que los últimos 10 weeks aparecen como opciones y seleccionarlos por defecto
+            const last = lastNWeeks(10);
+            if (last && last.length) {
+                // añadir opciones de semana (sin importar el año) y años faltantes
+                last.forEach(item => {
+                    const y = item.year; const w = item.week;
+                    if (![...chartDesdeYear.options].some(opt => opt.value === String(y))) {
+                        const o = document.createElement('option'); o.value = String(y); o.textContent = String(y);
+                        chartDesdeYear.appendChild(o);
+                        chartHastaYear.appendChild(o.cloneNode(true));
+                    }
+                    if (![...chartDesdeWeek.options].some(opt => opt.value === String(w))) {
+                        const ow = document.createElement('option'); ow.value = String(w); ow.textContent = 'SEM' + String(w);
+                        chartDesdeWeek.appendChild(ow);
+                        chartHastaWeek.appendChild(ow.cloneNode(true));
+                    }
+                });
+
+                // seleccionar rango: Desde = primera semana del array, Hasta = última
+                const first = last[0]; const lastIt = last[last.length - 1];
+                chartDesdeYear.value = String(first.year);
+                chartDesdeWeek.value = String(first.week);
+                chartHastaYear.value = String(lastIt.year);
+                chartHastaWeek.value = String(lastIt.week);
+            }
+        }
+
+        function parseControlRange(){
+            // determine tipo from switches: SEGUNDA / TERCERA / AMBOS
+            let tipo = 'AMBOS';
+            try {
+                if (chartSwitchSeg && chartSwitchSeg.checked) tipo = 'SEGUNDA';
+                else if (chartSwitchTer && chartSwitchTer.checked) tipo = 'TERCERA';
+            } catch(e) { tipo = 'AMBOS'; }
+            const desdeY = chartDesdeYear.value || '';
+            const desdeW = chartDesdeWeek.value || '';
+            const hastaY = chartHastaYear.value || '';
+            const hastaW = chartHastaWeek.value || '';
+            // Si el usuario no seleccionó ningún Desde/Hasta usar las últimas 10 semanas
+            const useLast = !(desdeY || desdeW || hastaY || hastaW);
+            return { useLast, tipo, desdeY, desdeW, hastaY, hastaW };
+        }
+
+        function aggregateWeeklyData(opts){
+            const fechaKeyDef = detectFechaKey(_originalDefectos);
+            const fechaKeyIng = detectFechaKey(_originalIngreso);
+            const defectsMap = new Map();
+            const ingresoMap = new Map();
+
+            // Acumular defectos por semana (filtrando por tipo si aplica)
+            (_originalDefectos||[]).forEach(r => {
+                const d = tryParseDate(r[fechaKeyDef]);
+                if (!d) return;
+                const y = d.getFullYear(); const w = getISOWeek(d); const key = getWeekKey(y,w);
+                const tipoRow = toUpperTrim(r['TIPO']);
+                if (opts.tipo !== 'AMBOS' && tipoRow !== opts.tipo) return;
+                let sum = 0;
+                DEFECT_DEFS.forEach(def => { sum += toNumber(r[def.col]); });
+                if (!sum) sum = 0;
+                defectsMap.set(key, (defectsMap.get(key) || 0) + sum);
+            });
+
+            // Acumular ingreso por semana.
+            // Primero intentar usar columnas explicitias AÑO / SEMANA en la hoja de ingreso (más fiable).
+            const ingresoCol = detectarColumnaIngreso(_originalIngreso);
+            const ingresoKeys = _originalIngreso && _originalIngreso.length ? Object.keys(_originalIngreso[0]) : [];
+            const keyAno = ingresoKeys.find(k => toUpperTrim(k).replace(/\s+/g,'') === 'AÑO' || toUpperTrim(k).replace(/\s+/g,'') === 'ANO' || toUpperTrim(k) === 'AÑO');
+            const keySemana = ingresoKeys.find(k => toUpperTrim(k).includes('SEMANA'));
+            if (keyAno && keySemana) {
+                (_originalIngreso||[]).forEach(r => {
+                    const rv = r[keyAno];
+                    const sv = r[keySemana];
+                    const y = rv === null || rv === undefined || rv === '' ? null : Number(String(rv).toString().replace(/\s+/g, ''));
+                    const w = sv === null || sv === undefined || sv === '' ? null : Number(String(sv).toString().replace(/\D+/g, ''));
+                    if (!y || !w) return;
+                    const key = getWeekKey(y, w);
+                    const val = toNumber(r[ingresoCol]);
+                    ingresoMap.set(key, (ingresoMap.get(key) || 0) + val);
+                });
+            } else {
+                // fallback: intentar por fecha (si existe una columna de fecha en ingresoRows)
+                (_originalIngreso||[]).forEach(r => {
+                    const d = tryParseDate(r[fechaKeyIng]);
+                    if (!d) return;
+                    const y = d.getFullYear(); const w = getISOWeek(d); const key = getWeekKey(y,w);
+                    const val = toNumber(r[ingresoCol]);
+                    ingresoMap.set(key, (ingresoMap.get(key) || 0) + val);
+                });
+            }
+
+            // Preferir las semanas presentes en ingresoMap (para alinear las barras)
+            let keys = [];
+            if (ingresoMap.size > 0) keys = Array.from(ingresoMap.keys());
+            else keys = Array.from(new Set([...defectsMap.keys(), ...ingresoMap.keys()]));
+
+            let arr = keys.map(k => {
+                const [y,s] = k.split('|');
+                return { key: k, year: Number(y), week: Number(s), defects: defectsMap.get(k) || 0, ingreso: ingresoMap.get(k) || 0 };
+            });
+            arr.sort((a,b) => (a.year*100 + a.week) - (b.year*100 + b.week));
+
+            if (opts.useLast) {
+                const last = lastNWeeks(10);
+                const order = last.map(x => x.key);
+                // construir arr siguiendo el orden de las últimas semanas
+                arr = order.map(k => {
+                    const found = arr.find(a => a.key === k);
+                    if (found) return found;
+                    const [y,s] = k.split('|');
+                    return { key: k, year: Number(y), week: Number(s), defects: 0, ingreso: 0 };
+                }).filter(Boolean);
+            } else if (opts.desdeY || opts.desdeW || opts.hastaY || opts.hastaW) {
+                const desdeNum = (opts.desdeY && opts.desdeW) ? (Number(opts.desdeY)*100 + Number(opts.desdeW)) : null;
+                const hastaNum = (opts.hastaY && opts.hastaW) ? (Number(opts.hastaY)*100 + Number(opts.hastaW)) : null;
+                arr = arr.filter(a => {
+                    const v = a.year*100 + a.week;
+                    if (desdeNum !== null && v < desdeNum) return false;
+                    if (hastaNum !== null && v > hastaNum) return false;
+                    return true;
+                });
+            }
+
+            const yearsSet = new Set(arr.map(a => a.year));
+            const includeYear = yearsSet.size > 1;
+            const labels = arr.map(a => includeYear ? `${a.year}-SEM${a.week}` : `SEM${a.week}`);
+            const defects = arr.map(a => a.defects);
+            const ingresos = arr.map(a => a.ingreso);
+            const percent = arr.map(a => (a.ingreso && a.ingreso > 0) ? (a.defects / a.ingreso) * 100 : 0);
+            return { labels, defects, ingresos, percent };
+        }
+
+        function drawChart(data){
+            if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+            const ctx = chartsCanvas.getContext('2d');
+            const maxPercent = data.percent && data.percent.length ? Math.max(...data.percent) : 0;
+            const suggestedMax = maxPercent > 0 ? Math.ceil(maxPercent * 1.2 * 100) / 100 : 1;
+
+            // add a small custom plugin to draw the labels exactly as requested
+            const CustomDataLabelPlugin = {
+                id: 'customDataLabels',
+                afterDatasetsDraw: function(chart) {
+                    const { ctx, data } = chart;
+                    // debug: indicate plugin ran
+                    try { console.debug && console.debug('customDataLabels: drawing', chart.id); } catch (e) {}
+                    ctx.save();
+                    // Bars: dataset index 0 -> TOTAL INGRESO A LINEA (blue, Calibri 16 bold) at base of column
+                    const barMeta = chart.getDatasetMeta(0);
+                    if (barMeta && barMeta.data) {
+                        // usar azul oscuro para las etiquetas de las columnas
+                        ctx.fillStyle = '#0b5394';
+                        ctx.font = '700 16px Calibri, Arial, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        barMeta.data.forEach((bar, i) => {
+                            try {
+                                const val = data.datasets[0].data[i];
+                                if (val === null || val === undefined) return;
+                                const txt = Number(val) ? Number(val).toLocaleString() : '0';
+                                // for vertical bar, use bar.base as bottom coordinate (if available)
+                                const baseY = (bar.base !== undefined) ? bar.base : (chart.chartArea ? chart.chartArea.bottom : (bar.y || 0));
+                                const x = bar.x !== undefined ? bar.x : (bar.getCenterPoint ? bar.getCenterPoint().x : 0);
+                                // draw slightly above the base (inside the bar). If you prefer outside, change offset.
+                                ctx.fillText(txt, x, baseY - 4);
+                            } catch (e) { /* ignore per-bar errors */ }
+                        });
+                    }
+
+                    // Line: dataset index 1 -> % DEFECTOS (red, Calibri 16) above each point
+                    // Only draw these line labels for the main chartsCanvas plugin consumer to avoid duplicating
+                    // with chartjs-plugin-datalabels (used by Pareto). If chart is the general charts canvas, draw.
+                    const lineMeta = chart.getDatasetMeta(1);
+                    if (chart && chart.canvas && chart.canvas.id === 'chartsCanvas') {
+                        if (lineMeta && lineMeta.data) {
+                            ctx.fillStyle = 'rgb(220,53,69)';
+                            ctx.font = '400 16px Calibri, Arial, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            lineMeta.data.forEach((pt, i) => {
+                                try {
+                                    const val = data.datasets[1].data[i];
+                                    if (val === null || val === undefined) return;
+                                    const txt = Number(val) ? Number(val).toFixed(2) + '%' : '0.00%';
+                                    const x = pt.x !== undefined ? pt.x : (pt.getCenterPoint ? pt.getCenterPoint().x : 0);
+                                    const y = pt.y !== undefined ? pt.y : (pt.getCenterPoint ? pt.getCenterPoint().y : 0);
+                                    ctx.fillText(txt, x, y - 10);
+                                } catch (e) { /* ignore */ }
+                            });
+                        }
+                    }
+
+                    ctx.restore();
+                }
+            };
+            // register plugin (safe no-op if already registered)
+            try { Chart.register(CustomDataLabelPlugin); } catch (e) { /* ignore */ }
+
+            chartInstance = new Chart(ctx, {
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'TOTAL INGRESO A LINEA',
+                            data: data.ingresos,
+                            backgroundColor: 'rgba(54,162,235,0.6)',
+                            borderColor: 'rgba(54,162,235,0.9)',
+                            borderWidth: 1,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            type: 'line',
+                            label: '% DEFECTOS vs INGRESO',
+                            data: data.percent,
+                            borderColor: 'rgba(220,53,69,0.9)',
+                            backgroundColor: 'rgba(220,53,69,0.2)',
+                            tension: 0.2,
+                            fill: false,
+                            pointRadius: 4,
+                            yAxisID: 'y'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        // Disable chartjs-plugin-datalabels for this chart to avoid duplicate labels.
+                        datalabels: { display: false, clamp: true, clip: false },
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const ds = ctx.dataset;
+                                    const val = ctx.raw;
+                                    if (ds.type === 'bar') {
+                                        return ds.label + ': ' + (Number(val) ? Number(val).toLocaleString() : '0');
+                                    } else {
+                                        return ds.label + ': ' + (Number(val) ? Number(val).toFixed(2) + '%' : '0.00%');
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            ticks: { callback: function(v){ return Number(v).toFixed(2) + '%'; } },
+                            title: { display: true, text: '% DEFECTOS vs INGRESO' },
+                            suggestedMax: suggestedMax,
+                            beginAtZero: true
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'TOTAL INGRESO A LINEA' },
+                            ticks: { callback: function(v){ return Math.round(v).toLocaleString(); } },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            // expose for debugging in DevTools
+            try { window._lastChart = chartInstance; } catch(e) {}
+        }
+
+        function renderChartFromControls(){
+            const opts = parseControlRange();
+            const data = aggregateWeeklyData(opts);
+            // if no labels, show empty message in canvas by drawing blank chart
+            drawChart(data);
+        }
+
+        // Re-render chart automatically when any selector changes
+        [chartDesdeYear, chartDesdeWeek, chartHastaYear, chartHastaWeek].forEach(el => {
+            if (el) el.addEventListener('change', () => { renderChartFromControls(); });
+        });
+        // Setup switches behavior for charts (mutually exclusive, redraw)
+        if (chartSwitchSeg && chartSwitchTer) {
+            chartSwitchSeg.addEventListener('change', () => {
+                if (chartSwitchSeg.checked) chartSwitchTer.checked = false;
+                renderChartFromControls();
+            });
+            chartSwitchTer.addEventListener('change', () => {
+                if (chartSwitchTer.checked) chartSwitchSeg.checked = false;
+                renderChartFromControls();
+            });
+        }
+
+    })();
+
+    /*************************************************************
+     * INICIO
+     *************************************************************/
+    (function init() {
+        setStatus("Cargando datos desde Google Sheets…", "loading");
+
+        Promise.all([
+            loadSheetJSONP(SHEET_ID, DEFECTOS_SHEET),
+            loadSheetJSONP(SHEET_ID, INGRESO_SHEET)
+        ])
+        .then(([defectosRows, ingresoRows]) => {
+            setStatus("Datos cargados correctamente", "ok");
+            // Guardar originales para filtrado
+            _originalDefectos = defectosRows || [];
+            _originalIngreso = ingresoRows || [];
+            // Poblar selects basados en FECHA DE TIMBRADO
+            populateFilters(_originalDefectos);
+            // Construir inicialmente con todos los datos
+            applyFiltersAndBuild();
+        })
+        .catch(err => {
+            console.error(err);
+            setStatus("Error al cargar datos", "error");
+            showError(err.message || "Ocurrió un error al cargar los datos.");
+        });
+    })();
+</script>
+</body>
+</html>

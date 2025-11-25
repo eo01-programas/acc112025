@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumen de Auditorías - Embalaje</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background-color: #ffffff;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .controls {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .controls-left {
+            display: none; /* Ocultar controles de archivo ya que se carga automáticamente */
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        #loadingStatus {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .loading {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        #error-banner {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: #fee2e2;
+            color: #991b1b;
+            border-bottom: 1px solid #fecaca;
+            padding: 10px 16px;
+            font-size: 14px;
+            display: none;
+            z-index: 3000;
+            text-align: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #555;
+        }
+
+        input[type="file"],
+        select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: #fff;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        input[type="file"]:hover,
+        select:hover {
+            border-color: #4A90E2;
+        }
+
+        select {
+            min-width: 200px;
+        }
+
+        .btn-download {
+            padding: 6px 12px;
+            background-color: #FF9800;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-download:hover {
+            background-color: #F57C00;
+        }
+
+        .btn-download:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-charts {
+            padding: 6px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-left: 10px;
+        }
+
+        .btn-charts:hover {
+            background-color: #45a049;
+        }
+
+        .btn-charts:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 4000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 2% auto;
+            padding: 20px;
+            border: none;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1000px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+
+        .modal-filters {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-filters label {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            margin: 0;
+        }
+
+        .modal-filters select {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 14px;
+            background-color: #fff;
+            cursor: pointer;
+            transition: border-color 0.3s;
+            min-width: 140px;
+            height: 32px;
+            line-height: 18px;
+        }
+
+        .modal-filters select:hover {
+            border-color: #4A90E2;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 450px;
+            width: 100%;
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        #auditChart {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .filter-frame {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px 16px;
+            background-color: #f9f9f9;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .factory-filter-frame {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px 16px;
+            background-color: #f9f9f9;
+            margin-bottom: 20px;
+            margin-left: 20px;
+            display: inline-block;
+        }
+
+        .factory-filter-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .factory-switches {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .buttons-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .filters-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0px;
+        }
+
+        .date-filter-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .filter-group select,
+        .filter-group input[type="date"] {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            background-color: #fff;
+            cursor: pointer;
+            transition: border-color 0.3s;
+            min-width: 110px;
+            height: 30px;
+        }
+
+        .filter-group select:hover,
+        .filter-group input[type="date"]:hover {
+            border-color: #4A90E2;
+        }
+
+        .btn-clear {
+            padding: 6px 10px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            height: 30px;
+            align-self: flex-end;
+        }
+
+        .btn-clear:hover {
+            background-color: #5a6268;
+        }
+
+        .table-section {
+            margin-bottom: 50px;
+        }
+
+        .table-section h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4A90E2;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            font-size: 13px;
+            table-layout: fixed;
+        }
+
+        thead {
+            background-color: #E3F2FD;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 700;
+            color: #1a1a1a;
+            border: 1px solid #B3D9FF;
+            white-space: normal;
+            word-wrap: break-word;
+            background-color: #E3F2FD;
+            box-sizing: border-box;
+        }
+
+        /* Fixed column widths that don't change during filtering */
+        th:nth-child(1),
+        td:nth-child(1) { /* Factory Code */
+            width: 40px !important;
+            min-width: 40px !important;
+            max-width: 40px !important;
+        }
+
+        th:nth-child(2),
+        td:nth-child(2) { /* Customer */
+            width: 60px !important;
+            min-width: 60px !important;
+            max-width: 60px !important;
+        }
+
+        th:nth-child(3),
+        td:nth-child(3) { /* Audit Date */
+            width: 30px !important;
+            min-width: 30px !important;
+            max-width: 30px !important;
+        }
+
+        th:nth-child(4),
+        td:nth-child(4) { /* OP */
+            width: 80px !important;
+            min-width: 80px !important;
+            max-width: 80px !important;
+        }
+
+        th:nth-child(5),
+        td:nth-child(5) { /* Color/ID */
+            width: 100px !important;
+            min-width: 100px !important;
+            max-width: 100px !important;
+        }
+
+        th:nth-child(6),
+        td:nth-child(6) { /* Lot Size */
+            width: 20px !important;
+            min-width: 20px !important;
+            max-width: 20px !important;
+        }
+
+        th:nth-child(7),
+        td:nth-child(7) { /* Result */
+            width: 80px !important;
+            min-width: 80px !important;
+            max-width: 80px !important;
+        }
+
+        td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Specific alignment for certain columns */
+        td:nth-child(2) { /* Customer */
+            text-align: left;
+            padding-left: 15px;
+        }
+
+        td:nth-child(4) { /* OP */
+            text-align: left;
+            padding-left: 15px;
+        }
+
+        td:nth-child(5) { /* Color/ID */
+            text-align: left;
+            padding-left: 15px;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tbody tr:hover {
+            background-color: #f0f7ff;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 16px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Status colors */
+        .status-pass {
+            background-color: #4CAF50 !important;
+            color: white !important;
+            font-weight: bold;
+        }
+
+        .status-fail {
+            background-color: #F44336 !important;
+            color: white !important;
+            font-weight: bold;
+        }
+
+        .status-partial {
+            background-color: #FF9800 !important;
+            color: white !important;
+            font-weight: bold;
+        }
+
+        .status-rejected {
+            background-color: #ffebee !important;
+            color: #c62828 !important;
+            font-weight: bold;
+        }
+
+        .row-rejected {
+            background-color: #ffebee !important;
+            color: #c62828 !important;
+        }
+
+        .row-rejected td {
+            background-color: #ffebee !important;
+            color: #c62828 !important;
+        }
+
+        /* Iconos de estado */
+        .status-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 16px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-approved {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .status-rejected {
+            background-color: #F44336;
+            color: white;
+        }
+
+        /* Toggle Switch Styles */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .switch-label {
+            font-family: Calibri, sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+            color: #333;
+            min-width: 50px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(145deg, #e8e8e8, #f0f0f0);
+            border: 1px solid #ddd;
+            border-radius: 22px;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background: linear-gradient(145deg, #ffffff, #f8f8f8);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .toggle-slider {
+            background: linear-gradient(145deg, #4CAF50, #45a049);
+            border-color: #45a049;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(22px);
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+        }
+
+        .toggle-slider:hover {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.15), 0 0 8px rgba(76, 175, 80, 0.3);
+        }
+
+        input:checked + .toggle-slider:hover {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.15), 0 0 12px rgba(76, 175, 80, 0.5);
+        }
+
+        .status-approved::before {
+            content: '✓';
+        }
+
+        .status-rejected::before {
+            content: '●';
+            font-size: 3em; /* 300% del tamaño original */
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .controls-left {
+                flex-direction: column;
+            }
+            
+            select {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="error-banner"></div>
+    
+    <div class="container">
+        <h1>RESULTADO DE AUDITORIAS DE PRODUCTO TERMINADO</h1>
+        <div class="controls">
+            <div class="controls-left">
+                <div class="control-group">
+                    <label for="fileInput">Cargar archivo Excel:</label>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+                </div>
+                
+                <div class="control-group">
+                    <label for="sheetSelect">Seleccionar hoja:</label>
+                    <select id="sheetSelect" disabled>
+                        <option value="">Seleccionar hoja...</option>
+                    </select>
+                </div>
+                
+                <div id="loadingStatus" class="loading">Cargando datos...</div>
+            </div>
+            
+            <div class="buttons-container">
+                <div class="filters-row">
+                    <div class="filter-frame">
+                        <div class="date-filter-container">
+                            <div class="filter-group">
+                                <label for="dateFromFilter">Desde:</label>
+                                <input type="date" id="dateFromFilter" />
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label for="dateToFilter">Hasta:</label>
+                                <input type="date" id="dateToFilter" />
+                            </div>
+                            
+                            <button id="btnClearFilters" class="btn-clear" onclick="clearDateFilters()">Limpiar</button>
+                            
+                            <div class="switch-container">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="todaySwitch">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <label class="switch-label">Hoy</label>
+                                
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="yesterdaySwitch">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <label class="switch-label">Ayer</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="factory-filter-frame">
+                        <div class="factory-filter-title">Factory Filters:</div>
+                        <div class="factory-switches">
+                            <div class="switch-container">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="cofacoSwitch">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <label class="switch-label">Cofaco</label>
+                            </div>
+                            
+                            <div class="switch-container">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="cititex1Switch">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <label class="switch-label">Cititex 1</label>
+                            </div>
+                            
+                            <div class="switch-container">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="cititex2Switch">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <label class="switch-label">Cititex 2</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center;">
+                    <button id="btnDownload" class="btn-download" disabled>Descargar Excel</button>
+                    <button id="btnCharts" class="btn-charts" disabled>Gráficos</button>
+                    <a href="indice.html" class="back-btn" style="font-family:Calibri, Arial, sans-serif; font-size:10px; margin-left:8px; padding:6px 10px; background:#001a54; color:#fff; border-radius:6px; text-decoration:none; font-weight:700; display:inline-block;">← Volver</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-wrapper">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>Factory Code</th>
+                            <th>Customer</th>
+                            <th>Audit Date</th>
+                            <th>OP</th>
+                            <th>Color/ID</th>
+                            <th>Lot Size</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="7" class="no-data">Cargando datos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Gráficos -->
+    <div id="chartsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">#Auditorias/Lot Size</h2>
+                <div class="modal-filters">
+                    <label for="factoryFilter">Factory Code:</label>
+                    <select id="factoryFilter">
+                        <option value="all">Todos los Factory Codes</option>
+                    </select>
+                </div>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="auditChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Google Sheets configuration
+        const SHEET_ID = '1nEvl2vlYNC2SVOYTRXuij-0duWZ_Aw3NqyP-8Zi5raA';
+        const SHEET_NAME = 'GRID'; // Change this to match your sheet tab name
+
+        let workbook = null;
+        let currentData = [];
+        let gridData = [];
+        let filteredData = []; // Datos actualmente filtrados y mostrados en la tabla
+
+        // DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const sheetSelect = document.getElementById('sheetSelect');
+        const dataTable = document.getElementById('dataTable');
+        const btnDownload = document.getElementById('btnDownload');
+        const loadingStatus = document.getElementById('loadingStatus');
+        const errorBanner = document.getElementById('error-banner');
+        const dateFromFilter = document.getElementById('dateFromFilter');
+        const dateToFilter = document.getElementById('dateToFilter');
+        const todaySwitch = document.getElementById('todaySwitch');
+        const yesterdaySwitch = document.getElementById('yesterdaySwitch');
+        const cofacoSwitch = document.getElementById('cofacoSwitch');
+        const cititex1Switch = document.getElementById('cititex1Switch');
+        const cititex2Switch = document.getElementById('cititex2Switch');
+        const btnCharts = document.getElementById('btnCharts');
+        const chartsModal = document.getElementById('chartsModal');
+        const closeModal = document.getElementById('closeModal');
+        const factoryFilter = document.getElementById('factoryFilter');
+
+        // Event listeners
+        fileInput.addEventListener('change', handleFileSelect);
+        sheetSelect.addEventListener('change', handleSheetSelect);
+        btnDownload.addEventListener('click', downloadExcel);
+        dateFromFilter.addEventListener('change', applyFilters);
+        dateToFilter.addEventListener('change', applyFilters);
+        todaySwitch.addEventListener('change', handleTodaySwitch);
+        yesterdaySwitch.addEventListener('change', handleYesterdaySwitch);
+        btnCharts.addEventListener('click', openChartsModal);
+        closeModal.addEventListener('click', closeChartsModal);
+        
+        // Cerrar modal al hacer clic fuera de él
+        window.addEventListener('click', function(event) {
+            if (event.target === chartsModal) {
+                closeChartsModal();
+            }
+        });
+        
+        // Event listener para el filtro de factory en el modal
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                const factoryFilterElement = document.getElementById('factoryFilter');
+                if (factoryFilterElement) {
+                    factoryFilterElement.addEventListener('change', function() {
+                        updateChartWithFactoryFilter();
+                    });
+                }
+            }, 100);
+        });
+        
+        // Verificar que los factory switches existen y agregar listeners
+        if (cofacoSwitch) {
+            cofacoSwitch.addEventListener('change', function() {
+                console.log('🏭 Cofaco switch changed:', cofacoSwitch.checked);
+                applyFilters();
+            });
+            console.log('✅ Cofaco switch encontrado y listener agregado');
+        } else {
+            console.error('❌ cofacoSwitch no encontrado');
+        }
+        
+        if (cititex1Switch) {
+            cititex1Switch.addEventListener('change', function() {
+                console.log('🏭 Cititex1 switch changed:', cititex1Switch.checked);
+                applyFilters();
+            });
+            console.log('✅ Cititex1 switch encontrado y listener agregado');
+        } else {
+            console.error('❌ cititex1Switch no encontrado');
+        }
+        
+        if (cititex2Switch) {
+            cititex2Switch.addEventListener('change', function() {
+                console.log('🏭 Cititex2 switch changed:', cititex2Switch.checked);
+                applyFilters();
+            });
+            console.log('✅ Cititex2 switch encontrado y listener agregado');
+        } else {
+            console.error('❌ cititex2Switch no encontrado');
+        }
+
+        // Google Sheets helper functions
+        function gvizToObjects(resp) {
+            if (!resp || !resp.table) return [];
+            const cols = (resp.table.cols || []).map(c => String(c.label || c.id || '').trim());
+            return (resp.table.rows || []).map(r => {
+                const o = {};
+                cols.forEach((h, i) => {
+                    const cell = r.c && r.c[i] ? r.c[i] : null;
+                    o[h] = cell && (cell.v !== null && cell.v !== undefined) ? cell.v : '';
+                });
+                return o;
+            });
+        }
+
+        function loadSheetJSONP(sheetId, sheetName) {
+            const TIMEOUT_MS = 15000;
+            return new Promise((resolve, reject) => {
+                const cbName = 'GVIZ_CB_' + Math.random().toString(36).slice(2);
+                let script = document.createElement('script');
+                let timer = null;
+
+                function cleanup() {
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
+                    }
+                    delete window[cbName];
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                        script = null;
+                    }
+                }
+
+                timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error(`Tiempo de espera agotado al cargar "${sheetName}".`));
+                }, TIMEOUT_MS);
+
+                window[cbName] = function (resp) {
+                    cleanup();
+                    try {
+                        resolve(gvizToObjects(resp));
+                    } catch (e) {
+                        reject(new Error('Error al procesar los datos: ' + e.message));
+                    }
+                };
+
+                script.onerror = (err) => {
+                    cleanup();
+                    reject(new Error(`No se pudo cargar la hoja "${sheetName}".`));
+                };
+
+                const base = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`;
+                const url = `${base}?sheet=${encodeURIComponent(sheetName)}&headers=1&tq=${encodeURIComponent('select *')}&tqx=out:json;responseHandler:${cbName}&nocache=${Date.now()}`;
+
+                script.src = url;
+                document.head.appendChild(script);
+            });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            updateLoadingStatus('Cargando archivo...', 'loading');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    workbook = XLSX.read(e.target.result, { type: 'binary' });
+                    populateSheetSelect();
+                    updateLoadingStatus('Archivo cargado. Seleccione una hoja.', 'success');
+                } catch (error) {
+                    showError('Error al leer el archivo: ' + error.message);
+                    updateLoadingStatus('Error al cargar archivo', 'error');
+                }
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        function populateSheetSelect() {
+            sheetSelect.innerHTML = '<option value="">Seleccionar hoja...</option>';
+            
+            workbook.SheetNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                sheetSelect.appendChild(option);
+            });
+            
+            sheetSelect.disabled = false;
+        }
+
+        function handleSheetSelect() {
+            const sheetName = sheetSelect.value;
+            if (!sheetName) return;
+
+            updateLoadingStatus('Procesando datos...', 'loading');
+            
+            try {
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                
+                processSheetData(jsonData);
+                renderTable();
+                updateLoadingStatus('Datos cargados correctamente', 'success');
+                btnDownload.disabled = false;
+                btnCharts.disabled = false;
+            } catch (error) {
+                showError('Error al procesar la hoja: ' + error.message);
+                updateLoadingStatus('Error al procesar datos', 'error');
+            }
+        }
+
+        function processSheetData(jsonData) {
+            gridData = jsonData;
+            
+            // Filtrar y mapear datos para la tabla de embalaje
+            currentData = jsonData.map(row => {
+                // Función helper para obtener valor de texto
+                const getStr = (key) => {
+                    const val = row[key];
+                    return val ? val.toString().trim() : '';
+                };
+
+                // Función para formatear fecha
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '';
+                    
+                    console.log('=== PROCESANDO FECHA ===');
+                    console.log('Fecha original recibida:', dateStr, typeof dateStr);
+                    
+                    try {
+                        let date;
+                        
+                        // Si es un número de serie de Excel, convertirlo
+                        if (typeof dateStr === 'number') {
+                            console.log('Procesando como número de Excel');
+                            // Convertir número de Excel a fecha
+                            date = new Date((dateStr - 25569) * 86400 * 1000);
+                        } else if (typeof dateStr === 'string') {
+                            // FORMATO AMERICANO: MM/DD/YYYY (MES/DÍA/AÑO)
+                            const mmddyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                            if (mmddyyyyMatch) {
+                                const [, month, day, year] = mmddyyyyMatch;
+                                console.log(`Detectado formato MM/DD/YYYY: mes=${month}, día=${day}, año=${year}`);
+                                
+                                // IMPORTANTE: En formato americano, el primer número es el MES
+                                date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                console.log('Fecha creada:', date);
+                                console.log('Mes resultante:', date.getMonth() + 1, 'Día:', date.getDate());
+                            }
+                            // Manejar formato específico Date(yyyy,m,d)
+                            else if (dateStr.includes('Date(')) {
+                                console.log('Procesando formato Date()');
+                                const dateMatch = dateStr.match(/Date\((\d{4}),(\d{1,2}),(\d{1,2})\)/);
+                                if (dateMatch) {
+                                    const year = parseInt(dateMatch[1]);
+                                    const monthFromDate = parseInt(dateMatch[2]); // Este es el mes tal como viene
+                                    const day = parseInt(dateMatch[3]);
+                                    
+                                    console.log(`Formato Date(): año=${year}, mes=${monthFromDate}, día=${day}`);
+                                    
+                                    // IMPORTANTE: En Date(2025,10,8), el 10 ya es base-0 de JavaScript
+                                    // Significa noviembre (mes 10 = noviembre), no octubre
+                                    // Así que NO restamos 1 aquí, el mes ya está en formato JavaScript
+                                    date = new Date(year, monthFromDate, day);
+                                    
+                                    console.log('Fecha creada desde Date():', date);
+                                    console.log('Mes real resultante (1-based):', date.getMonth() + 1, 'Día:', date.getDate());
+                                }
+                            }
+                            // Si es una cadena, intentar parsearlo
+                            else {
+                                console.log('Procesando como cadena genérica');
+                                date = new Date(dateStr);
+                            }
+                        } else {
+                            console.log('Formato no reconocido, devolviendo string original');
+                            return dateStr.toString();
+                        }
+                        
+                        // Verificar si la fecha es válida
+                        if (isNaN(date.getTime())) {
+                            console.log('Fecha inválida, devolviendo string original');
+                            return dateStr.toString();
+                        }
+                        
+                        // Formatear como dd/mmm
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const monthAbbr = getMonthAbbr(date.getMonth() + 1);
+                        const formatted = `${day}/${monthAbbr}`;
+                        
+                        console.log(`RESULTADO FINAL: ${dateStr} → ${formatted}`);
+                        console.log('=== FIN PROCESAMIENTO ===');
+                        
+                        return formatted;
+                        
+                    } catch (e) {
+                        console.error('Error formateando fecha:', dateStr, e);
+                        return dateStr.toString();
+                    }
+                };
+
+                return {
+                    'Factory Code': getStr('Factory Code'),
+                    'Customer': getStr('Customer'),
+                    'Audit Date': formatDate(row['Audit Date']),
+                    'OP': getStr('OP'),
+                    'Color/ID': getStr('Color/ID') || getStr('Color') || getStr('ID'),
+                    'Lot Size': getStr('Lot Size'),
+                    'Result': getStr('Result')
+                };
+            }).filter(row => 
+                row['Factory Code'] || 
+                row['Customer'] || 
+                row['OP'] || 
+                row['Result']
+            );
+        }
+
+        function getMonthAbbr(month) {
+            const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+                           'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+            return months[month - 1] || month;
+        }
+
+        function formatNumber(value) {
+            // Función para formatear números con separador de miles (coma)
+            if (!value || value === '') return '';
+            
+            // Convertir a número y verificar si es válido
+            const num = parseInt(value);
+            if (isNaN(num)) return value;
+            
+            // Formatear manualmente con coma como separador de miles
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function populateDateFilters() {
+            // Establecer valores por defecto
+            setDefaultDateFilters();
+            
+            // Mostrar información detallada sobre los datos para debugging
+            console.log('=== INFORMACIÓN DE DATOS ===');
+            console.log('Total de registros cargados:', currentData.length);
+            
+            // Mostrar las primeras 3 filas completas
+            console.log('Primeras 3 filas de datos:', currentData.slice(0, 3));
+            
+            // Mostrar todas las fechas disponibles
+            const availableDates = currentData
+                .map(row => row['Audit Date'])
+                .filter(date => date && date !== '')
+                .filter((date, index, self) => self.indexOf(date) === index) // eliminar duplicados
+                .sort();
+            
+            console.log('Fechas únicas disponibles:', availableDates);
+            console.log('Cantidad de fechas únicas:', availableDates.length);
+            
+            // Verificar si hay filas con fechas vacías
+            const emptyDates = currentData.filter(row => !row['Audit Date'] || row['Audit Date'] === '').length;
+            if (emptyDates > 0) {
+                console.log(`⚠️ ${emptyDates} filas tienen fechas vacías`);
+            }
+            
+            console.log('=== FIN INFORMACIÓN ===');
+        }
+
+        function handleFactoryFilterToggle() {
+            console.log('🏭 Factory filter toggle activado');
+            // Re-aplicar filtros cuando cambie un factory switch
+            applyAllFilters();
+        }
+
+        function applyFactoryFilters(data) {
+            const activeFactories = [];
+            if (cofacoSwitch && cofacoSwitch.checked) activeFactories.push('COFACO');
+            if (cititex1Switch && cititex1Switch.checked) activeFactories.push('CITITEX 1');
+            if (cititex2Switch && cititex2Switch.checked) activeFactories.push('CITITEX 2');
+
+            console.log('🏭 Active factories:', activeFactories);
+
+            // Si no hay ningún filtro activo, retornar todos los datos
+            if (activeFactories.length === 0) {
+                console.log('🏭 No hay filtros activos - retornando todos los datos');
+                return data;
+            }
+
+            // Filtrar datos
+            const filteredData = data.filter(row => {
+                const factoryCode = (row['Factory Code'] || '').toUpperCase().trim();
+                console.log('🏭 Evaluando:', factoryCode, 'contra:', activeFactories);
+                return activeFactories.includes(factoryCode);
+            });
+
+            console.log('🏭 Datos filtrados:', filteredData.length, 'de', data.length);
+            return filteredData;
+        }
+
+        function setDefaultDateFilters() {
+            const today = new Date();
+            
+            // Calcular el lunes de la semana actual
+            const dayOfWeek = today.getDay(); // 0 = domingo, 1 = lunes, etc.
+            const mondayOffset = dayOfWeek === 0 ? -6 : -(dayOfWeek - 1); // Si es domingo, retroceder 6 días
+            const monday = new Date(today);
+            monday.setDate(today.getDate() + mondayOffset);
+            
+            const mondayFormatted = formatDateForInput(monday);
+            const todayFormatted = formatDateForInput(today);
+            
+            // Establecer valores en los inputs
+            dateFromFilter.value = mondayFormatted;
+            dateToFilter.value = todayFormatted;
+            
+            // Limpiar switches
+            todaySwitch.checked = false;
+            yesterdaySwitch.checked = false;
+            
+            // Limpiar switches
+            todaySwitch.checked = false;
+            yesterdaySwitch.checked = false;
+            
+            console.log('=== FILTROS POR DEFECTO ===');
+            console.log('Lunes de esta semana (Desde):', mondayFormatted);
+            console.log('Fecha actual (Hasta):', todayFormatted);
+            console.log('=== FIN FILTROS DEFECTO ===');
+            
+            // Aplicar el filtro automáticamente
+            applyFilters();
+        }
+
+        function clearDateFilters() {
+            console.log('Limpiando filtros...');
+            dateFromFilter.value = '';
+            dateToFilter.value = '';
+            todaySwitch.checked = false;
+            yesterdaySwitch.checked = false;
+            
+            // Limpiar también los factory filters
+            cofacoSwitch.checked = false;
+            cititex1Switch.checked = false;
+            cititex2Switch.checked = false;
+            
+            renderTable(); // Mostrar todos los datos sin filtros
+        }
+
+        function handleTodaySwitch() {
+            if (todaySwitch.checked) {
+                // Desactivar switch de AYER
+                yesterdaySwitch.checked = false;
+                
+                // Establecer fecha de hoy
+                const today = new Date();
+                const todayFormatted = formatDateForInput(today);
+                
+                dateFromFilter.value = todayFormatted;
+                dateToFilter.value = todayFormatted;
+                
+                console.log('Filtro HOY activado:', todayFormatted);
+                applyFilters();
+            } else {
+                // Restaurar filtros por defecto
+                setDefaultDateFilters();
+            }
+        }
+
+        function handleYesterdaySwitch() {
+            if (yesterdaySwitch.checked) {
+                // Desactivar switch de HOY
+                todaySwitch.checked = false;
+                
+                // Establecer fecha de ayer
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayFormatted = formatDateForInput(yesterday);
+                
+                dateFromFilter.value = yesterdayFormatted;
+                dateToFilter.value = yesterdayFormatted;
+                
+                console.log('Filtro AYER activado:', yesterdayFormatted);
+                applyFilters();
+            } else {
+                // Restaurar filtros por defecto
+                setDefaultDateFilters();
+            }
+        }
+
+        function formatDateForInput(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Función para mostrar todos los datos (para debugging)
+        function showAllData() {
+            console.log('=== MOSTRANDO TODOS LOS DATOS ===');
+            console.log('currentData completo:', currentData);
+            renderTable();
+        }
+
+        function applyFilters() {
+            console.log('📋 applyFilters() ejecutándose...');
+            const fromDate = dateFromFilter.value;
+            const toDate = dateToFilter.value;
+
+            console.log('=== INICIANDO FILTRADO ===');
+            console.log('Filtros aplicados:', { fromDate, toDate });
+            console.log('Total de datos originales:', currentData.length);
+
+            // Usar la variable global filteredData
+            filteredData = [...currentData];
+
+            // Primero aplicar filtros de factory
+            filteredData = applyFactoryFilters(filteredData);
+
+            // Luego aplicar filtros de fecha
+            if (fromDate || toDate) {
+                filteredData = filteredData.filter(row => {
+                    const auditDateStr = row['Audit Date'];
+                    
+                    if (!auditDateStr || auditDateStr === '') {
+                        return false;
+                    }
+
+                    // Convertir fecha dd/mmm a Date object
+                    const auditDate = parseAuditDate(auditDateStr);
+                    if (!auditDate) {
+                        return false;
+                    }
+
+                    // Convertir filtros a Date objects
+                    const fromDateObj = fromDate ? new Date(fromDate) : null;
+                    const toDateObj = toDate ? new Date(toDate) : null;
+                    
+                    if (toDateObj) {
+                        toDateObj.setUTCHours(23, 59, 59, 999);
+                    }
+
+                    let passesFilter = true;
+                    
+                    if (fromDateObj && auditDate < fromDateObj) {
+                        passesFilter = false;
+                    }
+                    
+                    if (toDateObj && auditDate > toDateObj) {
+                        passesFilter = false;
+                    }
+
+                    return passesFilter;
+                });
+            }
+
+            console.log('Datos después del filtrado:', filteredData.length);
+            renderFilteredTable(filteredData);
+        }
+
+        function parseAuditDate(dateStr) {
+            try {
+                const parts = dateStr.trim().split('/');
+                if (parts.length !== 2) {
+                    return null;
+                }
+                
+                const [day, monthAbbr] = parts;
+                const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+                                  'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                
+                const monthIndex = monthNames.indexOf(monthAbbr.toLowerCase());
+                if (monthIndex === -1) {
+                    return null;
+                }
+                
+                const year = new Date().getFullYear();
+                const date = new Date(year, monthIndex, parseInt(day));
+                
+                if (isNaN(date.getTime())) {
+                    return null;
+                }
+                
+                return date;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function renderFilteredTable(data) {
+            const tbody = dataTable.querySelector('tbody');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No hay datos que coincidan con el filtro</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                // Verificar si el resultado es "Rejected" para aplicar estilo a toda la fila
+                const resultValue = row['Result'].toLowerCase();
+                if (resultValue.includes('rejected') || resultValue.includes('rechazado')) {
+                    tr.classList.add('row-rejected');
+                }
+                
+                // Factory Code
+                const tdFactoryCode = document.createElement('td');
+                tdFactoryCode.textContent = (row['Factory Code'] || '').toString().toUpperCase();
+                tr.appendChild(tdFactoryCode);
+                
+                // Customer
+                const tdCustomer = document.createElement('td');
+                tdCustomer.textContent = (row['Customer'] || '').toString().toUpperCase();
+                tr.appendChild(tdCustomer);
+                
+                // Audit Date
+                const tdAuditDate = document.createElement('td');
+                tdAuditDate.textContent = row['Audit Date'] || '';
+                tr.appendChild(tdAuditDate);
+                
+                // OP
+                const tdOP = document.createElement('td');
+                const opValue = row['OP'] || '';
+                
+                // Crear icono según el resultado
+                let iconHtml = '';
+                if (resultValue.includes('approved') || resultValue.includes('aprobado')) {
+                    iconHtml = '<span class="status-icon status-approved"></span>';
+                } else if (resultValue.includes('rejected') || resultValue.includes('rechazado')) {
+                    iconHtml = '<span class="status-icon status-rejected"></span>';
+                }
+                
+                tdOP.innerHTML = iconHtml + opValue;
+                tr.appendChild(tdOP);
+                
+                // Color/ID
+                const tdColorID = document.createElement('td');
+                tdColorID.textContent = (row['Color/ID'] || '').toString().toUpperCase();
+                tr.appendChild(tdColorID);
+                
+                // Lot Size
+                const tdLotSize = document.createElement('td');
+                tdLotSize.textContent = formatNumber(row['Lot Size']);
+                tr.appendChild(tdLotSize);
+                
+                // Result
+                const tdResult = document.createElement('td');
+                tdResult.textContent = row['Result'];
+                
+                // Aplicar estilos según el resultado
+                const result = row['Result'].toLowerCase();
+                if (result.includes('pass') || result.includes('aprobado') || result.includes('ok')) {
+                    tdResult.classList.add('status-pass');
+                } else if (result.includes('fail') || result.includes('fallo') || result.includes('rechazado')) {
+                    tdResult.classList.add('status-fail');
+                } else if (result.includes('partial') || result.includes('parcial')) {
+                    tdResult.classList.add('status-partial');
+                }
+                
+                tr.appendChild(tdResult);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderTable() {
+            console.log('=== RENDERIZANDO TABLA ===');
+            console.log('Datos a renderizar:', currentData);
+            console.log('Cantidad de filas a mostrar:', currentData.length);
+            
+            // Inicializar filteredData con todos los datos al cargar por primera vez
+            filteredData = [...currentData];
+            
+            const tbody = dataTable.querySelector('tbody');
+            
+            if (currentData.length === 0) {
+                console.log('No hay datos para mostrar');
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No hay datos para mostrar</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            
+            currentData.forEach((row, index) => {
+                console.log(`Procesando fila ${index + 1}:`, row);
+                
+                const tr = document.createElement('tr');
+                
+                // Verificar si el resultado es "Rejected" para aplicar estilo a toda la fila
+                const resultValue = row['Result'] ? row['Result'].toLowerCase() : '';
+                if (resultValue.includes('rejected') || resultValue.includes('rechazado')) {
+                    tr.classList.add('row-rejected');
+                }
+                
+                // Factory Code
+                const tdFactoryCode = document.createElement('td');
+                tdFactoryCode.textContent = (row['Factory Code'] || '').toString().toUpperCase();
+                tr.appendChild(tdFactoryCode);
+                
+                // Customer
+                const tdCustomer = document.createElement('td');
+                tdCustomer.textContent = (row['Customer'] || '').toString().toUpperCase();
+                tr.appendChild(tdCustomer);
+                
+                // Audit Date
+                const tdAuditDate = document.createElement('td');
+                tdAuditDate.textContent = row['Audit Date'] || '';
+                tr.appendChild(tdAuditDate);
+                
+                // OP
+                const tdOP = document.createElement('td');
+                const opValue = row['OP'] || '';
+                
+                // Crear icono según el resultado
+                let iconHtml = '';
+                if (resultValue.includes('approved') || resultValue.includes('aprobado')) {
+                    iconHtml = '<span class="status-icon status-approved"></span>';
+                } else if (resultValue.includes('rejected') || resultValue.includes('rechazado')) {
+                    iconHtml = '<span class="status-icon status-rejected"></span>';
+                }
+                
+                tdOP.innerHTML = iconHtml + opValue;
+                tr.appendChild(tdOP);
+                
+                // Color/ID
+                const tdColorID = document.createElement('td');
+                tdColorID.textContent = (row['Color/ID'] || '').toString().toUpperCase();
+                tr.appendChild(tdColorID);
+                
+                // Lot Size
+                const tdLotSize = document.createElement('td');
+                tdLotSize.textContent = formatNumber(row['Lot Size']);
+                tr.appendChild(tdLotSize);
+                
+                // Result
+                const tdResult = document.createElement('td');
+                tdResult.textContent = row['Result'] || '';
+                
+                // Aplicar estilos según el resultado
+                const result = (row['Result'] || '').toLowerCase();
+                if (result.includes('pass') || result.includes('aprobado') || result.includes('ok')) {
+                    tdResult.classList.add('status-pass');
+                } else if (result.includes('fail') || result.includes('fallo') || result.includes('rechazado')) {
+                    tdResult.classList.add('status-fail');
+                } else if (result.includes('partial') || result.includes('parcial')) {
+                    tdResult.classList.add('status-partial');
+                }
+                
+                tr.appendChild(tdResult);
+                tbody.appendChild(tr);
+            });
+            
+            console.log('=== TABLA RENDERIZADA ===');
+        }
+
+        function downloadExcel() {
+            // Usar filteredData si está disponible, sino currentData
+            const dataToDownload = filteredData.length > 0 ? filteredData : currentData;
+            
+            if (dataToDownload.length === 0) {
+                showError('No hay datos para descargar');
+                return;
+            }
+
+            try {
+                const ws = XLSX.utils.json_to_sheet(dataToDownload);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Resumen Auditorias');
+                
+                // Aplicar estilos al encabezado
+                const headerRange = XLSX.utils.decode_range(ws['!ref']);
+                for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+                    if (!ws[cellAddress]) continue;
+                    
+                    ws[cellAddress].s = {
+                        fill: { fgColor: { rgb: "E3F2FD" } },
+                        font: { bold: true, color: { rgb: "1a1a1a" } },
+                        border: {
+                            top: { style: "thin", color: { rgb: "B3D9FF" } },
+                            bottom: { style: "thin", color: { rgb: "B3D9FF" } },
+                            left: { style: "thin", color: { rgb: "B3D9FF" } },
+                            right: { style: "thin", color: { rgb: "B3D9FF" } }
+                        }
+                    };
+                }
+                
+                const fileName = `resumen_auditorias_embalaje_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+            } catch (error) {
+                showError('Error al generar el archivo Excel: ' + error.message);
+            }
+        }
+
+        function showError(msg) {
+            errorBanner.textContent = msg;
+            errorBanner.style.display = 'block';
+            setTimeout(() => {
+                errorBanner.style.display = 'none';
+            }, 10000);
+        }
+
+        function updateLoadingStatus(status, className) {
+            loadingStatus.textContent = status;
+            loadingStatus.className = className;
+            
+            if (className === 'success') {
+                btnDownload.disabled = false;
+                btnCharts.disabled = false;
+            }
+        }
+
+        // Initialize the application by loading data from Google Sheets
+        function initializeApp() {
+            updateLoadingStatus('Cargando datos...', 'loading');
+            console.log('=== INICIANDO CARGA DE DATOS ===');
+            
+            loadSheetJSONP(SHEET_ID, SHEET_NAME)
+                .then(data => {
+                    console.log('Datos raw recibidos de Google Sheets:', data);
+                    console.log('Cantidad de filas recibidas:', data.length);
+                    
+                    processSheetData(data);
+                    console.log('Datos procesados:', currentData);
+                    console.log('Cantidad de datos procesados:', currentData.length);
+                    
+                    renderTable();
+                    populateDateFilters();
+                    updateLoadingStatus('Datos cargados exitosamente', 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    showError('Error al cargar los datos: ' + error.message);
+                    updateLoadingStatus('Error al cargar datos', 'error');
+                });
+        }
+
+        // Start the application when the page loads
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        // Función para poblar el filtro de Factory Code
+        function populateFactoryFilter() {
+            const factoryFilter = document.getElementById('factoryFilter');
+            if (!factoryFilter) return;
+            
+            // Obtener factory codes únicos
+            const factoryCodes = [...new Set(currentData
+                .map(row => row['Factory Code'])
+                .filter(code => code && code.trim() !== '')
+                .map(code => code.toUpperCase())
+            )].sort();
+            
+            // Limpiar opciones existentes
+            factoryFilter.innerHTML = '<option value="all">Todos los Factory Codes</option>';
+            
+            // Agregar opciones de factory codes
+            factoryCodes.forEach(code => {
+                const option = document.createElement('option');
+                option.value = code;
+                option.textContent = code;
+                factoryFilter.appendChild(option);
+            });
+        }
+
+        // Función para actualizar el gráfico cuando cambia el filtro de factory
+        function updateChartWithFactoryFilter() {
+            const selectedFactory = document.getElementById('factoryFilter')?.value || 'all';
+            console.log('🏭 Filtrando gráfico por factory:', selectedFactory);
+            
+            let dataToAnalyze = currentData;
+            
+            // Filtrar por factory si no es "all"
+            if (selectedFactory !== 'all') {
+                dataToAnalyze = currentData.filter(row => {
+                    const factoryCode = (row['Factory Code'] || '').toUpperCase().trim();
+                    return factoryCode === selectedFactory;
+                });
+            }
+            
+            console.log('📊 Datos filtrados para gráfico:', dataToAnalyze.length, 'registros');
+            
+            // Regenerar el gráfico con los datos filtrados
+            generateChart(dataToAnalyze);
+        }
+
+        // Funciones para Modal y Gráficos
+        function openChartsModal() {
+            console.log('📊 Abriendo modal de gráficos...');
+            
+            // Siempre usar todos los datos (currentData), independiente de filtros
+            const dataToAnalyze = currentData;
+            console.log('📊 Datos a analizar:', dataToAnalyze.length, 'registros (sin filtros)');
+            
+            if (dataToAnalyze.length === 0) {
+                alert('No hay datos disponibles para generar el gráfico');
+                return;
+            }
+            
+            // Mostrar el modal primero
+            chartsModal.style.display = 'block';
+            
+            // Poblar el filtro de Factory Code
+            populateFactoryFilter();
+            
+            // Generar el gráfico después de un pequeño delay para asegurar que el modal sea visible
+            setTimeout(() => {
+                generateChart(dataToAnalyze);
+            }, 100);
+        }
+
+        function closeChartsModal() {
+            chartsModal.style.display = 'none';
+            
+            // Destruir gráfico al cerrar modal usando Chart.js API
+            const existingChart = Chart.getChart('auditChart');
+            if (existingChart) {
+                existingChart.destroy();
+            }
+        }
+
+        function generateChart(dataToAnalyze) {
+            console.log('📊 Generando gráfico con datos:', dataToAnalyze.length, 'registros');
+            
+            try {
+                const ctx = document.getElementById('auditChart');
+                if (!ctx) {
+                    console.error('❌ No se encontró el canvas auditChart');
+                    return;
+                }
+                
+                const context = ctx.getContext('2d');
+                
+                // Procesar datos para el gráfico
+                const chartData = processChartData(dataToAnalyze);
+                console.log('📊 Datos procesados para gráfico:', chartData);
+                
+                // Calcular el valor máximo para ajustar el eje Y
+                const maxApproved = Math.max(...chartData.approved, 0);
+                const maxRejected = Math.max(...chartData.rejected, 0);
+                const maxValue = Math.max(maxApproved, maxRejected);
+                const yAxisMax = Math.ceil(maxValue * 1.2); // Agregar 20% de padding
+                console.log('📊 Valores máximos - Aprobadas:', maxApproved, 'Rechazadas:', maxRejected, 'Eje Y máximo:', yAxisMax);
+                
+                // Verificar si hay datos para mostrar
+                if (chartData.dates.length === 0) {
+                    // Mostrar mensaje en el canvas si no hay datos
+                    context.clearRect(0, 0, ctx.width, ctx.height);
+                    context.font = '16px Arial';
+                    context.fillStyle = '#666';
+                    context.textAlign = 'center';
+                    context.fillText('No hay datos de auditorías en los últimos 14 días', ctx.width / 2, ctx.height / 2);
+                    return;
+                }
+                
+                // Destruir gráfico anterior si existe
+                const existingChart = Chart.getChart('auditChart');
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+                
+                // Crear nuevo gráfico
+                const newChart = new Chart(context, {
+                    type: 'bar',
+                    plugins: [{
+                        id: 'customDataLabels',
+                        afterDatasetsDraw: function(chart) {
+                            const ctx = chart.ctx;
+                            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                                const meta = chart.getDatasetMeta(datasetIndex);
+                                meta.data.forEach((bar, index) => {
+                                    const data = dataset.data[index];
+                                    if (data > 0) {
+                                        // Etiqueta de cantidad
+                                        ctx.fillStyle = datasetIndex === 0 ? '#1976D2' : '#D32F2F';
+                                        ctx.font = 'bold 16px Calibri';
+                                        ctx.textAlign = 'center';
+                                        ctx.fillText(data, bar.x, bar.y - 30);
+                                        
+                                        // Etiqueta de Total Lot Size
+                                        const lotSizeData = datasetIndex === 0 ? chartData.approvedLotSizes : chartData.rejectedLotSizes;
+                                        const lotSize = formatNumber(lotSizeData[index]);
+                                        ctx.fillStyle = datasetIndex === 0 ? '#1976D2' : '#D32F2F';
+                                        ctx.font = '14px Calibri';
+                                        ctx.fillText(lotSize, bar.x, bar.y - 10);
+                                    }
+                                });
+                            });
+                        }
+                    }],
+                    data: {
+                        labels: chartData.dates,
+                        datasets: [{
+                            label: 'Aprobadas',
+                            data: chartData.approved,
+                            backgroundColor: 'rgba(25, 118, 210, 0.8)',
+                            borderColor: '#1976D2',
+                            borderWidth: 2
+                        }, {
+                            label: 'Rechazadas',
+                            data: chartData.rejected,
+                            backgroundColor: 'rgba(211, 47, 47, 0.8)',
+                            borderColor: '#D32F2F',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 1000,
+                            easing: 'easeOutQuart'
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: yAxisMax > 0 ? yAxisMax : 15,
+                                ticks: {
+                                    stepSize: Math.max(1, Math.ceil(yAxisMax / 10)),
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Cantidad de Auditorías',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                },
+                                grid: {
+                                    display: true,
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Fecha de Auditoría',
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 12
+                                    },
+                                    callback: function(value, index, ticks) {
+                                        const label = this.getLabelForValue(value);
+                                        return label;
+                                    },
+                                    color: function(context) {
+                                        // Obtener la fecha del label
+                                        const label = context.chart.data.labels[context.index];
+                                        if (!label) return '#666';
+                                        
+                                        // Convertir dd/mmm a Date para verificar el día de la semana
+                                        const auditDate = parseAuditDate(label);
+                                        if (!auditDate) return '#666';
+                                        
+                                        const dayOfWeek = auditDate.getDay();
+                                        // 0 = Domingo, 6 = Sábado
+                                        if (dayOfWeek === 0 || dayOfWeek === 6) {
+                                            return '#B8860B'; // Amarillo oscuro (DarkGoldenRod)
+                                        }
+                                        return '#666'; // Color normal para días laborales
+                                    }
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: 'white',
+                                bodyColor: 'white',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 1,
+                                callbacks: {
+                                    title: function(context) {
+                                        return `Fecha: ${context[0].label}`;
+                                    },
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.y} auditorías`;
+                                    },
+                                    afterLabel: function(context) {
+                                        const dateIndex = context.dataIndex;
+                                        const dataset = context.dataset.label;
+                                        
+                                        let lotSizeSum = 0;
+                                        if (dataset === 'Aprobadas') {
+                                            lotSizeSum = chartData.approvedLotSizes[dateIndex];
+                                        } else {
+                                            lotSizeSum = chartData.rejectedLotSizes[dateIndex];
+                                        }
+                                        
+                                        return `Total Lot Size: ${formatNumber(lotSizeSum)}`;
+                                    }
+                                }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20,
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                console.log('✅ Gráfico creado exitosamente');
+                
+            } catch (error) {
+                console.error('❌ Error generando gráfico:', error);
+                alert('Error al generar el gráfico: ' + error.message);
+            }
+        }
+
+        function processChartData(data) {
+            // Calcular rango de fechas: hoy y 14 días atrás
+            const today = new Date();
+            const fourteenDaysAgo = new Date();
+            fourteenDaysAgo.setDate(today.getDate() - 14);
+            
+            console.log('📊 Procesando datos para gráfico');
+            console.log('📅 Rango de fechas: desde', fourteenDaysAgo.toDateString(), 'hasta', today.toDateString());
+            console.log('📊 Total de registros recibidos:', data.length);
+            
+            const dateStats = {};
+            let recordsProcessed = 0;
+            let recordsInRange = 0;
+            
+            // Procesar datos por fecha dentro del rango de 7 días
+            data.forEach((row, index) => {
+                const date = row['Audit Date'];
+                const result = (row['Result'] || '').toLowerCase();
+                const lotSize = parseInt(row['Lot Size']) || 0;
+                
+                recordsProcessed++;
+                
+                if (!date) {
+                    console.log(`⚠️ Fila ${index + 1}: fecha vacía`);
+                    return;
+                }
+                
+                // Convertir fecha dd/mmm a Date object para comparar
+                const auditDate = parseAuditDate(date);
+                if (!auditDate) {
+                    console.log(`⚠️ Fila ${index + 1}: no se pudo parsear fecha "${date}"`);
+                    return;
+                }
+                
+                // Filtrar solo los últimos 14 días (incluyendo hoy)
+                if (auditDate >= fourteenDaysAgo && auditDate <= today) {
+                    recordsInRange++;
+                    console.log(`✅ Fila ${index + 1}: fecha "${date}" está en rango`);
+                    
+                    if (!dateStats[date]) {
+                        dateStats[date] = {
+                            approved: 0,
+                            rejected: 0,
+                            approvedLotSize: 0,
+                            rejectedLotSize: 0
+                        };
+                    }
+                    
+                    if (result.includes('approved') || result.includes('aprobado')) {
+                        dateStats[date].approved++;
+                        dateStats[date].approvedLotSize += lotSize;
+                        console.log(`✅ Aprobada: fecha=${date}, lot=${lotSize}`);
+                    } else if (result.includes('rejected') || result.includes('rechazado')) {
+                        dateStats[date].rejected++;
+                        dateStats[date].rejectedLotSize += lotSize;
+                        console.log(`❌ Rechazada: fecha=${date}, lot=${lotSize}`);
+                    }
+                } else {
+                    console.log(`⏰ Fila ${index + 1}: fecha "${date}" (${auditDate.toDateString()}) fuera de rango`);
+                }
+            });
+            
+            console.log('📊 Resumen procesamiento:');
+            console.log(`  - Registros procesados: ${recordsProcessed}`);
+            console.log(`  - Registros en rango: ${recordsInRange}`);
+            console.log('📊 Fechas con datos en los últimos 14 días:', Object.keys(dateStats));
+            console.log('📊 Estadísticas por fecha:', dateStats);
+            
+            // Ordenar fechas
+            const sortedDates = Object.keys(dateStats).sort((a, b) => {
+                return parseAuditDate(a) - parseAuditDate(b);
+            });
+            
+            console.log('📊 Fechas ordenadas para gráfico:', sortedDates);
+            
+            const result = {
+                dates: sortedDates,
+                approved: sortedDates.map(date => dateStats[date].approved),
+                rejected: sortedDates.map(date => dateStats[date].rejected),
+                approvedLotSizes: sortedDates.map(date => dateStats[date].approvedLotSize),
+                rejectedLotSizes: sortedDates.map(date => dateStats[date].rejectedLotSize)
+            };
+            
+            console.log('📊 Resultado final:', result);
+            return result;
+        }
+    </script>
+</body>
+</html>

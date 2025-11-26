@@ -176,15 +176,21 @@
 
         .modal-content {
             background-color: #fefefe;
-            margin: 2% auto;
-            padding: 20px;
+            margin: 4% auto;
+            padding: 18px 18px 22px 18px;
             border: none;
             border-radius: 12px;
-            width: 90%;
-            max-width: 1000px;
+            width: 60%; /* reducido a 60% del viewport */
+            max-width: 900px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
 
+        /* Forzar ancho específico del modal de detalles OP (evita override por otras bibliotecas) */
+        #opDetailsModal .modal-content {
+            width: 60% !important;
+            max-width: 900px !important;
+            box-sizing: border-box;
+        }
         .modal-header {
             display: flex;
             justify-content: space-between;
@@ -530,6 +536,33 @@
             font-weight: bold;
         }
 
+        /* OP clickable link style */
+        .op-link {
+            text-decoration: underline;
+            cursor: pointer;
+            color: #0b61a4;
+            font-weight: 700;
+        }
+
+        /* Danger rows in modal */
+        .modal-row-danger td {
+            background-color: #fff0f0;
+            color: #b71c1c;
+            font-weight: 700;
+        }
+
+        /* Fix column widths in modal details table */
+        #opDetailsTable {
+            table-layout: fixed;
+        }
+        #opDetailsTable th,
+        #opDetailsTable td {
+            width: 40pt !important;
+            max-width: 40pt !important;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
         .row-rejected {
             background-color: #ffebee !important;
             color: #c62828 !important;
@@ -805,6 +838,33 @@
         </div>
     </div>
 
+    <!-- Modal para detalles de OP (solo Rejected) -->
+    <div id="opDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 id="opModalTitleHM" class="modal-title">Rechazo - HM: -</h2>
+                    <div id="opModalTitleColor" style="font-size:18px; font-weight:700; margin-top:6px; color:#333;">Color: -</div>
+                </div>
+                <span class="close" id="closeOpModal">&times;</span>
+            </div>
+
+            <div style="max-height:65vh; overflow:auto; padding:6px 0;">
+                <table id="opDetailsTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e0e0e0;">Campo</th>
+                            <th style="text-align:left; padding:8px; border-bottom:1px solid #e0e0e0;">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Filas generadas dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Google Sheets configuration
         const SHEET_ID = '1nEvl2vlYNC2SVOYTRXuij-0duWZ_Aw3NqyP-8Zi5raA';
@@ -1013,7 +1073,7 @@
             gridData = jsonData;
             
             // Filtrar y mapear datos para la tabla de embalaje
-            currentData = jsonData.map(row => {
+            currentData = jsonData.map((row, _idx) => {
                 // Función helper para obtener valor de texto
                 const getStr = (key) => {
                     const val = row[key];
@@ -1106,7 +1166,8 @@
                     'OP': getStr('OP'),
                     'Color/ID': getStr('Color/ID') || getStr('Color') || getStr('ID'),
                     'Lot Size': getStr('Lot Size'),
-                    'Result': getStr('Result')
+                    'Result': getStr('Result'),
+                    '__origIndex': _idx
                 };
             }).filter(row => 
                 row['Factory Code'] || 
@@ -1406,6 +1467,11 @@
                 const tdFactoryCode = document.createElement('td');
                 tdFactoryCode.textContent = (row['Factory Code'] || '').toString().toUpperCase();
                 tr.appendChild(tdFactoryCode);
+                if (row['__origIndex'] !== undefined) tr.dataset.origIndex = row['__origIndex'];
+                // store original index
+                if (row['__origIndex'] !== undefined) tr.dataset.origIndex = row['__origIndex'];
+                // store original index
+                if (row['__origIndex'] !== undefined) tr.dataset.origIndex = row['__origIndex'];
                 
                 // Customer
                 const tdCustomer = document.createElement('td');
@@ -1431,6 +1497,18 @@
                 
                 tdOP.innerHTML = iconHtml + opValue;
                 tr.appendChild(tdOP);
+                // make OP clickable if this row is rejected
+                try {
+                    const origIdx = tr.dataset.origIndex;
+                    if (origIdx !== undefined) {
+                        const raw = gridData[origIdx];
+                        const rawResult = (raw && (raw['Result'] || raw['result'] || raw.Result) || '').toString().toLowerCase();
+                        if (rawResult.includes('rejected') || rawResult.includes('rechazado')) {
+                            tdOP.classList.add('op-link');
+                            tdOP.addEventListener('click', function(e){ e.stopPropagation(); openOpModalFromRaw(raw); });
+                        }
+                    }
+                } catch (e) { console.warn('op click attach error', e); }
                 
                 // Color/ID
                 const tdColorID = document.createElement('td');
@@ -1459,6 +1537,8 @@
                 tr.appendChild(tdResult);
                 tbody.appendChild(tr);
             });
+            // Activar handlers para OP en filas visibles
+            enableOpClickHandlers();
         }
 
         function renderTable() {
@@ -1547,8 +1627,11 @@
                 tr.appendChild(tdResult);
                 tbody.appendChild(tr);
             });
-            
-            console.log('=== TABLA RENDERIZADA ===');
+                    
+                    // Activar handlers para OP en todas las filas iniciales
+                    enableOpClickHandlers();
+
+                    console.log('=== TABLA RENDERIZADA ===');
         }
 
         function downloadExcel() {
@@ -2008,7 +2091,232 @@
             console.log('📊 Resultado final:', result);
             return result;
         }
+
+        /* --------------------- OP Details Modal Logic --------------------- */
+        function normalizeKey(s) {
+            return (s || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+        }
+
+        function enableOpClickHandlers() {
+            try {
+                const thead = dataTable.querySelectorAll('thead th');
+                const headers = Array.from(thead).map(h => h.textContent.trim());
+                const headerMap = {};
+                headers.forEach((h, i) => headerMap[normalizeKey(h)] = i);
+
+                const rows = dataTable.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (!cells || cells.length === 0) return;
+
+                    const opIdx = headerMap['op'];
+                    if (opIdx === undefined) return;
+                    const opCell = cells[opIdx];
+                    if (!opCell) return;
+
+                    // Prefer the raw sheet data referenced by data-origIndex
+                    const origIdx = row.dataset.origIndex;
+                    if (origIdx === undefined) return;
+                    const raw = gridData[origIdx];
+                    const rawResult = (raw && (raw['Result'] || raw['result'] || raw.Result) || '').toString().toLowerCase();
+                    if (rawResult.includes('rejected') || rawResult.includes('rechazado')) {
+                        opCell.classList.add('op-link');
+                        if (!opCell.dataset.opListenerSet) {
+                            opCell.addEventListener('click', function(e){ e.stopPropagation(); openOpModalFromRaw(raw); });
+                            opCell.dataset.opListenerSet = '1';
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Error enableOpClickHandlers:', e);
+            }
+        }
+
+        function openOpModalFromRow(row, headerMap) {
+            // If this row references raw sheet data, prefer opening from raw
+            const origIdx = row.dataset.origIndex;
+            if (origIdx !== undefined && gridData && gridData[origIdx]) {
+                openOpModalFromRaw(gridData[origIdx]);
+                return;
+            }
+
+            // Fallback: build from visible cells
+            const cells = row.querySelectorAll('td');
+            const getByHeader = (nameVariants) => {
+                for (const name of nameVariants) {
+                    const idx = headerMap[normalizeKey(name)];
+                    if (idx !== undefined && cells[idx]) {
+                        return cells[idx].textContent.trim();
+                    }
+                }
+                return '';
+            };
+
+            const factory = getByHeader(['Factory Code','Factory']);
+            const customer = getByHeader(['Customer']);
+            const op = getByHeader(['OP']);
+            const color = getByHeader(['Color/ID','Color','ID']);
+            const lotSize = getByHeader(['Lot Size','LotSize']);
+            const sampleSize = getByHeader(['Sample Size','SampleSize']);
+            const totDef = getByHeader(['Tot. Def.','Tot Def','Total Def','TotDef']);
+
+            document.getElementById('opModalTitleHM').textContent = `Rechazo - HM: ${op}`;
+            document.getElementById('opModalTitleColor').textContent = `Color: ${color}`;
+
+            const fields = [
+                {k: 'Factory Code', label: 'Factory Code'},
+                {k: 'Customer', label: 'Customer'},
+                {k: 'OP', label: 'OP'},
+                {k: 'Color/ID', label: 'Color/ID'},
+                {k: 'Lot Size', label: 'Lot Size'},
+                {k: 'Sample Size', label: 'Sample Size'},
+                {k: 'Tot. Def.', label: 'Tot. Def.'}
+            ];
+
+            const otherFields = ['Fabric','Untrimmed threads End','Embellisment','Hole','Broken/skip stitches','Color Shading','Puckering/Excessive Fullness','Cleaness','Asymmetrical','Pin','Wrong Hangtas','Assorment','Shipping Marks','Others','Meas.','Cuenta de Nº Report','A1','A2','A3','A4'];
+
+            const tbody = document.querySelector('#opDetailsTable tbody');
+            tbody.innerHTML = '';
+
+            fields.forEach(fld => {
+                const v = getByHeader([fld.k]);
+                if (v && v.trim() !== '') {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td style="padding:8px; border-bottom:1px solid #f0f0f0;">${fld.label}</td><td style="padding:8px; border-bottom:1px solid #f0f0f0;">${v}</td>`;
+                    tbody.appendChild(tr);
+                }
+            });
+
+            otherFields.forEach(f => {
+                const normalized = normalizeKey(f);
+                const idx = headerMap[normalized];
+                let value = '';
+                if (idx !== undefined && cells[idx]) value = cells[idx].textContent.trim();
+                if (value && value !== '') {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td style="padding:8px; border-bottom:1px solid #f0f0f0;">${f}</td><td style="padding:8px; border-bottom:1px solid #f0f0f0;">${value}</td>`;
+                    tbody.appendChild(tr);
+                }
+            });
+
+            const opModal = document.getElementById('opDetailsModal');
+            opModal.style.display = 'block';
+
+            // Close handlers
+            const closeBtn = document.getElementById('closeOpModal');
+            closeBtn.onclick = () => { opModal.style.display = 'none'; };
+
+            window.addEventListener('keydown', function escListener(e) {
+                if (e.key === 'Escape') {
+                    opModal.style.display = 'none';
+                    window.removeEventListener('keydown', escListener);
+                }
+            });
+
+            // Click fuera para cerrar
+            opModal.onclick = function (ev) {
+                if (ev.target === opModal) opModal.style.display = 'none';
+            };
+        }
+
+        function findRawField(raw, fieldName) {
+            if (!raw) return '';
+            // direct match
+            if (raw[fieldName] !== undefined && raw[fieldName] !== null) return raw[fieldName];
+            // try common variants
+            const normalizedTarget = normalizeKey(fieldName);
+            for (const k in raw) {
+                if (!Object.prototype.hasOwnProperty.call(raw, k)) continue;
+                if (normalizeKey(k) === normalizedTarget) return raw[k];
+            }
+            return '';
+        }
+
+        function openOpModalFromRaw(raw) {
+            try {
+                const factory = (findRawField(raw, 'Factory Code') || findRawField(raw, 'Factory') || '').toString().toUpperCase();
+                const customer = (findRawField(raw, 'Customer') || '').toString().toUpperCase();
+                const op = (findRawField(raw, 'OP') || '').toString();
+                const color = (findRawField(raw, 'Color/ID') || findRawField(raw, 'Color') || findRawField(raw, 'ID') || '').toString();
+                const lotSize = (findRawField(raw, 'Lot Size') || '').toString();
+                const sampleSize = (findRawField(raw, 'Sample Size') || findRawField(raw, 'SampleSize') || '').toString();
+                const totDef = (findRawField(raw, 'Tot. Def.') || findRawField(raw, 'Tot Def') || findRawField(raw, 'Total Def') || '').toString();
+
+                    // Two-line title: HM and Color
+                    document.getElementById('opModalTitleHM').textContent = `Rechazo - HM: ${op}`;
+                    document.getElementById('opModalTitleColor').textContent = `Color: ${color}`;
+
+                // Fields to always show first (if they have data)
+                const primaryFields = [
+                    {k: 'Factory Code', label: 'Factory Code'},
+                    {k: 'Customer', label: 'Customer'},
+                    {k: 'OP', label: 'OP'},
+                    {k: 'Color/ID', label: 'Color/ID'},
+                    {k: 'Lot Size', label: 'Lot Size'},
+                    {k: 'Sample Size', label: 'Sample Size'},
+                    {k: 'Tot. Def.', label: 'Tot. Def.'}
+                ];
+
+                const otherFields = ['Fabric','Untrimmed threads End','Embellisment','Hole','Broken/skip stitches','Color Shading','Puckering/Excessive Fullness','Cleaness','Asymmetrical','Pin','Wrong Hangtas','Assorment','Shipping Marks','Others','Meas.','Cuenta de Nº Report','A1','A2','A3','A4'];
+
+                const tbody = document.querySelector('#opDetailsTable tbody');
+                tbody.innerHTML = '';
+
+                // Prepare set of danger fields (normalized)
+                const dangerFields = [
+                    'Fabric','Untrimmed threads End','Embellisment','Hole','Broken/skip stitches','Color Shading','Puckering/Excessive Fullness','Cleaness','Asymmetrical','Pin','Wrong Hangtas','Assorment','Shipping Marks','Others','Meas.','Cuenta de Nº Report','A1','A2','A3','A4'
+                ].map(s => normalizeKey(s));
+
+                // Add primary fields only if they have data
+                primaryFields.forEach(fld => {
+                    let v = findRawField(raw, fld.k);
+                    if (v === undefined || v === null) v = '';
+                    v = String(v).trim();
+                    if (v !== '') {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td style="padding:8px; border-bottom:1px solid #f0f0f0;">${fld.label}</td><td style="padding:8px; border-bottom:1px solid #f0f0f0;">${v}</td>`;
+                        // If this primary field is also in dangerFields, apply danger class
+                        if (dangerFields.includes(normalizeKey(fld.label))) tr.classList.add('modal-row-danger');
+                        tbody.appendChild(tr);
+                    }
+                });
+
+                // Add other fields only if they have data
+                otherFields.forEach(f => {
+                    let v = findRawField(raw, f);
+                    if (v === undefined || v === null) v = '';
+                    v = String(v).trim();
+                    if (v !== '') {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td style="padding:8px; border-bottom:1px solid #f0f0f0;">${f}</td><td style="padding:8px; border-bottom:1px solid #f0f0f0;">${v}</td>`;
+                        if (dangerFields.includes(normalizeKey(f))) tr.classList.add('modal-row-danger');
+                        tbody.appendChild(tr);
+                    }
+                });
+
+                const opModal = document.getElementById('opDetailsModal');
+                opModal.style.display = 'block';
+
+                // Close handlers
+                const closeBtn = document.getElementById('closeOpModal');
+                closeBtn.onclick = () => { opModal.style.display = 'none'; };
+
+                const escHandler = function escListener(e) {
+                    if (e.key === 'Escape') {
+                        opModal.style.display = 'none';
+                        window.removeEventListener('keydown', escListener);
+                    }
+                };
+                window.addEventListener('keydown', escHandler);
+
+                // Click fuera para cerrar
+                opModal.onclick = function (ev) {
+                    if (ev.target === opModal) opModal.style.display = 'none';
+                };
+            } catch (err) {
+                console.error('openOpModalFromRaw error', err);
+            }
+        }
     </script>
 </body>
-
 </html>

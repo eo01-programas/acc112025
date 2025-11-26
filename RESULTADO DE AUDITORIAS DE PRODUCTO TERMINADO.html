@@ -1163,7 +1163,7 @@
                     'Factory Code': getStr('Factory Code'),
                     'Customer': getStr('Customer'),
                     'Audit Date': formatDate(row['Audit Date']),
-                    'OP': getStr('OP'),
+                    'OP': normalizeOP(getStr('OP')),
                     'Color/ID': getStr('Color/ID') || getStr('Color') || getStr('ID'),
                     'Lot Size': getStr('Lot Size'),
                     'Result': getStr('Result'),
@@ -1193,6 +1193,19 @@
             
             // Formatear manualmente con coma como separador de miles
             return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        // Normaliza valores de la columna OP:
+        // 1) Reemplaza guion bajo '_' por guion normal '-'
+        // 2) Elimina espacios en blanco antes y después del guion
+        function normalizeOP(s) {
+            if (s === null || s === undefined) return '';
+            let str = s.toString();
+            // Reemplazar todos los '_' por '-'
+            str = str.replace(/_/g, '-');
+            // Eliminar espacios alrededor del guion (p. ej. '123 - 456' -> '123-456')
+            str = str.replace(/\s*-\s*/g, '-');
+            return str.trim();
         }
 
         function populateDateFilters() {
@@ -1644,7 +1657,15 @@
             }
 
             try {
-                const ws = XLSX.utils.json_to_sheet(dataToDownload);
+                // Asegurarnos de que la columna OP esté normalizada en la exportación
+                const sanitizedData = dataToDownload.map(r => {
+                    // Crear una copia superficial para no mutar el origen
+                    const copy = Object.assign({}, r);
+                    copy['OP'] = normalizeOP(copy['OP'] || '');
+                    return copy;
+                });
+
+                const ws = XLSX.utils.json_to_sheet(sanitizedData);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Resumen Auditorias');
                 
@@ -2236,7 +2257,7 @@
             try {
                 const factory = (findRawField(raw, 'Factory Code') || findRawField(raw, 'Factory') || '').toString().toUpperCase();
                 const customer = (findRawField(raw, 'Customer') || '').toString().toUpperCase();
-                const op = (findRawField(raw, 'OP') || '').toString();
+                const op = normalizeOP(findRawField(raw, 'OP') || '');
                 const color = (findRawField(raw, 'Color/ID') || findRawField(raw, 'Color') || findRawField(raw, 'ID') || '').toString();
                 const lotSize = (findRawField(raw, 'Lot Size') || '').toString();
                 const sampleSize = (findRawField(raw, 'Sample Size') || findRawField(raw, 'SampleSize') || '').toString();

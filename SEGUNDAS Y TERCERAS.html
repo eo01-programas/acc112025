@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1386px; /* aumentado 5% adicional sobre 1320 -> 1386 (~+15% total) */
             margin: 0 auto;
         }
 
@@ -123,8 +123,8 @@
         table {
             border-collapse: collapse;
             width: 100%;
-            min-width: 900px;
-            font-size: 9pt;
+            min-width: 1040px; /* aumentado 5% adicional sobre 990 -> 1039.5, redondeado a 1040 (~+15% total) */
+            font-size: 10.4pt; /* aumentado ~5% adicional sobre 9.9pt -> ~10.395pt */
             font-family: Calibri, Arial, sans-serif;
         }
 
@@ -136,11 +136,11 @@
 
         th, td {
             border: 1px solid #e2e8f0;
-            padding: 3px 6px;
+            padding: 3.6px 7px; /* aumentado ~5% adicional sobre 3.3/6.6 */
             text-align: center;
             white-space: nowrap;
             font-family: Calibri, Arial, sans-serif;
-            font-size: 7.5pt;
+            font-size: 8.7pt; /* aumentado ~5% adicional sobre 8.25pt */
         }
 
         /* Alinear la columna DEFECTOS a la izquierda */
@@ -1094,7 +1094,7 @@
     spanDef.innerHTML = `<strong>TOTAL DEFECTOS: ${formatNumber(totalDefectos)} pds</strong>`;
 
     const spanIng = document.createElement("span");
-    spanIng.innerHTML = `<strong>TOTAL INGRESO A LINEA: ${formatNumber(totalIngreso)} pds</strong>`;
+    spanIng.innerHTML = `<strong>TOTAL INGRESO A EMBALAJE: ${formatNumber(totalIngreso)} pds</strong>`;
 
     const spanRate = document.createElement("span");
     const rate = (totalIngreso > 0) ? (totalDefectos / totalIngreso) * 100 : 0;
@@ -1949,7 +1949,7 @@
                     // debug: indicate plugin ran
                     try { console.debug && console.debug('customDataLabels: drawing', chart.id); } catch (e) {}
                     ctx.save();
-                    // Bars: dataset index 0 -> TOTAL INGRESO A LINEA (blue, Calibri 16 bold) at base of column
+                    // Bars: dataset index 0 -> TOTAL INGRESO A EMBALAJE (blue, Calibri 16 bold) at base of column
                     const barMeta = chart.getDatasetMeta(0);
                     if (barMeta && barMeta.data) {
                         // usar azul oscuro para las etiquetas de las columnas
@@ -2006,7 +2006,7 @@
                     datasets: [
                         {
                             type: 'bar',
-                            label: 'TOTAL INGRESO A LINEA',
+                            label: 'TOTAL INGRESO A EMBALAJE',
                             data: data.ingresos,
                             backgroundColor: 'rgba(54,162,235,0.6)',
                             borderColor: 'rgba(54,162,235,0.9)',
@@ -2061,7 +2061,7 @@
                             type: 'linear',
                             position: 'right',
                             grid: { drawOnChartArea: false },
-                            title: { display: true, text: 'TOTAL INGRESO A LINEA' },
+                            title: { display: true, text: 'TOTAL INGRESO A EMBALAJE' },
                             ticks: { callback: function(v){ return Math.round(v).toLocaleString(); } },
                             beginAtZero: true
                         }
@@ -2126,4 +2126,3 @@
 </script>
 </body>
 </html>
-

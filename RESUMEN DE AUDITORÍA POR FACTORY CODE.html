@@ -1978,33 +1978,74 @@
         function getBAPForWeek(weekNumber, selectedFactory = 'all') {
             console.log('=== Getting BAP data for week:', weekNumber, 'factory:', selectedFactory, '===');
             
-            // FORZAR SIEMPRE DATOS DE EJEMPLO PARA DEBUG
-            console.log('Using FORCED sample data for debugging');
-            
-            // Para factory específico, usar datos simulados diferentes
-            if (selectedFactory !== 'all') {
-                const factoryBAPData = {
-                    'Cititex 1': { '41': 0, '43': 75, '44': 76, '45': 83, '46': 82, '47': 87 },
-                    'Cititex 2': { '41': 0, '43': 78, '44': 79, '45': 86, '46': 85, '47': 90 },
-                    'Cofaco': { '41': 0, '43': 79, '44': 80, '45': 87, '46': 86, '47': 91 }
+            // Calcular BAP a partir de la columna 'Intento'
+            // Numerador: conteo de filas donde Intento == 1
+            // Denominador: conteo de filas donde Intento tiene dato (no vacío)
+            const weekStr = weekNumber.toString();
+
+            // Si no hay datos cargados, usar datos de ejemplo como fallback
+            if (!gridData || gridData.length === 0) {
+                console.log('No gridData available, using sample BAP data');
+                const sampleBAPData = {
+                    '41': 0,
+                    '43': 77,
+                    '44': 78,
+                    '45': 85,
+                    '46': 84,
+                    '47': 89
                 };
-                const result = factoryBAPData[selectedFactory]?.[weekNumber.toString()] || 0;
-                console.log(`BAP for factory ${selectedFactory} week ${weekNumber}: ${result}`);
-                return result;
+                const sampleResult = sampleBAPData[weekStr] || 0;
+                console.log(`Sample BAP for week ${weekNumber}:`, sampleResult);
+                return sampleResult;
             }
-            
-            // Para "Todos"
-            const sampleBAPData = {
-                '41': 0,
-                '43': 77, // Tu cálculo: 49/(49+12+2+1)*100=77%
-                '44': 78,
-                '45': 85,
-                '46': 84,
-                '47': 89
-            };
-            const result = sampleBAPData[weekNumber.toString()] || 0;
-            console.log(`BAP for "Todos" week ${weekNumber}: ${result}`);
-            return result;
+
+            // Filtrar filas por semana, tipo y factory (misma lógica que getTotalDefectsForWeek)
+            const rows = gridData.filter(row => {
+                const matchesWeek = row.Week === weekStr;
+                const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
+                const matchesFactory = selectedFactory === 'all' || row['Factory Code'] === selectedFactory;
+                return matchesWeek && matchesType && matchesFactory;
+            });
+
+            console.log(`Week ${weekStr}, Factory ${selectedFactory} filtered rows for BAP:`, rows.length);
+
+            if (rows.length === 0) {
+                console.log('No rows for week', weekStr, 'using sample BAP fallback');
+                const sampleBAPData = {
+                    '41': 0,
+                    '43': 77,
+                    '44': 78,
+                    '45': 85,
+                    '46': 84,
+                    '47': 89
+                };
+                return sampleBAPData[weekStr] || 0;
+            }
+
+            let intentoOnes = 0;
+            let intentoAny = 0;
+
+            rows.forEach(r => {
+                const intentoRaw = r['Intento'];
+                // Considerar que 'tener dato' significa distinto de '', null o undefined
+                if (intentoRaw !== '' && intentoRaw !== null && intentoRaw !== undefined) {
+                    intentoAny++;
+                    const intentoNum = parseInt(String(intentoRaw).trim());
+                    if (!isNaN(intentoNum) && intentoNum === 1) {
+                        intentoOnes++;
+                    }
+                }
+            });
+
+            console.log(`Intento counts for week ${weekStr}: ones=${intentoOnes}, any=${intentoAny}`);
+
+            if (intentoAny === 0) return 0;
+
+            const bap = (intentoOnes / intentoAny) * 100;
+            // Devolver sin decimales (entero)
+            const rounded = Math.round(bap);
+            console.log(`Calculated BAP for week ${weekStr}:`, rounded);
+            return rounded;
         }
 
         // Función para obtener el porcentaje de defectuosos de la fila DEFECTUOSO para una semana específica

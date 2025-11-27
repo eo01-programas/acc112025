@@ -328,13 +328,16 @@
             <div style="display: flex; align-items: center; gap: 8px;">
                 <h1 style="text-align: left; margin: 0; font-size: 26px; letter-spacing: 0.03em;">SEGUNDAS Y TERCERAS</h1>
 
-                <!-- Controles de filtro: Año y Semana (a la derecha del título) -->
+                <!-- Controles de filtro: Periodo y Selección (semana/mes) -->
                 <div id="filters" style="display: flex; align-items: center; gap: 8px; margin-left: 12px;">
-                    <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; color: #333;">Año
-                        <select id="filterYear" style="margin-left:4px; font-family: Calibri, Arial, sans-serif; font-size:9pt; padding:2px 6px;"></select>
+                    <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; color: #333;">Periodo
+                        <select id="filterGroupBy" class="small-select" style="margin-left:4px; font-family: Calibri, Arial, sans-serif; font-size:9pt; padding:2px 6px;">
+                            <option value="SEMANA">Semana</option>
+                            <option value="MES">Mes</option>
+                        </select>
                     </label>
-                    <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; color: #333;">Semana
-                        <select id="filterWeek" style="margin-left:4px; font-family: Calibri, Arial, sans-serif; font-size:9pt; padding:2px 6px;"></select>
+                    <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; color: #333;">Seleccionar
+                        <select id="filterPeriodSelect" class="small-select" style="margin-left:4px; font-family: Calibri, Arial, sans-serif; font-size:9pt; padding:2px 6px;"></select>
                     </label>
                     <!-- Switches SEGUNDA / TERCERA -->
                     <div class="tipo-switches" aria-label="Mostrar tipo">
@@ -351,6 +354,9 @@
                             </span>
                         </label>
                     </div>
+                    <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; color: #333;">Cliente:
+                        <select id="filterCliente" class="small-select" style="margin-left:4px; font-family: Calibri, Arial, sans-serif; font-size:9pt; padding:2px 6px;"></select>
+                    </label>
                 </div>
             </div>
 
@@ -1205,91 +1211,57 @@
     }
 
     function populateFilters(rows) {
-        const yearSel = document.getElementById('filterYear');
-        const weekSel = document.getElementById('filterWeek');
-        yearSel.innerHTML = '';
-        weekSel.innerHTML = '';
+        const groupSel = document.getElementById('filterGroupBy');
+        const periodSel = document.getElementById('filterPeriodSelect');
+        if (!groupSel || !periodSel) return;
+        periodSel.innerHTML = '';
 
         const fechaKey = detectFechaKey(rows);
-        const years = getYearsFromRows(rows, fechaKey);
-        const optAllY = document.createElement('option'); optAllY.value = ''; optAllY.textContent = 'Todas';
-        yearSel.appendChild(optAllY);
-        years.forEach(y => {
-            const o = document.createElement('option'); o.value = String(y); o.textContent = String(y);
-            yearSel.appendChild(o);
-        });
+        // Si no tenemos fecha, dejar una sola opción 'Todas'
+        if (!fechaKey) {
+            const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'Todas'; periodSel.appendChild(opt);
+            return;
+        }
 
-        // Llenar semanas disponibles
-        const weeks = Array.from(new Set(rows.map(r => {
-            const d = fechaKey ? tryParseDate(r[fechaKey]) : null;
-            return d ? getISOWeek(d) : null;
-        }).filter(x=>x!==null))).sort((a,b)=>a-b);
-        const optAllW = document.createElement('option'); optAllW.value = ''; optAllW.textContent = 'Todas';
-        weekSel.appendChild(optAllW);
-        weeks.forEach(w => {
-            const o = document.createElement('option'); o.value = String(Number(w)); o.textContent = String(Number(w));
-            weekSel.appendChild(o);
-        });
-
-        yearSel.addEventListener('change', () => {
-            const y = yearSel.value;
-            weekSel.innerHTML = '';
-            const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = 'Todas';
-            weekSel.appendChild(optAll);
-            if (!y) {
-                weeks.forEach(w => {
-                    const o = document.createElement('option'); o.value = String(Number(w)); o.textContent = String(Number(w));
-                    weekSel.appendChild(o);
-                });
+        function populatePeriodOptions() {
+            periodSel.innerHTML = '';
+            const group = (groupSel.value || 'SEMANA');
+            if (group === 'SEMANA') {
+                const set = new Set();
+                (rows || []).forEach(r => { const d = tryParseDate(r[fechaKey]); if (!d) return; const y = d.getFullYear(); const w = getISOWeek(d); set.add(`${y}|${String(w).padStart(2,'0')}`); });
+                const arr = Array.from(set).sort();
+                const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = 'Todas'; periodSel.appendChild(optAll);
+                arr.forEach(k => { const [y,w] = k.split('|'); const o = document.createElement('option'); o.value = k; o.textContent = `${y}-SEM${Number(w)}`; periodSel.appendChild(o); });
+                if (arr.length) periodSel.value = arr[arr.length - 1];
             } else {
-                const ws = getWeeksForYear(rows, y, fechaKey);
-                ws.forEach(w => {
-                    const o = document.createElement('option'); o.value = String(Number(w)); o.textContent = String(Number(w));
-                    weekSel.appendChild(o);
-                });
-            }
-            applyFiltersAndBuild();
-        });
-
-        weekSel.addEventListener('change', () => {
-            applyFiltersAndBuild();
-        });
-
-        // --------- SELECCIÓN POR DEFECTO ---------
-        // Selección por defecto: preferir la ÚLTIMA semana con datos del AÑO ACTUAL
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        let defaultYear = currentYear;
-        // obtener semanas disponibles para el año actual a partir de los datos
-        const weeksThisYear = getWeeksForYear(rows, currentYear, fechaKey);
-        let defaultWeek = null;
-        if (weeksThisYear && weeksThisYear.length > 0) {
-            // seleccionar la última semana disponible del año actual
-            defaultWeek = Math.max(...weeksThisYear);
-        } else {
-            // fallback: usar la semana anterior a la actual (como antes)
-            let currentWeek = getISOWeek(now);
-            defaultWeek = currentWeek - 1;
-            if (defaultWeek < 1) {
-                // si queda fuera de rango, intentar usar la última semana del año anterior
-                defaultYear = currentYear - 1;
-                const prevYearWeeks = getWeeksForYear(rows, defaultYear, fechaKey);
-                if (prevYearWeeks.length > 0) {
-                    defaultWeek = Math.max(...prevYearWeeks);
-                } else {
-                    defaultWeek = 1;
-                }
+                const set = new Set();
+                const monthsNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+                (rows || []).forEach(r => { const d = tryParseDate(r[fechaKey]); if (!d) return; const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); set.add(`${y}|${m}`); });
+                const arr = Array.from(set).sort();
+                const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = 'Todas'; periodSel.appendChild(optAll);
+                arr.forEach(k => { const [y,m] = k.split('|'); const o = document.createElement('option'); o.value = k; o.textContent = `${monthsNames[Number(m)-1]} ${y}`; periodSel.appendChild(o); });
+                if (arr.length) periodSel.value = arr[arr.length - 1];
             }
         }
-        // Seleccionar año y semana por defecto si existen
-        if ([...yearSel.options].some(opt => opt.value === String(defaultYear))) {
-            yearSel.value = String(defaultYear);
+
+        groupSel.addEventListener('change', () => { populatePeriodOptions(); applyFiltersAndBuild(); });
+        periodSel.addEventListener('change', () => { applyFiltersAndBuild(); });
+
+        // POBLAR SELECT CLIENTE
+        const clientSel = document.getElementById('filterCliente');
+        if (clientSel) {
+            clientSel.innerHTML = '';
+            const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = 'Todos'; clientSel.appendChild(optAll);
+            // obtener lista única de clientes desde rows
+            const clientsSet = new Set();
+            (rows || []).forEach(r => { const c = toUpperTrim(r['CLIENTE']); if (c) clientsSet.add(c); });
+            const clientsArr = Array.from(clientsSet).sort();
+            clientsArr.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; clientSel.appendChild(o); });
+            clientSel.addEventListener('change', () => { applyFiltersAndBuild(); });
         }
-        if ([...weekSel.options].some(opt => opt.value === String(defaultWeek))) {
-            weekSel.value = String(defaultWeek);
-        }
-        // Aplicar filtro inicial
-        applyFiltersAndBuild();
+
+        // inicializar opciones
+        populatePeriodOptions();
     }
 
     /* ------------------ MODAL DE DETALLES ------------------ */
@@ -1334,24 +1306,32 @@
         const estiloKey = detectKey(_originalDefectos, ['ESTILO', 'STYLE']);
         const opKey = detectKey(_originalDefectos, ['OP', 'ORDEN', 'ORDER']);
 
-        // leer filtros actuales (si aplicados)
-        const yearFilter = document.getElementById('filterYear') ? document.getElementById('filterYear').value : '';
-        const weekFilter = document.getElementById('filterWeek') ? document.getElementById('filterWeek').value : '';
+        // leer filtros actuales (Periodo/Seleccionar)
+        const group = document.getElementById('filterGroupBy') ? document.getElementById('filterGroupBy').value : 'SEMANA';
+        const period = document.getElementById('filterPeriodSelect') ? document.getElementById('filterPeriodSelect').value : '';
         const fechaKey = detectFechaKey(_originalDefectos);
 
-        // filtrar filas relevantes teniendo en cuenta año/semana
+        // filtrar filas relevantes teniendo en cuenta el periodo seleccionado
         const rows = (_originalDefectos || []).filter(r => {
             if (toUpperTrim(r['TIPO']) !== tipo) return false;
             if (toUpperTrim(r['CLIENTE']) !== toUpperTrim(cliente)) return false;
             const cantidad = toNumber(r[defCol]);
             if (cantidad <= 0) return false;
 
-            // Si hay fechaKey y se aplicó algún filtro, validar año/semana
-            if (fechaKey && (yearFilter || weekFilter)) {
+            // Si hay fechaKey y se aplicó algún filtro, validar según el tipo de periodo
+            if (fechaKey && period) {
                 const d = tryParseDate(r[fechaKey]);
                 if (!d) return false;
-                if (yearFilter && String(d.getFullYear()) !== String(yearFilter)) return false;
-                if (weekFilter && String(getISOWeek(d)) !== String(weekFilter)) return false;
+                if (group === 'SEMANA') {
+                    const [y,w] = period.split('|');
+                    if (y && String(d.getFullYear()) !== String(y)) return false;
+                    if (w && String(getISOWeek(d)) !== String(Number(w))) return false;
+                } else {
+                    const [y,m] = period.split('|');
+                    if (y && String(d.getFullYear()) !== String(y)) return false;
+                    const mm = String(d.getMonth()+1).padStart(2,'0');
+                    if (m && mm !== String(m)) return false;
+                }
             }
 
             return true;
@@ -1427,52 +1407,98 @@
         openDetailModal(tipo, cliente, defcol, defectoNombre);
     });
 
-    function filterByYearWeek(rows, year, week) {
+    function filterByPeriod(rows, group, period) {
         const fechaKey = detectFechaKey(rows);
-        if ((!year || year === '') && (!week || week === '')) return rows.slice();
-        return rows.filter(r => {
-            const d = fechaKey ? tryParseDate(r[fechaKey]) : null;
-            if (!d) return false;
-            if (year && String(d.getFullYear()) !== String(year)) return false;
-            if (week && String(getISOWeek(d)) !== String(week)) return false;
-            return true;
-        });
+        if (!period || period === '') return rows.slice();
+        if (!fechaKey) return rows.slice();
+        if (group === 'SEMANA') {
+            const parts = period.split('|');
+            const y = parts[0];
+            const w = parts[1] ? String(Number(parts[1])) : '';
+            return rows.filter(r => {
+                const d = fechaKey ? tryParseDate(r[fechaKey]) : null;
+                if (!d) return false;
+                if (y && String(d.getFullYear()) !== String(y)) return false;
+                if (w && String(getISOWeek(d)) !== String(w)) return false;
+                return true;
+            });
+        } else {
+            // MES: period format YYYY|MM
+            const parts = period.split('|');
+            const y = parts[0];
+            const m = parts[1] ? String(parts[1]).padStart(2,'0') : '';
+            return rows.filter(r => {
+                const d = fechaKey ? tryParseDate(r[fechaKey]) : null;
+                if (!d) return false;
+                if (y && String(d.getFullYear()) !== String(y)) return false;
+                const mm = String(d.getMonth() + 1).padStart(2,'0');
+                if (m && mm !== String(m)) return false;
+                return true;
+            });
+        }
     }
 
-    // Filtra las filas de la hoja `ingreso a linea`.
-    // Si la hoja tiene columnas `AÑO` y `SEMANA` las usa directamente (más rápido y fiable).
-    // En otro caso intenta filtrar por fecha como fallback.
-    function filterIngresoRowsByYearWeek(rows, year, week) {
+    // Filtra las filas de la hoja `ingreso a linea` según periodo (semana o mes).
+    function filterIngresoRowsByPeriod(rows, group, period) {
         if (!rows || !rows.length) return [];
         // buscar claves año/semana (insensible a mayúsculas y tildes)
         const keys = Object.keys(rows[0] || {});
         const keyAno = keys.find(k => toUpperTrim(k).replace(/\s+/g,'') === 'AÑO' || toUpperTrim(k).replace(/\s+/g,'') === 'ANO' || toUpperTrim(k) === 'AÑO');
         const keySemana = keys.find(k => toUpperTrim(k).includes('SEMANA'));
+        const fechaKey = detectFechaKey(rows);
 
-        if (keyAno && keySemana) {
-            // usar columnas año/semana directamente
-            return rows.filter(r => {
-                const rv = r[keyAno];
-                const sv = r[keySemana];
-                const rvn = rv === null || rv === undefined || rv === '' ? null : Number(String(rv).toString().replace(/\s+/g, ''));
-                const svn = sv === null || sv === undefined || sv === '' ? null : Number(String(sv).toString().replace(/\s+/g, ''));
-                if ((!year || year === '') && (!week || week === '')) return true;
-                if (year && String(rvn) !== String(year)) return false;
-                if (week && String(svn) !== String(week)) return false;
-                return true;
-            });
+        if (!period || period === '') {
+            // sin filtro -> devolver todo
+            return rows.slice();
         }
 
-        // fallback: filtrar por fecha similar a filterByYearWeek
-        return filterByYearWeek(rows, year, week);
+        if (group === 'SEMANA') {
+            const parts = period.split('|');
+            const y = parts[0];
+            const w = parts[1] ? String(Number(parts[1])) : '';
+            if (keyAno && keySemana) {
+                return rows.filter(r => {
+                    const rv = r[keyAno];
+                    const sv = r[keySemana];
+                    const rvn = rv === null || rv === undefined || rv === '' ? null : Number(String(rv).toString().replace(/\s+/g, ''));
+                    const svn = sv === null || sv === undefined || sv === '' ? null : Number(String(sv).toString().replace(/\s+/g, ''));
+                    if (y && String(rvn) !== String(y)) return false;
+                    if (w && String(svn) !== String(w)) return false;
+                    return true;
+                });
+            }
+            // fallback: filtrar por fecha
+            return filterByPeriod(rows, 'SEMANA', period);
+        } else {
+            // MES
+            const parts = period.split('|');
+            const y = parts[0];
+            const m = parts[1] ? String(parts[1]).padStart(2,'0') : '';
+            // si existe columna de fecha en ingreso, usarla
+            if (fechaKey) {
+                return rows.filter(r => {
+                    const d = tryParseDate(r[fechaKey]);
+                    if (!d) return false;
+                    if (y && String(d.getFullYear()) !== String(y)) return false;
+                    const mm = String(d.getMonth() + 1).padStart(2,'0');
+                    if (m && mm !== String(m)) return false;
+                    return true;
+                });
+            }
+            // sin fecha, no podemos filtrar por mes -> devolver vacío
+            return [];
+        }
     }
 
     function applyFiltersAndBuild() {
-        const y = document.getElementById('filterYear').value;
-        const w = document.getElementById('filterWeek').value;
-        const filteredDefectos = filterByYearWeek(_originalDefectos, y, w);
-        const filteredIngreso = filterIngresoRowsByYearWeek(_originalIngreso, y, w);
-        buildTable(filteredDefectos, filteredIngreso);
+        const group = document.getElementById('filterGroupBy') ? document.getElementById('filterGroupBy').value : 'SEMANA';
+        const period = document.getElementById('filterPeriodSelect') ? document.getElementById('filterPeriodSelect').value : '';
+        const clientSel = document.getElementById('filterCliente');
+        const clientVal = clientSel ? (clientSel.value || '') : '';
+        const filteredDefectos = filterByPeriod(_originalDefectos, group, period);
+        const filteredDefectosByClient = clientVal ? filteredDefectos.filter(r => toUpperTrim(r['CLIENTE']) === String(clientVal)) : filteredDefectos;
+        const filteredIngreso = filterIngresoRowsByPeriod(_originalIngreso, group, period);
+        buildTable(filteredDefectosByClient, filteredIngreso);
     }
 
     // Switches SEGUNDA / TERCERA: comportamiento y exclusividad

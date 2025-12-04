@@ -724,6 +724,17 @@
                         </div>
                     </div>
                 </fieldset>
+
+                <fieldset class="control-fieldset">
+                    <legend>Customer Filter:</legend>
+                    <div class="fieldset-content">
+                        <div class="control-group">
+                            <select id="customerFilter" disabled>
+                                <option value="">Todos los Customers</option>
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
             </div>
             
             <div class="buttons-container">
@@ -876,6 +887,7 @@
         const cititex1Toggle = document.getElementById('cititex1Toggle');
         const cititex2Toggle = document.getElementById('cititex2Toggle');
         const cofacoToggle = document.getElementById('cofacoToggle');
+        const customerFilter = document.getElementById('customerFilter');
         const loadingStatus = document.getElementById('loadingStatus');
         const errorBanner = document.getElementById('error-banner');
         const chartModal = document.getElementById('chartModal');
@@ -894,6 +906,7 @@
         cititex1Toggle.addEventListener('change', handleFactoryFilterToggle);
         cititex2Toggle.addEventListener('change', handleFactoryFilterToggle);
         cofacoToggle.addEventListener('change', handleFactoryFilterToggle);
+        customerFilter.addEventListener('change', handleFactoryFilterToggle);
         closeModal.addEventListener('click', hideModal);
         factoryFilter.addEventListener('change', updateChartWithFilter);
         weekFromFilter.addEventListener('change', updateChartWithFilter);
@@ -1149,15 +1162,52 @@
             currentInternaData = internaData;
             currentClienteData = clienteData;
 
+            // Poblar el selector de Customer con valores únicos de ambas tablas
+            populateCustomerFilter(internaData, clienteData);
+
             renderTable(internaBody, internaData, 'INTERNA');
             renderTable(clienteBody, clienteData, 'CLIENTE');
             
             btnDownload.disabled = false;
 
-            // Solo aplicar filtros de Factory Code si hay algún switch activo
-            if (cofacoToggle.checked || cititex1Toggle.checked || cititex2Toggle.checked) {
+            // Solo aplicar filtros de Factory Code si hay algún switch activo o filtro de customer seleccionado
+            if (cofacoToggle.checked || cititex1Toggle.checked || cititex2Toggle.checked || customerFilter.value) {
                 applyFactoryFilters();
             }
+        }
+
+        function populateCustomerFilter(internaData, clienteData) {
+            // Obtener todos los customers únicos de ambas tablas
+            const allCustomers = new Set();
+            
+            internaData.forEach(row => {
+                if (row['Customer']) {
+                    allCustomers.add(row['Customer']);
+                }
+            });
+            
+            clienteData.forEach(row => {
+                if (row['Customer']) {
+                    allCustomers.add(row['Customer']);
+                }
+            });
+            
+            // Ordenar alfabéticamente
+            const sortedCustomers = Array.from(allCustomers).sort();
+            
+            // Limpiar opciones existentes excepto la primera
+            customerFilter.innerHTML = '<option value="">Todos los Customers</option>';
+            
+            // Agregar opciones
+            sortedCustomers.forEach(customer => {
+                const option = document.createElement('option');
+                option.value = customer;
+                option.textContent = customer;
+                customerFilter.appendChild(option);
+            });
+            
+            // Habilitar el selector
+            customerFilter.disabled = false;
         }
 
         function handleFactoryFilterToggle() {
@@ -1172,25 +1222,51 @@
             if (cofacoToggle.checked) activeFactories.push('Cofaco');
             if (cititex1Toggle.checked) activeFactories.push('Cititex 1');
             if (cititex2Toggle.checked) activeFactories.push('Cititex 2');
+            
+            const selectedCustomer = customerFilter.value;
 
             // Si no hay ningún filtro activo, mostrar todos los datos originales
-            if (activeFactories.length === 0) {
+            if (activeFactories.length === 0 && !selectedCustomer) {
                 renderTable(internaBody, currentInternaData, 'INTERNA');
                 renderTable(clienteBody, currentClienteData, 'CLIENTE');
                 return;
             }
 
             // Filtrar datos INTERNA
-            const filteredInternaData = currentInternaData.filter(row => {
-                const factoryCode = row['Factory Code'];
-                return activeFactories.includes(factoryCode);
-            });
+            let filteredInternaData = currentInternaData;
+            
+            // Aplicar filtro de Factory Code si hay factories seleccionadas
+            if (activeFactories.length > 0) {
+                filteredInternaData = filteredInternaData.filter(row => {
+                    const factoryCode = row['Factory Code'];
+                    return activeFactories.includes(factoryCode);
+                });
+            }
+            
+            // Aplicar filtro de Customer si hay uno seleccionado
+            if (selectedCustomer) {
+                filteredInternaData = filteredInternaData.filter(row => {
+                    return row['Customer'] === selectedCustomer;
+                });
+            }
 
             // Filtrar datos CLIENTE
-            const filteredClienteData = currentClienteData.filter(row => {
-                const factoryCode = row['Factory Code'];
-                return activeFactories.includes(factoryCode);
-            });
+            let filteredClienteData = currentClienteData;
+            
+            // Aplicar filtro de Factory Code si hay factories seleccionadas
+            if (activeFactories.length > 0) {
+                filteredClienteData = filteredClienteData.filter(row => {
+                    const factoryCode = row['Factory Code'];
+                    return activeFactories.includes(factoryCode);
+                });
+            }
+            
+            // Aplicar filtro de Customer si hay uno seleccionado
+            if (selectedCustomer) {
+                filteredClienteData = filteredClienteData.filter(row => {
+                    return row['Customer'] === selectedCustomer;
+                });
+            }
 
             // Re-renderizar las tablas
             renderTable(internaBody, filteredInternaData, 'INTERNA');

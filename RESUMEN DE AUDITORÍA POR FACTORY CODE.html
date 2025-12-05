@@ -7,6 +7,109 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <!-- jQuery + Select2 para multi-select amigable -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        /* Select2 visual tweaks to match reference (rounded box, checkboxes in dropdown) */
+        .select2-container--default .select2-selection--multiple,
+        .select2-container--default .select2-selection--single {
+            border-radius: 12px;
+            min-height: 36px; /* reduced height */
+            padding: 6px 8px; /* reduced padding for a tighter look */
+            border: 2px solid #ececec;
+            background: #fff;
+            box-shadow: none;
+        }
+
+        .select2-selection__rendered {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #333;
+            font-size: 10px; /* kept calibri 10 as requested */
+            line-height: 1;
+            padding: 0; /* ensure compact rendering */
+        }
+
+        /* Hide the tokenized choices, we will render a compact summary */
+        .select2-selection__choice {
+            display: none;
+        }
+
+        .select2-placeholder { color: #8b8b8b; }
+
+        .select2-dropdown {
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            border: 1px solid rgba(0,0,0,0.06);
+            padding: 8px;
+        }
+
+        .select2-results__options {
+            max-height: 260px;
+            overflow-y: auto;
+            padding: 2px;
+        }
+
+        .select2-results__option {
+            padding: 6px 10px !important;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+
+        .select2-results__option--highlighted {
+            background: #eaf6ff !important;
+        }
+
+        .s2-checkbox {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid #cfd8dd;
+            background: #fff;
+            accent-color: #1e88e5;
+            flex-shrink: 0;
+        }
+
+        .select2-results__option[aria-selected="true"] { background: #eaf6ff; }
+
+        .select2-search--dropdown .select2-search__field {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid #f0f0f0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Force dropdown option text to Calibri 10 bold */
+        .s2-label,
+        .select2-container--default .select2-results__option .s2-label,
+        .select2-container--default .select2-results__option .s2-result .s2-label {
+            font-family: Calibri, Arial, sans-serif !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            color: #111 !important;
+        }
+
+        /* Ensure the control's displayed summary uses Calibri 10 bold */
+        .select2-container--default .select2-selection__rendered,
+        .select2-container--default .select2-selection__rendered .select2-placeholder {
+            font-family: Calibri, Arial, sans-serif !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            color: #222 !important;
+        }
+
+        /* Scrollbar styling for dropdown (WebKit) */
+        .select2-results__options::-webkit-scrollbar { width: 10px; }
+        .select2-results__options::-webkit-scrollbar-track { background: transparent; }
+        .select2-results__options::-webkit-scrollbar-thumb { background: #e6f0fa; border-radius: 10px; }
+    </style>
     <style>
         * {
             margin: 0;
@@ -757,6 +860,13 @@
                 <div style="background-color: #e8f5e8; border: 2px solid #90c695; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                     <div style="text-align: center; display: flex; gap: 15px; justify-content: center; align-items: center; flex-wrap: nowrap;">
                         <div>
+                            <label for="chartCustomerFilter" style="font-weight: bold; margin-right: 8px;">Customer:</label>
+                            <select id="chartCustomerFilter" style="padding: 6px 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 12px; width: 220px;">
+                                <option value="">Todos los Customers</option>
+                            </select>
+                        </div>
+
+                        <div>
                             <label for="factoryFilter" style="font-weight: bold; margin-right: 8px;">Factory Code:</label>
                             <select id="factoryFilter" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 180px;">
                                 <option value="all">Todos los Factory Codes</option>
@@ -893,11 +1003,179 @@
         const chartModal = document.getElementById('chartModal');
         const closeModal = document.getElementById('closeModal');
         const factoryFilter = document.getElementById('factoryFilter');
+        const chartCustomerFilter = document.getElementById('chartCustomerFilter');
         const weekFromFilter = document.getElementById('weekFromFilter');
         const weekToFilter = document.getElementById('weekToFilter');
 
         let currentInternaData = [];
         let currentClienteData = [];
+
+        // Helper: obtener lista de customers seleccionados (compatibilidad Select2 y select múltiple nativo)
+        function getSelectedCustomers() {
+            try {
+                if (window.jQuery && $('#customerFilter').data('select2')) {
+                    const val = $('#customerFilter').val() || [];
+                    return val.filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+                }
+            } catch (e) {
+                // ignore
+            }
+            return Array.from(customerFilter.selectedOptions || [])
+                .map(o => o.value)
+                .filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+        }
+
+        // Helper para el modal de gráfica (chartCustomerFilter)
+        function getSelectedChartCustomers() {
+            try {
+                if (window.jQuery && $('#chartCustomerFilter').data('select2')) {
+                    const val = $('#chartCustomerFilter').val() || [];
+                    return val.filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+                }
+            } catch (e) {}
+            const el = document.getElementById('chartCustomerFilter');
+            if (!el) return [];
+            return Array.from(el.selectedOptions || []).map(o => o.value).filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+        }
+
+        // Inicializar Select2 (se mantendrá deshabilitado hasta poblar opciones)
+        if (window.jQuery) {
+            $(function() {
+                $('#customerFilter').attr('multiple', 'multiple');
+                $('#customerFilter').select2({
+                    placeholder: 'Seleccione Customers',
+                    allowClear: true,
+                    width: 'resolve',
+                    closeOnSelect: false,
+                    templateResult: function(state) {
+                        if (!state.id) return state.text;
+                        var checked = state.selected ? 'checked' : '';
+                        var $state = $("<div class='s2-result'><input type='checkbox' class='s2-checkbox' " + checked + "/> <span class='s2-label'></span></div>");
+                        $state.find('.s2-label').text(state.text);
+                        return $state;
+                    },
+                    templateSelection: function(state) {
+                        // We'll override the rendered area after selection change to show a compact summary
+                        return state.text;
+                    }
+                });
+                // After init, ensure the displayed summary is correct
+                var updateSummary = function() {
+                    var vals = $('#customerFilter').val() || [];
+                    var container = $('#customerFilter').siblings('.select2-container').find('.select2-selection__rendered');
+                    if (!container || container.length === 0) return;
+                    if (vals.length === 0) {
+                        // Leave empty so Select2's native placeholder is shown (avoid duplicate text)
+                        container.empty();
+                    } else if (vals.length === 1) {
+                        var txt = $('#customerFilter').find('option[value="' + vals[0] + '"]').text() || vals[0];
+                        container.text(txt);
+                    } else {
+                        container.text(vals.length + ' seleccionados');
+                    }
+                };
+
+                // Keep Select2 control disabled until populated
+                $('#customerFilter').prop('disabled', true);
+
+                // Increase Customer Filter width by 10% to meet UI request
+                function increaseCustomerFilterWidth() {
+                    try {
+                        var sel = document.getElementById('customerFilter');
+                        if (!sel) return;
+                        // Use the current rendered width
+                        var rect = sel.getBoundingClientRect();
+                        var currentWidth = rect.width || sel.offsetWidth || 140;
+                        var newWidth = Math.round(currentWidth * 1.1);
+                        // Apply to the select element
+                        sel.style.width = newWidth + 'px';
+                        // If Select2 is active, also adjust its container
+                        var $cont = $('#customerFilter').siblings('.select2-container');
+                        if ($cont && $cont.length) {
+                            $cont.css('width', newWidth + 'px');
+                            $cont.find('.select2-selection').css('width', newWidth + 'px');
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+
+                // Call once after init to enlarge the control
+                increaseCustomerFilterWidth();
+
+                // When dropdown opens we need to update checkboxes states
+                $('#customerFilter').on('select2:open', function() {
+                    // refresh results so checkboxes reflect actual selection
+                    var vals = $('#customerFilter').val() || [];
+                    $('.select2-results__option').each(function() {
+                        var $opt = $(this);
+                        var id = $opt.attr('id');
+                        // Select2 internal id format: 'select2-customerFilter-result-xxxxx-<value>' - easier to inspect contained text
+                    });
+                });
+
+                // Update summary and trigger filters when selection changes
+                $('#customerFilter').on('change', function() {
+                    updateSummary();
+                    // trigger native change for other listeners
+                    try { customerFilter.dispatchEvent(new Event('change')); } catch(e) {}
+                });
+
+                // Ensure summary is correct on initial render
+                updateSummary();
+                // Inicializar Select2 para el filtro del modal (chartCustomerFilter)
+                try {
+                    $('#chartCustomerFilter').attr('multiple', 'multiple');
+                    $('#chartCustomerFilter').select2({
+                        placeholder: '',
+                        allowClear: true,
+                        width: 'resolve',
+                        closeOnSelect: false,
+                        templateResult: function(state) {
+                            if (!state.id) return state.text;
+                            var checked = state.selected ? 'checked' : '';
+                            var $state = $("<div class='s2-result'><input type='checkbox' class='s2-checkbox' " + checked + "/> <span class='s2-label'></span></div>");
+                            $state.find('.s2-label').text(state.text);
+                            return $state;
+                        },
+                        templateSelection: function(state) { return state.text; }
+                    });
+                    // Mantener disabled hasta poblar
+                    $('#chartCustomerFilter').prop('disabled', true);
+                    // Force a fixed width for the modal select so it does not change when tokens are added
+                    try {
+                        var $chartSel = $('#chartCustomerFilter');
+                        var selEl = document.getElementById('chartCustomerFilter');
+                        var rect = selEl.getBoundingClientRect();
+                        var fixedWidth = Math.round((rect.width || 220) * 0.8);
+                        selEl.style.width = fixedWidth + 'px';
+                        $chartSel.siblings('.select2-container').css('width', fixedWidth + 'px');
+                        $chartSel.siblings('.select2-container').find('.select2-selection').css('width', fixedWidth + 'px');
+                    } catch (e) {}
+                    // Actualizar el resumen del control cuando cambie (no reflow de ancho)
+                    $('#chartCustomerFilter').on('change', function() {
+                        var vals = $('#chartCustomerFilter').val() || [];
+                        var container = $('#chartCustomerFilter').siblings('.select2-container').find('.select2-selection__rendered');
+                        if (!container || container.length === 0) return;
+                        if (vals.length === 0) {
+                            container.empty();
+                        } else if (vals.length === 1) {
+                            var txt = $('#chartCustomerFilter').find('option[value="' + vals[0] + '"]').text() || vals[0];
+                            container.text(txt);
+                        } else {
+                            container.text(vals.length + ' seleccionados');
+                        }
+                        try { chartCustomerFilter.dispatchEvent(new Event('change')); } catch(e) {}
+                    });
+                } catch(e) { /* ignore if chartCustomerFilter not present */ }
+                // Mantener disabled hasta que se llamen a populateCustomerFilter
+                $('#customerFilter').prop('disabled', true);
+            });
+        } else {
+            // Si no hay jQuery, asegurarse de que el select sea múltiple nativo
+            customerFilter.setAttribute('multiple', 'multiple');
+            customerFilter.disabled = true;
+        }
 
         weekSelect.addEventListener('change', handleWeekChange);
         btnDownload.addEventListener('click', downloadExcel);
@@ -909,6 +1187,7 @@
         customerFilter.addEventListener('change', handleFactoryFilterToggle);
         closeModal.addEventListener('click', hideModal);
         factoryFilter.addEventListener('change', updateChartWithFilter);
+        if (chartCustomerFilter) chartCustomerFilter.addEventListener('change', updateChartWithFilter);
         weekFromFilter.addEventListener('change', updateChartWithFilter);
         weekToFilter.addEventListener('change', updateChartWithFilter);
         
@@ -1171,7 +1450,8 @@
             btnDownload.disabled = false;
 
             // Solo aplicar filtros de Factory Code si hay algún switch activo o filtro de customer seleccionado
-            if (cofacoToggle.checked || cititex1Toggle.checked || cititex2Toggle.checked || customerFilter.value) {
+            const anyCustomerSelected = getSelectedCustomers().length > 0;
+            if (cofacoToggle.checked || cititex1Toggle.checked || cititex2Toggle.checked || anyCustomerSelected) {
                 applyFactoryFilters();
             }
         }
@@ -1195,8 +1475,8 @@
             // Ordenar alfabéticamente
             const sortedCustomers = Array.from(allCustomers).sort();
             
-            // Limpiar opciones existentes excepto la primera
-            customerFilter.innerHTML = '<option value="">Todos los Customers</option>';
+            // Limpiar opciones existentes
+            customerFilter.innerHTML = '';
             
             // Agregar opciones
             sortedCustomers.forEach(customer => {
@@ -1206,8 +1486,70 @@
                 customerFilter.appendChild(option);
             });
             
-            // Habilitar el selector
-            customerFilter.disabled = false;
+            // Habilitar el selector (y avisar a Select2 si está activado)
+            try {
+                if (window.jQuery && $('#customerFilter').data('select2')) {
+                    $('#customerFilter').prop('disabled', false);
+                    // Forzar a Select2 a refrescar su lista y a actualizar el resumen mostrado
+                    $('#customerFilter').trigger('change');
+                } else {
+                    customerFilter.disabled = false;
+                }
+            } catch (e) {
+                customerFilter.disabled = false;
+            }
+        }
+
+        // Poblar el filtro de Customers dentro del modal de gráfica
+        function populateChartCustomerFilter() {
+            const allCustomers = new Set();
+            if (gridData && gridData.length > 0) {
+                gridData.forEach(row => {
+                    // Preferir filas tipo INTERNA (misma lógica que la gráfica)
+                    const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
+                    if (matchesType && row['Customer']) {
+                        allCustomers.add(row['Customer']);
+                    }
+                });
+            }
+
+            const sorted = Array.from(allCustomers).sort();
+            const sel = document.getElementById('chartCustomerFilter');
+            if (!sel) return;
+            // Limpiar
+            sel.innerHTML = '';
+            // Agregar opción vacía (todos)
+            const optAll = document.createElement('option');
+            optAll.value = '';
+            optAll.textContent = 'Todos los Customers';
+            sel.appendChild(optAll);
+
+            sorted.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c;
+                o.textContent = c;
+                sel.appendChild(o);
+            });
+
+            try {
+                if (window.jQuery && $('#chartCustomerFilter').data('select2')) {
+                    $('#chartCustomerFilter').prop('disabled', false);
+                    $('#chartCustomerFilter').trigger('change');
+                    // Re-apply fixed width after populating options
+                    try {
+                        var selEl = document.getElementById('chartCustomerFilter');
+                        var rect = selEl.getBoundingClientRect();
+                        var fixedW = Math.round((rect.width || 220) * 0.8);
+                        selEl.style.width = fixedW + 'px';
+                        $('#chartCustomerFilter').siblings('.select2-container').css('width', fixedW + 'px');
+                        $('#chartCustomerFilter').siblings('.select2-container').find('.select2-selection').css('width', fixedW + 'px');
+                    } catch(e) {}
+                } else {
+                    sel.disabled = false;
+                }
+            } catch (e) {
+                sel.disabled = false;
+            }
         }
 
         function handleFactoryFilterToggle() {
@@ -1223,10 +1565,10 @@
             if (cititex1Toggle.checked) activeFactories.push('Cititex 1');
             if (cititex2Toggle.checked) activeFactories.push('Cititex 2');
             
-            const selectedCustomer = customerFilter.value;
+            const selectedCustomers = getSelectedCustomers();
 
             // Si no hay ningún filtro activo, mostrar todos los datos originales
-            if (activeFactories.length === 0 && !selectedCustomer) {
+            if (activeFactories.length === 0 && selectedCustomers.length === 0) {
                 renderTable(internaBody, currentInternaData, 'INTERNA');
                 renderTable(clienteBody, currentClienteData, 'CLIENTE');
                 return;
@@ -1243,10 +1585,10 @@
                 });
             }
             
-            // Aplicar filtro de Customer si hay uno seleccionado
-            if (selectedCustomer) {
+            // Aplicar filtro de Customer si hay uno o varios seleccionados
+            if (selectedCustomers.length > 0) {
                 filteredInternaData = filteredInternaData.filter(row => {
-                    return row['Customer'] === selectedCustomer;
+                    return selectedCustomers.includes(row['Customer']);
                 });
             }
 
@@ -1261,10 +1603,10 @@
                 });
             }
             
-            // Aplicar filtro de Customer si hay uno seleccionado
-            if (selectedCustomer) {
+            // Aplicar filtro de Customer si hay uno o varios seleccionados
+            if (selectedCustomers.length > 0) {
                 filteredClienteData = filteredClienteData.filter(row => {
-                    return row['Customer'] === selectedCustomer;
+                    return selectedCustomers.includes(row['Customer']);
                 });
             }
 
@@ -1879,6 +2221,7 @@
             const selectedFactory = factoryFilter.value;
             const weekFrom = weekFromFilter.value;
             const weekTo = weekToFilter.value;
+            const selectedChartCustomers = getSelectedChartCustomers();
             
             console.log('Filters changed - Factory:', selectedFactory, 'From:', weekFrom, 'To:', weekTo);
             
@@ -1894,7 +2237,7 @@
                 return;
             }
             
-            const weekData = getWeeklyTrendsDataByRange(selectedFactory);
+            const weekData = getWeeklyTrendsDataByRange(selectedFactory, selectedChartCustomers);
             if (weekData.length === 0) {
                 alert('No hay datos para los filtros seleccionados');
                 return;
@@ -1913,7 +2256,10 @@
             populateWeekFilters();
             
             const selectedFactory = factoryFilter.value;
-            const weekData = getWeeklyTrendsDataByRange(selectedFactory);
+            // Poblar el filtro de customers del modal
+            populateChartCustomerFilter();
+            const selectedChartCustomers = getSelectedChartCustomers();
+            const weekData = getWeeklyTrendsDataByRange(selectedFactory, selectedChartCustomers);
             console.log('Week data for chart:', weekData);
             console.log('BAP values:', weekData.map(w => ({ week: w.week, bap: w.bap })));
             
@@ -1937,7 +2283,7 @@
         }
 
         // Función para obtener datos de tendencias por rango de semanas
-        function getWeeklyTrendsDataByRange(selectedFactory = 'all') {
+        function getWeeklyTrendsDataByRange(selectedFactory = 'all', selectedChartCustomers = []) {
             const weekFrom = parseInt(weekFromFilter.value);
             const weekTo = parseInt(weekToFilter.value);
             
@@ -1974,8 +2320,8 @@
                 const weekName = `SEM${week}`;
                 
                 // Buscar datos para esta semana y factory
-                const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory);
-                const weekBAP = getBAPForWeek(weekNumber, selectedFactory);
+                const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory, selectedChartCustomers);
+                const weekBAP = getBAPForWeek(weekNumber, selectedFactory, selectedChartCustomers);
                 
                 weeksData.push({
                     week: weekName,
@@ -2002,8 +2348,8 @@
                 sampleWeeks.forEach(week => {
                     const weekNumber = parseInt(week);
                     const weekName = `SEM${week}`;
-                    const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory);
-                    const weekBAP = getBAPForWeek(weekNumber, selectedFactory);
+                    const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory, getSelectedChartCustomers());
+                    const weekBAP = getBAPForWeek(weekNumber, selectedFactory, getSelectedChartCustomers());
                     
                     console.log(`Week ${week}: defects=${weekDefects}, BAP=${weekBAP}`);
                     
@@ -2027,8 +2373,8 @@
                 const weekName = `SEM${week}`;
                 
                 // Buscar datos para esta semana y factory
-                const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory);
-                const weekBAP = getBAPForWeek(weekNumber, selectedFactory);
+                const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory, getSelectedChartCustomers());
+                const weekBAP = getBAPForWeek(weekNumber, selectedFactory, getSelectedChartCustomers());
                 
                 weeksData.push({
                     week: weekName,
@@ -2076,11 +2422,13 @@
             }
 
             // Filtrar filas por semana, tipo y factory (misma lógica que getTotalDefectsForWeek)
+            const selectedChartCustomers = arguments.length > 2 && Array.isArray(arguments[2]) ? arguments[2] : [];
             const rows = gridData.filter(row => {
                 const matchesWeek = row.Week === weekStr;
                 const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
                 const matchesFactory = selectedFactory === 'all' || row['Factory Code'] === selectedFactory;
-                return matchesWeek && matchesType && matchesFactory;
+                const matchesCustomer = (!selectedChartCustomers || selectedChartCustomers.length === 0) || selectedChartCustomers.includes(row['Customer']);
+                return matchesWeek && matchesType && matchesFactory && matchesCustomer;
             });
 
             console.log(`Week ${weekStr}, Factory ${selectedFactory} filtered rows for BAP:`, rows.length);
@@ -2145,12 +2493,14 @@
             
             // Filtrar datos por semana y factory
             const weekStr = weekNumber.toString();
+            const selectedChartCustomers = arguments.length > 2 && Array.isArray(arguments[2]) ? arguments[2] : [];
             const weekData = gridData.filter(row => {
                 // Asegurarse de que la semana coincida, que sea de tipo INTERNA y del factory seleccionado
                 const matchesWeek = row.Week === weekStr;
                 const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
                 const matchesFactory = selectedFactory === 'all' || row['Factory Code'] === selectedFactory;
-                return matchesWeek && matchesType && matchesFactory;
+                const matchesCustomer = (!selectedChartCustomers || selectedChartCustomers.length === 0) || selectedChartCustomers.includes(row['Customer']);
+                return matchesWeek && matchesType && matchesFactory && matchesCustomer;
             });
             
             console.log(`Week ${weekStr}, Factory ${selectedFactory} filtered data:`, weekData.length, 'rows');

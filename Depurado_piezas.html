@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Control de Calidad Corte</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 12px;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            height: calc(100vh - 24px);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 12px;
+            opacity: 0.95;
+            font-weight: 400;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .controls-grid {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+        }
+
+        .filters-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: #333;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        select {
+            padding: 6px 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 11px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        select:hover, select:focus {
+            border-color: #2a5298;
+            outline: none;
+        }
+
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(42, 82, 152, 0.4);
+        }
+
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: auto minmax(350px, 1fr);
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .kpi-grid {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 8px;
+            padding: 8px 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 0 0 calc(13.75% - 7px);
+            min-width: 120px;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            font-family: Calibri, sans-serif;
+            color: #000;
+            font-weight: 400;
+            margin-bottom: 2px;
+        }
+
+        .kpi-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .kpi-value {
+            font-size: 18px;
+            font-family: Calibri, sans-serif;
+            font-weight: 700;
+            color: #000;
+            line-height: 1;
+        }
+
+        .kpi-subvalue {
+            font-size: 18px;
+            font-family: Calibri, sans-serif;
+            color: #000;
+            font-weight: 400;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .kpi-percent {
+            font-size: 14px;
+            font-family: Calibri, sans-serif;
+            color: #000;
+            font-weight: 400;
+            line-height: 1;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chart-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-shrink: 0;
+        }
+
+        .chart-container {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            max-height: 350px;
+        }
+
+        .pareto-section {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .right-section {
+            grid-column: 2;
+            grid-row: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .top-ops {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .top-ops-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-shrink: 0;
+        }
+
+        .ops-list {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .op-item {
+            padding: 6px 8px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+        }
+
+        .op-item:hover {
+            background: #f8f9fa;
+        }
+
+        .op-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .op-name {
+            font-weight: 700;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .op-details {
+            color: #666;
+            font-size: 9px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .op-metric {
+            font-weight: 700;
+            font-size: 11px;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 6px;
+            flex-shrink: 0;
+        }
+
+        .badge-danger {
+            background: #fee;
+            color: #c00;
+        }
+
+        .badge-warning {
+            background: #ffeaa7;
+            color: #856404;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .status-loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .ops-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .ops-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .ops-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        .ops-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .btn-back {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 8px 16px;
+            background: white;
+            color: #1e3c72;
+            border: 2px solid white;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-50%) translateX(-2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="position: relative;">
+            <h1>🎯 Control de Calidad - Área de Corte</h1>
+            <a href="index.html" class="btn-back">
+                <span>←</span>
+                <span>Volver</span>
+            </a>
+        </header>
+
+        <div class="controls">
+            <div class="controls-grid">
+                <div class="filters-group">
+                    <div class="control-group">
+                        <label>Año:</label>
+                        <select id="yearSelect" onchange="applyFilters()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Periodo:</label>
+                        <select id="periodTypeSelect" onchange="togglePeriodFilter()">
+                            <option value="week">Por Semana</option>
+                            <option value="month">Por Mes</option>
+                        </select>
+                    </div>
+                    <div class="control-group" id="weekFilterGroup">
+                        <label>Semana:</label>
+                        <select id="weekSelect" onchange="applyFilters()">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="control-group" id="monthFilterGroup" style="display: none;">
+                        <label>Mes:</label>
+                        <select id="monthSelect" onchange="applyFilters()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Cliente:</label>
+                        <select id="clienteSelect" onchange="applyFilters()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <span id="loadingStatus" class="status-badge status-loading">Cargando...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="kpiSection" class="kpi-grid">
+                <!-- KPI cards -->
+            </div>
+
+            <div class="chart-card pareto-section">
+                <h3 class="chart-title">📊 Pareto de Defectos (Piezas Depuradas) - Principio 80/20</h3>
+                <div class="chart-container">
+                    <canvas id="paretoChart"></canvas>
+                </div>
+            </div>
+
+            <div class="right-section">
+                <div class="chart-card" style="flex: 1;">
+                    <h3 class="chart-title">🏭 Comparativa Factory Code</h3>
+                    <div class="chart-container">
+                        <canvas id="factoryChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="top-ops" style="flex: 1;">
+                    <h3 class="top-ops-title">⚠️ Top 10 OPs Críticas</h3>
+                    <div class="ops-list" id="topOpsList">
+                        <!-- OPs -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_ID = '1sFkWMxxLM7DO4erVoQtvHyrUk8ynJ4E1PVf6dIwnuBg';
+        const BASE_SHEET = 'base';
+        const PROD_CORTE_SHEET = 'prod_corte';
+
+        let baseData = [];
+        let prodCorteData = [];
+        let defectColumns = [];
+        let currentFilters = { year: '', periodType: 'week', month: '', week: '', cliente: '' };
+        let paretoChart = null;
+        let factoryChart = null;
+
+        function gvizToObjects(resp) {
+            if (!resp || !resp.table) return [];
+            const cols = (resp.table.cols || []).map(c => String(c.label || c.id || '').trim());
+            return (resp.table.rows || []).map(r => {
+                const o = {};
+                cols.forEach((h, i) => {
+                    const cell = r.c && r.c[i] ? r.c[i] : null;
+                    o[h] = cell && (cell.v !== null && cell.v !== undefined) ? cell.v : '';
+                });
+                return o;
+            });
+        }
+
+        function loadSheetJSONP(sheetId, sheetName) {
+            return new Promise((resolve, reject) => {
+                const cbName = 'GVIZ_CB_' + Math.random().toString(36).slice(2);
+                let script = document.createElement('script');
+                const timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error(`Timeout al cargar "${sheetName}"`));
+                }, 15000);
+
+                function cleanup() {
+                    clearTimeout(timer);
+                    delete window[cbName];
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                }
+
+                window[cbName] = function(resp) {
+                    cleanup();
+                    try {
+                        resolve(gvizToObjects(resp));
+                    } catch (e) {
+                        reject(new Error('Error al procesar datos: ' + e.message));
+                    }
+                };
+
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error(`No se pudo cargar "${sheetName}"`));
+                };
+
+                const base = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`;
+                const url = `${base}?sheet=${encodeURIComponent(sheetName)}&headers=1&tq=${encodeURIComponent('select *')}&tqx=out:json;responseHandler:${cbName}&nocache=${Date.now()}`;
+                
+                script.src = url;
+                document.head.appendChild(script);
+            });
+        }
+
+        function toNum(val) {
+            if (val === '' || val === null || val === undefined) return 0;
+            const num = parseFloat(val);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function formatNum(num) {
+            return num.toLocaleString('es-PE', { maximumFractionDigits: 0 });
+        }
+
+        function formatPercent(num, decimals = 2) {
+            return num.toLocaleString('es-PE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + '%';
+        }
+
+        function updateStatus(text, type = 'loading') {
+            const badge = document.getElementById('loadingStatus');
+            badge.className = `status-badge status-${type}`;
+            badge.textContent = text;
+        }
+
+        function detectDefectColumns(data) {
+            if (!data || data.length === 0) return [];
+            const allCols = Object.keys(data[0]);
+            
+            // Columnas conocidas que NO son defectos (incluye variaciones con espacios, puntos, etc)
+            const knownCols = ['SEM', 'SEMANA', 'CLIENTE', 'OP', 'TENDIDO', 'FECHA', 'FECHA CORTE', 'FECHA_COR',
+                             'CODIGO', 'TELA', 'PARTIDA', 'DESCRIPCION', 'COLOR', 'OP_TELA', 'PTDA',
+                             'CANT.', 'CANT', 'CORTADA', 'DEPURADO', 'RECUPERADOS', 'RECUPERADO', 
+                             'REAL', 'NO RECUPERADO', 'PERDIDA', 'NETA', 'FACTORY', '_year', '_month', '_week'];
+            
+            return allCols.filter(col => {
+                const upperCol = col.toUpperCase().trim();
+                // Excluir columnas vacías o que contengan alguna palabra conocida
+                if (col.trim() === '') return false;
+                return !knownCols.some(known => upperCol.includes(known));
+            });
+        }
+
+        function populateFilters() {
+            // Procesar fechas y extraer año, mes, semana usando parseo flexible
+            const badDates = [];
+            baseData.forEach(row => {
+                const fechaCorte = row['FECHA CORTE'];
+                if (fechaCorte) {
+                    const date = parseDateFlexible(fechaCorte);
+                    if (date) {
+                        row._year = date.getFullYear();
+                        row._month = date.getMonth() + 1; // 1-12
+                        row._week = getWeekNumber(date);
+                    } else {
+                        badDates.push(fechaCorte);
+                    }
+                }
+            });
+
+            // Años: combinar de base (FECHA CORTE procesada) y prod_corte (columna AÑO)
+            const yearsFromBase = baseData.map(r => r._year).filter(y => y);
+            const yearsFromProdCorte = prodCorteData.map(r => toNum(r['AÑO']) || toNum(r.AÑO)).filter(y => y);
+            const years = [...new Set([...yearsFromBase, ...yearsFromProdCorte])].sort((a, b) => a - b);
+            const yearSelect = document.getElementById('yearSelect');
+            years.forEach(year => {
+                const opt = document.createElement('option');
+                opt.value = year;
+                opt.textContent = year;
+                yearSelect.appendChild(opt);
+            });
+
+            // Meses: combinar de base (FECHA CORTE procesada) y prod_corte (columna MES)
+            const monthsFromBase = baseData.map(r => r._month).filter(m => m);
+            const monthsFromProdCorte = prodCorteData.map(r => toNum(r.MES) || toNum(r['MES'])).filter(m => m);
+            const months = [...new Set([...monthsFromBase, ...monthsFromProdCorte])].sort((a, b) => a - b);
+            const monthSelect = document.getElementById('monthSelect');
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            months.forEach(month => {
+                const opt = document.createElement('option');
+                opt.value = month;
+                opt.textContent = monthNames[month - 1];
+                monthSelect.appendChild(opt);
+            });
+
+            // Semanas: combinar de base (SEM) y prod_corte (SEM)
+            const weeksFromBase = baseData.map(r => toNum(r.SEM) || r._week).filter(w => w);
+            const weeksFromProdCorte = prodCorteData.map(r => toNum(r.SEM)).filter(w => w);
+            const weeks = [...new Set([...weeksFromBase, ...weeksFromProdCorte])].sort((a, b) => a - b);
+            const weekSelect = document.getElementById('weekSelect');
+            weeks.forEach(week => {
+                const opt = document.createElement('option');
+                opt.value = week;
+                opt.textContent = `Semana ${week}`;
+                weekSelect.appendChild(opt);
+            });
+
+            // Clientes
+            const clientes = [...new Set(baseData.map(r => r.CLIENTE).filter(c => c))].sort();
+            const clienteSelect = document.getElementById('clienteSelect');
+            clientes.forEach(cliente => {
+                const opt = document.createElement('option');
+                opt.value = cliente;
+                opt.textContent = cliente;
+                clienteSelect.appendChild(opt);
+            });
+
+            // Logs para depuración: años detectados y ejemplos de FECHA CORTE que no se parsearon
+            console.log('Años detectados en FECHA CORTE:', years);
+            if (badDates.length > 0) {
+                const uniq = [...new Set(badDates)].slice(0, 20);
+                console.warn('Algunos valores de FECHA CORTE no se pudieron parsear (ejemplos):', uniq);
+            }
+        }
+
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function togglePeriodFilter() {
+            const periodType = document.getElementById('periodTypeSelect').value;
+            const weekGroup = document.getElementById('weekFilterGroup');
+            const monthGroup = document.getElementById('monthFilterGroup');
+            
+            if (periodType === 'week') {
+                weekGroup.style.display = '';
+                monthGroup.style.display = 'none';
+                document.getElementById('monthSelect').value = '';
+            } else {
+                weekGroup.style.display = 'none';
+                monthGroup.style.display = '';
+                document.getElementById('weekSelect').value = '';
+            }
+            
+            applyFilters();
+        }
+
+        function parseDateFlexible(input) {
+            if (!input && input !== 0) return null;
+            // If already a Date
+            if (input instanceof Date) return isNaN(input) ? null : input;
+            // If Google returned an object-like date (sometimes GViz returns {v: Date})
+            if (typeof input === 'object' && input.v instanceof Date) return isNaN(input.v) ? null : input.v;
+            // If numeric (milliseconds since epoch)
+            if (typeof input === 'number') {
+                const d = new Date(input);
+                if (!isNaN(d)) return d;
+            }
+
+            const s = String(input).trim();
+            // Try native parse (ISO / RFC)
+            let d = new Date(s);
+            if (!isNaN(d)) return d;
+
+            // Try DD/MM/YYYY or D/M/YYYY
+            const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+            if (m1) {
+                const day = parseInt(m1[1], 10);
+                const month = parseInt(m1[2], 10) - 1;
+                const year = parseInt(m1[3], 10);
+                d = new Date(year, month, day);
+                if (!isNaN(d)) return d;
+            }
+
+            // Try YYYY-MM-DD or YYYY/MM/DD
+            const m2 = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (m2) {
+                const year = parseInt(m2[1], 10);
+                const month = parseInt(m2[2], 10) - 1;
+                const day = parseInt(m2[3], 10);
+                d = new Date(year, month, day);
+                if (!isNaN(d)) return d;
+            }
+
+            // Try DD-MMM-YY or DD-MMM-YYYY with month names (Spanish/English)
+            const m3 = s.match(/^(\d{1,2})[\-\s]([A-Za-zÀ-ÿ\.]{3,})[\-\s](\d{2,4})$/);
+            if (m3) {
+                const day = parseInt(m3[1], 10);
+                let mon = m3[2].replace('.', '').toLowerCase();
+                const yy = m3[3];
+                const monthsMap = {
+                    ene:0, feb:1, mar:2, abr:3, may:4, jun:5, jul:6, ago:7, sep:8, set:8, oct:9, nov:10, dic:11,
+                    jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11
+                };
+                const key3 = mon.slice(0,3);
+                let monthIdx = monthsMap[key3];
+                if (monthIdx === undefined) {
+                    for (const k in monthsMap) {
+                        if (k === mon) { monthIdx = monthsMap[k]; break; }
+                    }
+                }
+                if (monthIdx !== undefined) {
+                    let year = parseInt(yy, 10);
+                    if (yy.length === 2) {
+                        year += 2000; // assume 2000s for two-digit years
+                    }
+                    d = new Date(year, monthIdx, day);
+                    if (!isNaN(d)) return d;
+                }
+            }
+
+            return null;
+        }
+
+        function getFilteredData() {
+            let filtered = baseData;
+
+            if (currentFilters.year) {
+                filtered = filtered.filter(r => r._year == currentFilters.year);
+            }
+
+            if (currentFilters.periodType === 'month' && currentFilters.month) {
+                filtered = filtered.filter(r => r._month == currentFilters.month);
+            }
+
+            if (currentFilters.periodType === 'week' && currentFilters.week) {
+                filtered = filtered.filter(r => r._week == currentFilters.week);
+            }
+
+            if (currentFilters.cliente) {
+                filtered = filtered.filter(r => r.CLIENTE === currentFilters.cliente);
+            }
+
+            return filtered;
+        }
+
+        function getFilteredProdCorteData() {
+            let filtered = prodCorteData;
+
+            if (currentFilters.year) {
+                filtered = filtered.filter(r => toNum(r['AÑO']) == currentFilters.year || toNum(r.AÑO) == currentFilters.year);
+            }
+
+            if (currentFilters.periodType === 'month' && currentFilters.month) {
+                const monthNum = toNum(currentFilters.month);
+                const monthNamesUpper = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+                filtered = filtered.filter(r => {
+                    const raw = r.MES !== undefined ? r.MES : r['MES'];
+                    const rawNum = toNum(raw);
+                    if (!isNaN(rawNum) && monthNum && rawNum == monthNum) return true;
+                    if (raw) {
+                        const s = raw.toString().trim().toUpperCase();
+                        if (monthNamesUpper.includes(s)) return (monthNamesUpper.indexOf(s) + 1) === monthNum;
+                        const short = s.slice(0,3);
+                        const shortNames = monthNamesUpper.map(m => m.slice(0,3));
+                        if (shortNames.includes(short)) return (shortNames.indexOf(short) + 1) === monthNum;
+                    }
+                    return false;
+                });
+            }
+
+            if (currentFilters.periodType === 'week' && currentFilters.week) {
+                filtered = filtered.filter(r => toNum(r.SEM) == currentFilters.week);
+            }
+
+            if (currentFilters.cliente) {
+                filtered = filtered.filter(r => r.CLIENTE === currentFilters.cliente);
+            }
+
+            return filtered;
+        }
+
+        function calculateKPIs(data, prodCorteFiltered) {
+            // Calcular Prendas Cortadas desde la hoja prod_corte
+            let totalPrendasCortadas = 0;
+            let totalCantidadRevisada = 0;
+            if (prodCorteFiltered && prodCorteFiltered.length > 0) {
+                prodCorteFiltered.forEach(row => {
+                    // Obtener la cantidad cortada de la columna CANTIDAD CORTADA
+                    const cantidad = toNum(row['CANTIDAD CORTADA']) || toNum(row.CANTIDAD_CORTADA) || 0;
+                    totalPrendasCortadas += cantidad;
+                    
+                    // Obtener la cantidad revisada de la columna CANTIDAD REVISADA
+                    const cantidadRevisada = toNum(row['CANTIDAD REVISADA']) || toNum(row.CANTIDAD_REVISADA) || 0;
+                    totalCantidadRevisada += cantidadRevisada;
+                });
+            }
+            
+            let totalPrendasDepuradas = 0;
+            let totalPrendasRecuperadas = 0;
+            let totalPerdidaNeta = 0;
+            let totalPiezasDefectuosas = 0;
+
+            data.forEach(row => {
+                totalPrendasDepuradas += toNum(row['CANT. DEPURADO']);
+                totalPrendasRecuperadas += toNum(row.RECUPERADOS);
+                totalPerdidaNeta += toNum(row['REAL NO RECUPERADO']);
+                
+                defectColumns.forEach(col => {
+                    totalPiezasDefectuosas += toNum(row[col]);
+                });
+            });
+
+            const tasaRevisada = totalPrendasCortadas > 0 ? (totalCantidadRevisada / totalPrendasCortadas) * 100 : 0;
+            const tasaDepurado = totalPrendasCortadas > 0 ? (totalPrendasDepuradas / totalPrendasCortadas) * 100 : 0;
+            const tasaDepuradoRevisada = totalCantidadRevisada > 0 ? (totalPrendasDepuradas / totalCantidadRevisada) * 100 : 0;
+            const tasaRecuperadosCortadas = totalPrendasCortadas > 0 ? (totalPrendasRecuperadas / totalPrendasCortadas) * 100 : 0;
+            const tasaRecuperadosRevisada = totalCantidadRevisada > 0 ? (totalPrendasRecuperadas / totalCantidadRevisada) * 100 : 0;
+            const tasaRecuperacion = totalPrendasDepuradas > 0 ? (totalPrendasRecuperadas / totalPrendasDepuradas) * 100 : 0;
+            const tasaPerdida = totalPrendasCortadas > 0 ? (totalPerdidaNeta / totalPrendasCortadas) * 100 : 0;
+            const tasaPerdidaRevisada = totalCantidadRevisada > 0 ? (totalPerdidaNeta / totalCantidadRevisada) * 100 : 0;
+
+            return {
+                totalPrendasCortadas,
+                totalCantidadRevisada,
+                totalPrendasDepuradas,
+                totalPrendasRecuperadas,
+                totalPerdidaNeta,
+                totalPiezasDefectuosas,
+                tasaRevisada,
+                tasaDepurado,
+                tasaDepuradoRevisada,
+                tasaRecuperadosCortadas,
+                tasaRecuperadosRevisada,
+                tasaRecuperacion,
+                tasaPerdida,
+                tasaPerdidaRevisada,
+                totalRegistros: data.length
+            };
+        }
+
+        function renderKPIs(kpis) {
+            const kpiSection = document.getElementById('kpiSection');
+
+            kpiSection.innerHTML = `
+                <div class="kpi-card">
+                    <div class="kpi-label">Prendas Cortadas</div>
+                    <div class="kpi-row">
+                        <div class="kpi-value">${formatNum(kpis.totalPrendasCortadas)} pds</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Prendas Revisada</div>
+                    <div class="kpi-row">
+                        <div class="kpi-value">[${formatNum(kpis.totalCantidadRevisada)}]</div>
+                        <div class="kpi-subvalue"><span class="kpi-percent">${formatPercent(kpis.tasaRevisada, 2)}</span></div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Prendas Depuradas</div>
+                    <div class="kpi-row">
+                        <div class="kpi-value">${formatNum(kpis.totalPrendasDepuradas)}</div>
+                        <div class="kpi-subvalue"><span class="kpi-percent">${formatPercent(kpis.tasaDepurado, 2)}</span> [<span class="kpi-percent">${formatPercent(kpis.tasaDepuradoRevisada, 2)}</span>]</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Prendas Recuperadas</div>
+                    <div class="kpi-row">
+                        <div class="kpi-value">${formatNum(kpis.totalPrendasRecuperadas)}</div>
+                        <div class="kpi-subvalue"><span class="kpi-percent">${formatPercent(kpis.tasaRecuperadosCortadas, 2)}</span> [<span class="kpi-percent">${formatPercent(kpis.tasaRecuperadosRevisada, 2)}</span>]</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Real no recuperado</div>
+                    <div class="kpi-row">
+                        <div class="kpi-value">${formatNum(kpis.totalPerdidaNeta)}</div>
+                        <div class="kpi-subvalue"><span class="kpi-percent">${formatPercent(kpis.tasaPerdida, 2)}</span> [<span class="kpi-percent">${formatPercent(kpis.tasaPerdidaRevisada, 2)}</span>]</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Piezas Defectuosas</div>
+                    <div class="kpi-row">
+                        <div class="kpi-value">${formatNum(kpis.totalPiezasDefectuosas)}</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Eficiencia Global</div>
+                    <div class="kpi-row">
+                        <div class="kpi-value">${formatPercent(100 - kpis.tasaPerdida, 1)}</div>
+                        <div class="kpi-subvalue">${100 - kpis.tasaPerdida > 95 ? '✅ Óptimo' : '⚠️ Mejorar'}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function calculatePareto(data) {
+            const defectTotals = {};
+
+            defectColumns.forEach(col => {
+                defectTotals[col] = 0;
+            });
+
+            data.forEach(row => {
+                defectColumns.forEach(col => {
+                    defectTotals[col] += toNum(row[col]);
+                });
+            });
+
+            const sorted = Object.entries(defectTotals)
+                .filter(([_, value]) => value > 0)
+                .sort((a, b) => b[1] - a[1]);
+
+            const total = sorted.reduce((sum, [_, value]) => sum + value, 0);
+            
+            let cumulative = 0;
+            const paretoData = sorted.map(([defect, value]) => {
+                cumulative += value;
+                return {
+                    defect: defect.length > 25 ? defect.substring(0, 22) + '...' : defect,
+                    fullDefect: defect,
+                    value,
+                    percent: total > 0 ? (value / total) * 100 : 0,
+                    cumulative: total > 0 ? (cumulative / total) * 100 : 0
+                };
+            });
+
+            return paretoData;
+        }
+
+        function renderParetoChart(paretoData) {
+            const canvas = document.getElementById('paretoChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const top10 = paretoData.slice(0, 10);
+
+            // Destruir gráfico anterior si existe
+            if (paretoChart) {
+                paretoChart.destroy();
+            }
+
+            paretoChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: top10.map(d => d.defect),
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Piezas Defectuosas',
+                            data: top10.map(d => d.value),
+                            backgroundColor: 'rgba(30, 60, 114, 0.85)',
+                            borderColor: 'rgba(30, 60, 114, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: '% Acumulado (80/20)',
+                            data: top10.map(d => d.cumulative),
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            borderWidth: 3,
+                            yAxisID: 'y1',
+                            tension: 0.3,
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(231, 76, 60, 1)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 10 },
+                                padding: 8
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    const idx = context[0].dataIndex;
+                                    return top10[idx].fullDefect;
+                                },
+                                label: function(context) {
+                                    if (context.dataset.type === 'line') {
+                                        return 'Acumulado: ' + context.parsed.y.toFixed(1) + '%';
+                                    }
+                                    const idx = context.dataIndex;
+                                    return 'Piezas: ' + formatNum(context.parsed.y) + ' (' + top10[idx].percent.toFixed(1) + '%)';
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                font: { size: 9 },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Cantidad de Piezas',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '% Acumulado',
+                                font: { size: 10 }
+                            },
+                            min: 0,
+                            max: 100,
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            ticks: {
+                                font: { size: 9 },
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function calculateFactoryComparison(data) {
+            const factoryData = {};
+
+            data.forEach(row => {
+                const factory = row.FACTORY_CODE || 'Sin Factory';
+                if (!factoryData[factory]) {
+                    factoryData[factory] = {
+                        cortadas: 0,
+                        perdidaNeta: 0
+                    };
+                }
+
+                factoryData[factory].cortadas += toNum(row['CANT. CORTADA']);
+                factoryData[factory].perdidaNeta += toNum(row['REAL NO RECUPERADO']);
+            });
+
+            return Object.keys(factoryData)
+                .filter(f => f !== 'Sin Factory')
+                .map(factory => ({
+                    factory,
+                    cortadas: factoryData[factory].cortadas,
+                    perdidaNeta: factoryData[factory].perdidaNeta,
+                    tasaPerdida: factoryData[factory].cortadas > 0 
+                        ? (factoryData[factory].perdidaNeta / factoryData[factory].cortadas) * 100 
+                        : 0
+                }))
+                .sort((a, b) => a.tasaPerdida - b.tasaPerdida);
+        }
+
+        function renderFactoryChart(factoryData) {
+            const canvas = document.getElementById('factoryChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+
+            // Destruir gráfico anterior si existe
+            if (factoryChart) {
+                factoryChart.destroy();
+            }
+
+            const colors = [
+                'rgba(39, 174, 96, 0.85)',
+                'rgba(241, 196, 15, 0.85)',
+                'rgba(231, 76, 60, 0.85)'
+            ];
+
+            factoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: factoryData.map(d => d.factory),
+                    datasets: [
+                        {
+                            label: '% Pérdida Neta',
+                            data: factoryData.map(d => d.tasaPerdida),
+                            backgroundColor: factoryData.map((d, i) => colors[i] || colors[2]),
+                            borderColor: factoryData.map((d, i) => colors[i]?.replace('0.85', '1') || colors[2]),
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const idx = context.dataIndex;
+                                    return [
+                                        'Pérdida: ' + formatPercent(context.parsed.x, 2),
+                                        'Cortadas: ' + formatNum(factoryData[idx].cortadas),
+                                        'Pérdida Neta: ' + formatNum(factoryData[idx].perdidaNeta)
+                                    ];
+                                }
+                            }
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'right',
+                            formatter: (value) => formatPercent(value, 1),
+                            font: {
+                                weight: 'bold',
+                                size: 10
+                            },
+                            color: '#333'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '% Pérdida',
+                                font: { size: 10 }
+                            },
+                            ticks: {
+                                font: { size: 9 },
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Nuevo: comparación por semanas (barras: Cortadas, Revisada, Real no recuperado) + línea %Real no recuperado ---
+        function getISOWeekNumber(d) {
+            // Copy date so don't modify original
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            // Set to nearest Thursday: current date + 4 - current day number
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            // Year of the Thursday in ISO week date
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+            // Calculate full weeks to nearest Thursday
+            const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+            return weekNo;
+        }
+
+        function calculateWeekComparison(baseAll, prodCorteAll) {
+            // Use provided datasets or fall back to global loaded data
+            const base = baseAll && baseAll.length ? baseAll : (typeof baseData !== 'undefined' ? baseData : []);
+            const prod = prodCorteAll && prodCorteAll.length ? prodCorteAll : (typeof prodCorteData !== 'undefined' ? prodCorteData : []);
+
+            // Determine current week number (ISO) and take last 10 weeks
+            const today = new Date();
+            const currentWeek = getISOWeekNumber(today);
+            const weeks = [];
+            for (let i = 9; i >= 0; i--) {
+                const w = currentWeek - i;
+                if (w > 0) weeks.push(w);
+            }
+
+            const labels = weeks.map(w => `SEM${w}`);
+
+            const cortadas = [];
+            const revisadas = [];
+            const realNoRecuperado = [];
+            const pctRealNoRecuperado = [];
+
+            weeks.forEach(week => {
+                const prodRows = prod.filter(r => toNum(r.SEM) == week || toNum(r._week) == week || toNum(r['SEM']) == week);
+                const cort = prodRows.reduce((s, r) => s + (toNum(r['CANTIDAD CORTADA']) || toNum(r.CANTIDAD_CORTADA) || toNum(r['CANT. CORTADA']) || 0), 0);
+                const rev = prodRows.reduce((s, r) => s + (toNum(r['CANTIDAD REVISADA']) || toNum(r.CANTIDAD_REVISADA) || 0), 0);
+
+                const baseRows = base.filter(r => toNum(r._week) == week || toNum(r.SEM) == week);
+                const real = baseRows.reduce((s, r) => s + toNum(r['REAL NO RECUPERADO']), 0);
+
+                cortadas.push(cort);
+                revisadas.push(rev);
+                realNoRecuperado.push(real);
+
+                const pct = rev > 0 ? (real / rev) * 100 : 0;
+                pctRealNoRecuperado.push(pct);
+            });
+
+            return {
+                labels,
+                cortadas,
+                revisadas,
+                realNoRecuperado,
+                pctRealNoRecuperado
+            };
+        }
+
+        function renderWeekComparisonChart() {
+            const canvas = document.getElementById('factoryChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            if (factoryChart) {
+                factoryChart.destroy();
+            }
+
+            // Use global data (independent of main filters) to show last 10 weeks
+            const weekData = calculateWeekComparison();
+
+            // Determine a 'nice' max for the secondary Y axis based on data
+            function niceMaxPercent(value) {
+                if (!isFinite(value) || value <= 0) return 1;
+                const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+                const scaled = value / magnitude;
+                const choices = [1,2,4,5,10];
+                for (let i = 0; i < choices.length; i++) {
+                    if (scaled <= choices[i]) return choices[i] * magnitude;
+                }
+                return 10 * magnitude;
+            }
+
+            const maxPct = weekData.pctRealNoRecuperado && weekData.pctRealNoRecuperado.length ? Math.max(...weekData.pctRealNoRecuperado) : 0;
+            const y1Max = niceMaxPercent(maxPct);
+
+            factoryChart = new Chart(ctx, {
+                data: {
+                    labels: weekData.labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Prendas Cortadas',
+                            data: weekData.cortadas,
+                            backgroundColor: 'rgba(54,162,235,0.8)',
+                            borderColor: 'rgba(54,162,235,1)',
+                            borderWidth: 1,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Cantidad Revisada',
+                            data: weekData.revisadas,
+                            backgroundColor: 'rgba(75,192,192,0.8)',
+                            borderColor: 'rgba(75,192,192,1)',
+                            borderWidth: 1,
+                            yAxisID: 'y'
+                        },
+                        // 'Real no recuperado' barras removidas; sólo se mantiene la línea de % Real no recuperado
+                        {
+                            type: 'line',
+                            label: '% Real no recuperado',
+                            data: weekData.pctRealNoRecuperado,
+                            borderColor: 'rgba(155,89,182,1)',
+                            backgroundColor: 'rgba(155,89,182,0.1)',
+                            yAxisID: 'y1',
+                            tension: 0.2,
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(155,89,182,1)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            datalabels: {
+                                align: 'end',
+                                anchor: 'end',
+                                formatter: function(value) { return formatPercent(value, 2); },
+                                color: '#000',
+                                font: { family: 'Calibri, sans-serif', weight: 'bold', size: 14 },
+                                offset: -6
+                            }
+                        }
+                    ]
+                },
+                    options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataset.type === 'line') {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                                    }
+                                    return context.dataset.label + ': ' + formatNum(context.parsed.y);
+                                }
+                            }
+                        },
+                        datalabels: { display: false }
+                    },
+                        scales: {
+                        x: {
+                            title: { display: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: { display: false },
+                            min: 0,
+                            max: y1Max,
+                            grid: { drawOnChartArea: false },
+                            ticks: { callback: v => v + '%', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTopOPs(data) {
+            const topOpsList = document.getElementById('topOpsList');
+            
+            const opData = data.map(row => ({
+                op: row.OP || 'N/A',
+                tendido: row.TENDIDO || 'N/A',
+                cliente: row.CLIENTE || 'N/A',
+                factory: row.FACTORY_CODE || 'N/A',
+                cortadas: toNum(row['CANT. CORTADA']),
+                perdidaNeta: toNum(row['REAL NO RECUPERADO']),
+                tasaPerdida: toNum(row['CANT. CORTADA']) > 0 
+                    ? (toNum(row['REAL NO RECUPERADO']) / toNum(row['CANT. CORTADA'])) * 100 
+                    : 0
+            }))
+            .filter(op => op.perdidaNeta > 0)
+            .sort((a, b) => b.tasaPerdida - a.tasaPerdida)
+            .slice(0, 10);
+
+            if (opData.length === 0) {
+                topOpsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No hay OPs con pérdidas</div>';
+                return;
+            }
+
+            topOpsList.innerHTML = opData.map(op => `
+                <div class="op-item">
+                    <div class="op-info">
+                        <div class="op-name">OP ${op.op} - T${op.tendido}</div>
+                        <div class="op-details">${op.cliente} | ${op.factory}</div>
+                    </div>
+                    <div class="op-metric" style="color: ${op.tasaPerdida > 10 ? '#c00' : op.tasaPerdida > 5 ? '#856404' : '#155724'};">
+                        ${formatPercent(op.tasaPerdida, 1)}
+                    </div>
+                    <span class="badge ${op.tasaPerdida > 10 ? 'badge-danger' : op.tasaPerdida > 5 ? 'badge-warning' : 'badge-success'}">
+                        ${op.tasaPerdida > 10 ? 'CRÍTICO' : op.tasaPerdida > 5 ? 'ALERTA' : 'OK'}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function renderCharts(data, prodCorteFiltered) {
+            const paretoData = calculatePareto(data);
+            renderParetoChart(paretoData);
+
+            // Mostrar comparación por semanas en el área 'Comparativa Factory Code'
+            // Este gráfico es independiente de los filtros principales y siempre muestra
+            // las últimas 10 semanas desde la fecha actual.
+            renderWeekComparisonChart();
+
+            renderTopOPs(data);
+        }
+
+        function applyFilters() {
+            currentFilters.year = document.getElementById('yearSelect').value;
+            currentFilters.periodType = document.getElementById('periodTypeSelect').value;
+            currentFilters.month = document.getElementById('monthSelect').value;
+            currentFilters.week = document.getElementById('weekSelect').value;
+            currentFilters.cliente = document.getElementById('clienteSelect').value;
+
+            const filteredData = getFilteredData();
+            const filteredProdCorte = getFilteredProdCorteData();
+
+            if (filteredData.length === 0) {
+                updateStatus('No hay datos', 'error');
+                return;
+            }
+
+            const kpis = calculateKPIs(filteredData, filteredProdCorte);
+            renderKPIs(kpis);
+            renderCharts(filteredData, filteredProdCorte);
+            
+            let filterText = '';
+            if (currentFilters.year) filterText += `${currentFilters.year} `;
+            if (currentFilters.periodType === 'month' && currentFilters.month) {
+                const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                filterText += `${monthNames[currentFilters.month - 1]} `;
+            }
+            if (currentFilters.periodType === 'week' && currentFilters.week) filterText += `S${currentFilters.week} `;
+            if (currentFilters.cliente) filterText += `${currentFilters.cliente} `;
+            
+            updateStatus(`✓ ${filteredData.length} registros` + (filterText ? ` | ${filterText.trim()}` : ''), 'success');
+        }
+
+        async function init() {
+            try {
+                updateStatus('Cargando...', 'loading');
+
+                // Cargar ambas hojas en paralelo
+                [baseData, prodCorteData] = await Promise.all([
+                    loadSheetJSONP(SHEET_ID, BASE_SHEET),
+                    loadSheetJSONP(SHEET_ID, PROD_CORTE_SHEET)
+                ]);
+
+                if (baseData.length === 0) {
+                    updateStatus('Sin datos', 'error');
+                    return;
+                }
+
+                console.log('Datos cargados - base:', baseData.length, 'prod_corte:', prodCorteData.length);
+
+                defectColumns = detectDefectColumns(baseData);
+                
+                if (defectColumns.length === 0) {
+                    console.warn('No se detectaron columnas de defectos');
+                }
+
+                populateFilters();
+                
+                // Establecer filtros por defecto
+                // 1. Año actual
+                const currentYear = new Date().getFullYear();
+                const yearSelect = document.getElementById('yearSelect');
+                for (let i = 0; i < yearSelect.options.length; i++) {
+                    if (yearSelect.options[i].value == currentYear) {
+                        yearSelect.selectedIndex = i;
+                        currentFilters.year = yearSelect.value;
+                        break;
+                    }
+                }
+                // Si no existe el año actual, seleccionar el más reciente
+                if (!currentFilters.year && yearSelect.options.length > 1) {
+                    yearSelect.selectedIndex = yearSelect.options.length - 1;
+                    currentFilters.year = yearSelect.value;
+                }
+                
+                // 2. Periodo por semana
+                const periodTypeSelect = document.getElementById('periodTypeSelect');
+                periodTypeSelect.value = 'week';
+                currentFilters.periodType = 'week';
+                togglePeriodFilter();
+                
+                // 3. Semana anterior a la actual
+                const currentDate = new Date();
+                const currentWeekNumber = getWeekNumber(currentDate);
+                const previousWeekNumber = currentWeekNumber - 1;
+                
+                const weekSelect = document.getElementById('weekSelect');
+                let weekFound = false;
+                
+                // Intentar seleccionar la semana anterior
+                for (let i = 0; i < weekSelect.options.length; i++) {
+                    if (weekSelect.options[i].value == previousWeekNumber) {
+                        weekSelect.selectedIndex = i;
+                        currentFilters.week = weekSelect.value;
+                        weekFound = true;
+                        break;
+                    }
+                }
+                
+                // Si no existe la semana anterior, seleccionar la última disponible
+                if (!weekFound && weekSelect.options.length > 1) {
+                    weekSelect.selectedIndex = weekSelect.options.length - 1;
+                    currentFilters.week = weekSelect.value;
+                }
+                
+                applyFilters();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                updateStatus('Error: ' + error.message, 'error');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

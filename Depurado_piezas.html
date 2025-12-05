@@ -460,6 +460,9 @@
     </div>
 
     <script>
+        // Registrar el plugin de datalabels
+        Chart.register(ChartDataLabels);
+        
         const SHEET_ID = '1sFkWMxxLM7DO4erVoQtvHyrUk8ynJ4E1PVf6dIwnuBg';
         const BASE_SHEET = 'base';
         const PROD_CORTE_SHEET = 'prod_corte';
@@ -1263,7 +1266,10 @@
                             backgroundColor: 'rgba(54,162,235,0.8)',
                             borderColor: 'rgba(54,162,235,1)',
                             borderWidth: 1,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            datalabels: {
+                                display: false
+                            }
                         },
                         {
                             type: 'bar',
@@ -1272,7 +1278,10 @@
                             backgroundColor: 'rgba(75,192,192,0.8)',
                             borderColor: 'rgba(75,192,192,1)',
                             borderWidth: 1,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            datalabels: {
+                                display: false
+                            }
                         },
                         // 'Real no recuperado' barras removidas; sólo se mantiene la línea de % Real no recuperado
                         {
@@ -1288,6 +1297,7 @@
                             pointBorderColor: '#fff',
                             pointBorderWidth: 2,
                             datalabels: {
+                                display: true,
                                 align: 'end',
                                 anchor: 'end',
                                 formatter: function(value) { return formatPercent(value, 2); },
@@ -1312,8 +1322,7 @@
                                     return context.dataset.label + ': ' + formatNum(context.parsed.y);
                                 }
                             }
-                        },
-                        datalabels: { display: false }
+                        }
                     },
                         scales: {
                         x: {

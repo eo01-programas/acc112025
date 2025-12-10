@@ -244,7 +244,7 @@
             position: relative;
             flex: 1;
             min-height: 0;
-            max-height: 350px;
+            max-height: 455px;
         }
 
         .pareto-section {
@@ -474,6 +474,32 @@
             font-weight: 700;
         }
 
+        /* Ajustar anchos de columnas específicas en la tabla del modal de defectos */
+        #defectModalTable th:nth-child(1),
+        #defectModalTable td:nth-child(1) {
+            width: 10%; /* CLIENTE */
+        }
+
+        #defectModalTable th:nth-child(2),
+        #defectModalTable td:nth-child(2) {
+            width: 15%; /* OP_TELA-PTDA */
+        }
+
+        #defectModalTable th:nth-child(3),
+        #defectModalTable td:nth-child(3) {
+            width: 8%; /* OP */
+        }
+
+        #defectModalTable th:nth-child(4),
+        #defectModalTable td:nth-child(4) {
+            width: 50%; /* COLOR - más ancha */
+        }
+
+        #defectModalTable th:nth-child(5),
+        #defectModalTable td:nth-child(5) {
+            width: 17%; /* Columna de cantidad de defectos */
+        }
+
         /* Estilos específicos para la tabla de resumen OP: permitir que la tabla crezca
            horizontalmente y que los encabezados muestren el texto completo (scroll horizontal) */
         #opResumenTable {
@@ -559,6 +585,55 @@
             cursor: pointer;
             font-weight: 600;
         }
+
+        /* Context Menu para seleccionar Detalle o Tendencia */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            display: none;
+            min-width: 160px;
+            padding: 4px 0;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #333;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .context-menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        .context-menu-item:first-child {
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .context-menu-item:last-child {
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        /* Modal de Tendencia */
+        #trendModal .modal-card {
+            width: 80%;
+            max-width: 1400px;
+        }
+
+        .trend-chart-container {
+            height: 500px;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -607,6 +682,17 @@
                     <button id="opButton" class="btn-primary" style="padding:6px 10px;font-size:12px;">OP</button>
                     <span id="loadingStatus" class="status-badge status-loading">Cargando...</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Panel de Diagnóstico (oculto por defecto) -->
+        <div id="diagnosticPanel" style="display:none;background:#fff3cd;border-radius:8px;padding:10px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:11px;font-family:monospace;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <strong style="color:#856404;">🔍 Panel de Diagnóstico</strong>
+                <button onclick="toggleDiagnosticPanel()" style="padding:4px 8px;font-size:10px;border:1px solid #856404;background:transparent;cursor:pointer;border-radius:4px;">Ocultar</button>
+            </div>
+            <div id="diagnosticContent" style="color:#856404;line-height:1.6;">
+                Cargando diagnóstico...
             </div>
         </div>
 
@@ -735,6 +821,52 @@
                 </div>
             </div>
 
+            <!-- Modal para Tendencia del defecto -->
+            <div id="trendModal" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+                <div class="modal-card" role="document">
+                    <div class="modal-header">
+                        <div class="modal-title" id="trendModalTitle">Tendencia del Defecto</div>
+                        <button id="trendModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="trend-chart-container">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Context Menu para elegir entre Detalle y Tendencia -->
+            <div id="defectContextMenu" class="context-menu">
+                <div class="context-menu-item" id="contextMenuDetail">
+                    📋 Detallar
+                </div>
+                <div class="context-menu-item" id="contextMenuTrend">
+                    📈 Tendencia
+                </div>
+            </div>
+
+            <!-- Modal para detalle de TELA al hacer click -->
+            <div id="telaDetailModal" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+                <div class="modal-card" role="document" style="max-width:95%;width:95%;">
+                    <div class="modal-header">
+                        <div class="modal-title" id="telaDetailModalTitle">Detalle de TELA</div>
+                        <button id="telaDetailModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="overflow:auto;max-height:600px;position:relative;">
+                            <table id="telaDetailTable" class="modal-table" style="border-collapse:collapse;font-family:Calibri, sans-serif;font-size:12px;width:100%;">
+                                <thead id="telaDetailHead" style="position:sticky;top:0;z-index:10;">
+                                    <tr></tr>
+                                </thead>
+                                <tbody id="telaDetailBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="right-section">
                 <div class="chart-card compact" style="flex: 1;">
                     <h3 class="chart-title">Pds Cortadas/Revisadas Vs No recuperados</h3>
@@ -746,7 +878,7 @@
                 <div class="top-ops" style="flex: 1;">
                     <div class="two-tables" id="topOpsList" style="display:flex;gap:8px;height:100%;">
                         <div class="table-card" style="flex:0.8;overflow:auto;">
-                            <table id="clientsTable" class="compact-table" style="width:100%;border-collapse:collapse;font-family:Calibri, sans-serif;font-size:9px;">
+                            <table id="clientsTable" class="compact-table" style="width:100%;border-collapse:collapse;font-family:Calibri, sans-serif;font-size:14px;">
                                 <thead>
                                     <tr>
                                         <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;background-color:rgb(43,108,167);color:#fff;position:sticky;top:0;z-index:3;">CLIENTE</th>
@@ -760,7 +892,7 @@
                             </table>
                         </div>
                         <div class="table-card" style="flex:1.2;overflow:auto;">
-                            <table id="opsTable" class="compact-table" style="width:100%;border-collapse:collapse;font-family:Calibri, sans-serif;font-size:9px;">
+                            <table id="opsTable" class="compact-table" style="width:100%;border-collapse:collapse;font-family:Calibri, sans-serif;font-size:14px;">
                                 <thead>
                                     <tr>
                                         <th style="text-align:left;padding:6px;border-bottom:1px solid #ddd;background-color:rgb(43,108,167);color:#fff;position:sticky;top:0;z-index:3;">OP</th>
@@ -794,9 +926,46 @@
         let currentFilters = { year: '', periodType: 'week', month: '', week: '', cliente: '' };
         let paretoChart = null;
         let factoryChart = null;
+        // Preferencia de orden de día/mes para parseo: 'DMY' o 'MDY' o null para autodetectar
+        let dateOrderPreference = null;
         // Estado del último resumen mostrado en modal (para exportar)
         let lastResumenRows = [];
         let lastResumenDefects = [];
+        let diagnosticData = {};
+
+        function toggleDiagnosticPanel() {
+            const panel = document.getElementById('diagnosticPanel');
+            if (panel.style.display === 'none') {
+                panel.style.display = '';
+                updateDiagnosticPanel();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        function updateDiagnosticPanel() {
+            const content = document.getElementById('diagnosticContent');
+            if (!content) return;
+            
+            const html = `
+                <div><strong>Datos cargados:</strong></div>
+                <div>• Base: ${baseData ? baseData.length : 0} filas</div>
+                <div>• Prod_Corte: ${prodCorteData ? prodCorteData.length : 0} filas</div>
+                <div>• Defectos detectados: ${defectColumns ? defectColumns.length : 0} columnas</div>
+                ${diagnosticData.datePreference ? `<div>• Formato fecha: <strong>${diagnosticData.datePreference}</strong></div>` : ''}
+                ${diagnosticData.yearStats ? `<div>• Años detectados: ${diagnosticData.yearStats}</div>` : ''}
+                ${diagnosticData.parsedCount !== undefined ? `<div>• Fechas parseadas: ${diagnosticData.parsedCount} de ${baseData ? baseData.length : 0}</div>` : ''}
+                ${diagnosticData.badDateSamples ? `<div style="color:#d9534f;">⚠ Fechas no parseadas (ejemplos): ${diagnosticData.badDateSamples}</div>` : ''}
+                <div style="margin-top:8px;"><strong>Filtros activos:</strong></div>
+                <div>• Año: ${currentFilters.year || '(todos)'}</div>
+                <div>• Periodo: ${currentFilters.periodType === 'week' ? 'Semana' : 'Mes'}</div>
+                ${currentFilters.periodType === 'week' ? `<div>• Semana: ${currentFilters.week || '(todas)'}</div>` : ''}
+                ${currentFilters.periodType === 'month' ? `<div>• Mes: ${currentFilters.month || '(todos)'}</div>` : ''}
+                <div>• Cliente: ${currentFilters.cliente || '(todos)'}</div>
+                ${diagnosticData.filteredCount !== undefined ? `<div style="margin-top:4px;"><strong>Filas filtradas: ${diagnosticData.filteredCount}</strong></div>` : ''}
+            `;
+            content.innerHTML = html;
+        }
 
         function gvizToObjects(resp) {
             if (!resp || !resp.table) return [];
@@ -889,6 +1058,18 @@
         }
 
         function populateFilters() {
+            // Detectar preferencia de formato de FECHA CORTE (MDY vs DMY) antes de parsear
+            try {
+                dateOrderPreference = guessDateOrderFromSamples(baseData, 'FECHA CORTE');
+                console.log('✓ Preferencia de formato de fecha detectada:', dateOrderPreference);
+                // Mostrar algunas muestras de FECHA CORTE para depuración
+                const samples = baseData.slice(0, 5).map(r => r['FECHA CORTE']).filter(f => f);
+                console.log('Muestras de FECHA CORTE (primeras 5):', samples);
+            } catch (e) {
+                console.warn('No se pudo detectar preferencia de formato de fecha, usando heurística por defecto');
+                dateOrderPreference = null;
+            }
+
             // Procesar fechas y extraer año, mes, semana usando parseo flexible
             const badDates = [];
             baseData.forEach(row => {
@@ -931,7 +1112,7 @@
             });
 
             // Semanas: combinar de base (SEM) y prod_corte (SEM)
-            const weeksFromBase = baseData.map(r => toNum(r.SEM) || r._week).filter(w => w);
+            const weeksFromBase = baseData.map(r => toNum(r.SEM)).filter(w => w);
             const weeksFromProdCorte = prodCorteData.map(r => toNum(r.SEM)).filter(w => w);
             const weeks = [...new Set([...weeksFromBase, ...weeksFromProdCorte])].sort((a, b) => a - b);
             const weekSelect = document.getElementById('weekSelect');
@@ -953,10 +1134,25 @@
             });
 
             // Logs para depuración: años detectados y ejemplos de FECHA CORTE que no se parsearon
-            console.log('Años detectados en FECHA CORTE:', years);
+            const yearsWithCount = baseData.reduce((acc, r) => {
+                if (r._year) acc[r._year] = (acc[r._year] || 0) + 1;
+                return acc;
+            }, {});
+            console.log('✓ Años detectados en FECHA CORTE:', years);
+            console.log('Distribución de filas por año:', yearsWithCount);
+            console.log(`Total filas procesadas: ${baseData.length}, con fecha válida: ${baseData.filter(r => r._year).length}`);
+            
+            // Guardar info de diagnóstico
+            diagnosticData.datePreference = dateOrderPreference;
+            diagnosticData.yearStats = years.join(', ');
+            diagnosticData.parsedCount = baseData.filter(r => r._year).length;
+            
             if (badDates.length > 0) {
                 const uniq = [...new Set(badDates)].slice(0, 20);
-                console.warn('Algunos valores de FECHA CORTE no se pudieron parsear (ejemplos):', uniq);
+                console.warn(`⚠️ ${badDates.length} valores de FECHA CORTE no se pudieron parsear (ejemplos):`, uniq);
+                diagnosticData.badDateSamples = uniq.slice(0, 5).join(', ');
+            } else {
+                diagnosticData.badDateSamples = null;
             }
         }
 
@@ -992,25 +1188,75 @@
             if (input instanceof Date) return isNaN(input) ? null : input;
             // If Google returned an object-like date (sometimes GViz returns {v: Date})
             if (typeof input === 'object' && input.v instanceof Date) return isNaN(input.v) ? null : input.v;
-            // If numeric (milliseconds since epoch)
+            // If Google Sheets date object with formatted value
+            if (typeof input === 'object' && input.f) {
+                const formatted = String(input.f).trim();
+                const parsed = parseDateFlexible(formatted);
+                if (parsed) return parsed;
+            }
+            // If numeric (milliseconds since epoch or Excel serial date)
             if (typeof input === 'number') {
-                const d = new Date(input);
-                if (!isNaN(d)) return d;
+                // Excel serial dates are typically < 100000
+                if (input > 0 && input < 100000) {
+                    // Excel serial date (days since 1900-01-01)
+                    const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899
+                    const d = new Date(excelEpoch.getTime() + input * 86400000);
+                    if (!isNaN(d)) return d;
+                } else {
+                    // Milliseconds since epoch
+                    const d = new Date(input);
+                    if (!isNaN(d)) return d;
+                }
             }
 
             const s = String(input).trim();
+            if (!s) return null;
+            
+            // Google Sheets sometimes returns dates as strings like "Date(2025,0,3)"
+            const dateMatch = s.match(/^Date\((\d+),(\d+),(\d+)\)$/);
+            if (dateMatch) {
+                const year = parseInt(dateMatch[1], 10);
+                const month = parseInt(dateMatch[2], 10); // already 0-indexed in JS
+                const day = parseInt(dateMatch[3], 10);
+                const d = new Date(year, month, day);
+                if (!isNaN(d)) return d;
+            }
+            
             // Try native parse (ISO / RFC)
             let d = new Date(s);
-            if (!isNaN(d)) return d;
+            if (!isNaN(d) && d.getFullYear() > 1900) return d;
 
             // Try DD/MM/YYYY or D/M/YYYY
             const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
             if (m1) {
-                const day = parseInt(m1[1], 10);
-                const month = parseInt(m1[2], 10) - 1;
+                const p1 = parseInt(m1[1], 10);
+                const p2 = parseInt(m1[2], 10);
                 const year = parseInt(m1[3], 10);
-                d = new Date(year, month, day);
-                if (!isNaN(d)) return d;
+
+                // If a global preference was detected, use it. Otherwise try to be flexible:
+                // - If one of the parts >12, that part must be day.
+                // - If both <=12 and preference exists, use it.
+                // - Fallback: try MDY first (common for Google Sheets), then DMY.
+                function tryDMY() { return new Date(year, p2 - 1, p1); }
+                function tryMDY() { return new Date(year, p1 - 1, p2); }
+
+                // If one part > 12, determine unique mapping
+                if (p1 > 12 && p2 <= 12) {
+                    d = tryDMY(); if (!isNaN(d)) return d;
+                }
+                if (p2 > 12 && p1 <= 12) {
+                    d = tryMDY(); if (!isNaN(d)) return d;
+                }
+
+                if (dateOrderPreference === 'DMY') {
+                    d = tryDMY(); if (!isNaN(d)) return d;
+                } else if (dateOrderPreference === 'MDY') {
+                    d = tryMDY(); if (!isNaN(d)) return d;
+                } else {
+                    // No preference: try MDY first (covers MM/DD/YYYY), then DMY
+                    d = tryMDY(); if (!isNaN(d)) return d;
+                    d = tryDMY(); if (!isNaN(d)) return d;
+                }
             }
 
             // Try YYYY-MM-DD or YYYY/MM/DD
@@ -1053,25 +1299,95 @@
             return null;
         }
 
+        // Detecta si la mayoría de fechas en una columna usan MDY (MM/DD/YYYY) o DMY (DD/MM/YYYY)
+        function guessDateOrderFromSamples(data, fieldName) {
+            if (!data || !data.length) return null;
+            const maxSamples = 200;
+            const currentYear = new Date().getFullYear();
+            let mdyCount = 0;
+            let dmyCount = 0;
+            let samples = 0;
+
+            for (let i = 0; i < data.length && samples < maxSamples; i++) {
+                const row = data[i];
+                const raw = row[fieldName];
+                if (!raw && raw !== 0) continue;
+                const s = String(raw).trim();
+                const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+                if (!m) continue;
+                samples++;
+                const p1 = parseInt(m[1], 10);
+                const p2 = parseInt(m[2], 10);
+                const year = parseInt(m[3], 10);
+
+                // Construir fechas y contabilizar si parecen plausibles
+                const dmy = new Date(year, p2 - 1, p1);
+                const mdy = new Date(year, p1 - 1, p2);
+
+                const validDMY = (!isNaN(dmy) && dmy.getFullYear() === year && year > 1900 && year <= currentYear + 1);
+                const validMDY = (!isNaN(mdy) && mdy.getFullYear() === year && year > 1900 && year <= currentYear + 1);
+
+                if (validMDY && !validDMY) mdyCount++;
+                else if (validDMY && !validMDY) dmyCount++;
+                else {
+                    // Ambos válidos (ambigüedad) -> intentar heurística: si p1 > 12 then it's day etc.
+                    if (p1 > 12 && p2 <= 12) dmyCount++;
+                    else if (p2 > 12 && p1 <= 12) mdyCount++;
+                    else {
+                        // Si ambos <=12, preferir MDY (Google Sheets suele devolver mm/dd/yyyy cuando la hoja está en formato US)
+                        mdyCount++;
+                    }
+                }
+            }
+
+            if (samples === 0) return null;
+            return (mdyCount >= dmyCount) ? 'MDY' : 'DMY';
+        }
+
         function getFilteredData() {
             let filtered = baseData;
+            const initialCount = filtered.length;
 
-            if (currentFilters.year) {
-                filtered = filtered.filter(r => r._year == currentFilters.year);
+            // Solo aplicar filtro de año si NO estamos filtrando por semana o mes específico
+            // (porque SEM y MES ya son específicos y no dependen de FECHA CORTE)
+            const isFilteringByPeriod = (currentFilters.periodType === 'week' && currentFilters.week) || 
+                                       (currentFilters.periodType === 'month' && currentFilters.month);
+            
+            if (currentFilters.year && !isFilteringByPeriod) {
+                // Usar múltiples fuentes para el año: columna directa AÑO/ANO o _year calculado
+                filtered = filtered.filter(r => {
+                    const yearFromColumn = toNum(r['AÑO']) || toNum(r.AÑO) || toNum(r.ANO);
+                    const yearFromDate = r._year;
+                    return yearFromColumn == currentFilters.year || yearFromDate == currentFilters.year;
+                });
+                console.log(`Filtro año ${currentFilters.year}: ${filtered.length} de ${initialCount} filas`);
             }
 
             if (currentFilters.periodType === 'month' && currentFilters.month) {
+                const beforeMonth = filtered.length;
                 filtered = filtered.filter(r => r._month == currentFilters.month);
+                console.log(`Filtro mes ${currentFilters.month}: ${filtered.length} de ${beforeMonth} filas`);
             }
 
             if (currentFilters.periodType === 'week' && currentFilters.week) {
-                filtered = filtered.filter(r => r._week == currentFilters.week);
+                const beforeWeek = filtered.length;
+                // Usar la columna SEM del sheet en lugar de _week calculado para coincidir con el filtro manual
+                filtered = filtered.filter(r => toNum(r.SEM) == currentFilters.week || r._week == currentFilters.week);
+                console.log(`Filtro semana ${currentFilters.week}: ${filtered.length} de ${beforeWeek} filas`);
             }
 
             if (currentFilters.cliente) {
+                const beforeCliente = filtered.length;
                 filtered = filtered.filter(r => r.CLIENTE === currentFilters.cliente);
+                console.log(`Filtro cliente ${currentFilters.cliente}: ${filtered.length} de ${beforeCliente} filas`);
             }
 
+            console.log(`✓ Total filas filtradas: ${filtered.length}`);
+            
+            // Guardar para diagnóstico
+            diagnosticData.filteredCount = filtered.length;
+            if (typeof updateDiagnosticPanel === 'function') updateDiagnosticPanel();
+            
             return filtered;
         }
 
@@ -1133,9 +1449,18 @@
             let totalPiezasDefectuosas = 0;
 
             data.forEach(row => {
-                totalPrendasDepuradas += toNum(row['CANT. DEPURADO']);
-                totalPrendasRecuperadas += toNum(row.RECUPERADOS);
-                totalPerdidaNeta += toNum(row['REAL NO RECUPERADO']);
+                // Intentar múltiples variantes del nombre de columna CANT. DEPURADO
+                const depurado = toNum(row['CANT. DEPURADO']) || 
+                                toNum(row['CANT DEPURADO']) || 
+                                toNum(row['CANT.DEPURADO']) || 
+                                toNum(row['CANT. DEPL']) ||
+                                toNum(row['CANT DEPL']) ||
+                                toNum(row.CANT_DEPURADO) || 
+                                toNum(row.CANT_DEPL) || 
+                                0;
+                totalPrendasDepuradas += depurado;
+                totalPrendasRecuperadas += toNum(row.RECUPERADOS) || toNum(row.RECUPERADO) || 0;
+                totalPerdidaNeta += toNum(row['REAL NO RECUPERADO']) || toNum(row.REAL_NO_RECUPERADO) || 0;
                 
                 defectColumns.forEach(col => {
                     totalPiezasDefectuosas += toNum(row[col]);
@@ -1387,7 +1712,7 @@
                     ]
                 },
                 options: {
-                    // Cuando se hace click en una barra, abrimos el modal con el detalle del defecto
+                    // Cuando se hace click en una barra, mostramos el menú contextual
                     onClick: function(evt) {
                         try {
                             const points = paretoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true) || [];
@@ -1397,9 +1722,9 @@
                             if (p.datasetIndex !== 0) return;
                             const idx = p.index;
                             const defectName = top10[idx].fullDefect;
-                            // Filtrar filas actuales según defecto > 0
-                            const rows = getFilteredData().filter(r => toNum(r[defectName]) > 0);
-                            showDefectModal(defectName, rows);
+                            
+                            // Mostrar menú contextual en la posición del click
+                            showContextMenu(evt.native.pageX, evt.native.pageY, defectName);
                         } catch (e) {
                             console.error('Error en onClick paretoChart:', e);
                         }
@@ -1410,6 +1735,7 @@
                         legend: {
                             display: true,
                             position: 'top',
+                            align: 'start',
                             labels: {
                                 font: { family: 'Calibri, sans-serif', size: 12 },
                                 padding: 8,
@@ -1448,12 +1774,12 @@
                                     const isHl = (typeof highlightTicks !== 'undefined' && highlightTicks[idx]);
                                     return {
                                         family: 'Calibri, sans-serif',
-                                        size: 9,
+                                        size: 15,
                                         weight: isHl ? '700' : '400'
                                     };
                                 },
-                                maxRotation: 45,
-                                minRotation: 45
+                                maxRotation: 90,
+                                minRotation: 90
                             }
                         },
                         y: {
@@ -1520,6 +1846,327 @@
                         : 0
                 }))
                 .sort((a, b) => a.tasaPerdida - b.tasaPerdida);
+        }
+
+        // Variables globales para el menú contextual
+        let currentDefectForMenu = null;
+
+        function showContextMenu(x, y, defectName) {
+            const menu = document.getElementById('defectContextMenu');
+            currentDefectForMenu = defectName;
+            
+            // Posicionar el menú
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            menu.style.display = 'block';
+            
+            // Cerrar menú al hacer click fuera
+            setTimeout(() => {
+                document.addEventListener('click', closeContextMenu);
+            }, 0);
+        }
+
+        function closeContextMenu() {
+            const menu = document.getElementById('defectContextMenu');
+            menu.style.display = 'none';
+            document.removeEventListener('click', closeContextMenu);
+        }
+
+        function showDefectTrendModal(defectName) {
+            const modal = document.getElementById('trendModal');
+            const title = document.getElementById('trendModalTitle');
+            const ctx = document.getElementById('trendChart');
+            
+            title.textContent = `Tendencia: ${defectName}`;
+            
+            // Obtener la semana actual del usuario (última semana en los datos filtrados)
+            const filteredData = getFilteredData();
+            const allWeeks = filteredData.map(r => toNum(r.SEM)).filter(w => w > 0);
+            const currentWeek = allWeeks.length > 0 ? Math.max(...allWeeks) : 49;
+            
+            // Calcular las últimas 10 semanas (desde currentWeek-9 hasta currentWeek)
+            const weeks = [];
+            for (let i = 9; i >= 0; i--) {
+                const weekNum = currentWeek - i;
+                if (weekNum > 0) {
+                    weeks.push(weekNum);
+                }
+            }
+            
+            // Agrupar datos por semana
+            const weeklyData = {};
+            weeks.forEach(w => {
+                weeklyData[w] = {
+                    defectCount: 0,
+                    prendasDepuradas: 0,
+                    pdsRev: 0,
+                    piezasDefectuosas: 0
+                };
+            });
+            
+            // Procesar baseData para defectos, prendas depuradas y piezas defectuosas
+            baseData.forEach(row => {
+                const sem = toNum(row.SEM);
+                if (!sem || !weeklyData[sem]) return;
+                
+                const defectValue = toNum(row[defectName]);
+                
+                // Prendas Depuradas = CANT. DEPURADO
+                const prendasDep = toNum(row['CANT. DEPURADO']) || 
+                                   toNum(row['CANT DEPURADO']) || 
+                                   toNum(row['CANT.DEPURADO']) || 
+                                   toNum(row['CANT. DEPL']) ||
+                                   toNum(row['CANT DEPL']) ||
+                                   toNum(row.CANT_DEPURADO) || 
+                                   toNum(row.CANT_DEPL) || 
+                                   0;
+                
+                // Sumar todas las piezas defectuosas de la fila
+                let totalDefects = 0;
+                defectColumns.forEach(col => {
+                    totalDefects += toNum(row[col]);
+                });
+                
+                weeklyData[sem].defectCount += defectValue;
+                weeklyData[sem].prendasDepuradas += prendasDep;
+                weeklyData[sem].piezasDefectuosas += totalDefects;
+            });
+            
+            // Procesar prodCorteData para Pds Rev. (CANTIDAD REVISADA)
+            prodCorteData.forEach(row => {
+                const sem = toNum(row.SEM);
+                if (!sem || !weeklyData[sem]) return;
+                
+                const cantidadRevisada = toNum(row['CANTIDAD REVISADA']) || toNum(row.CANTIDAD_REVISADA) || 0;
+                weeklyData[sem].pdsRev += cantidadRevisada;
+            });
+            
+            // Preparar datos para el gráfico
+            const labels = weeks.map(w => `SEM${w}`);
+            const defectCounts = weeks.map(w => weeklyData[w].defectCount);
+            const pdsRevCounts = weeks.map(w => weeklyData[w].pdsRev);
+            const prendasDepCounts = weeks.map(w => weeklyData[w].prendasDepuradas);
+            const piezasDefCounts = weeks.map(w => weeklyData[w].piezasDefectuosas);
+            
+            // Calcular porcentajes: (Prendas Depuradas / Pds Rev.) * (SUMA defecto / Piezas Defectuosas) * 100
+            const percentages = weeks.map(w => {
+                const data = weeklyData[w];
+                
+                // Debug
+                console.log(`SEM${w}:`, {
+                    prendasDep: data.prendasDepuradas,
+                    pdsRev: data.pdsRev,
+                    defectCount: data.defectCount,
+                    piezasDefectuosas: data.piezasDefectuosas
+                });
+                
+                // Si no hay datos, retornar 0 en lugar de null para que se vea en el gráfico
+                if (data.pdsRev === 0 || data.piezasDefectuosas === 0) {
+                    console.log(`SEM${w}: Sin datos válidos (pdsRev=${data.pdsRev}, piezasDefectuosas=${data.piezasDefectuosas})`);
+                    return 0;
+                }
+                
+                const ratio1 = data.prendasDepuradas / data.pdsRev;
+                const ratio2 = data.defectCount / data.piezasDefectuosas;
+                const percentage = ratio1 * ratio2 * 100;
+                
+                console.log(`SEM${w}: ratio1=${ratio1.toFixed(4)}, ratio2=${ratio2.toFixed(4)}, %=${percentage.toFixed(2)}`);
+                
+                return percentage;
+            });
+            
+            console.log('=== RESUMEN DATOS TENDENCIA ===');
+            console.log('Defecto:', defectName);
+            console.log('Semanas:', weeks);
+            console.log('Pds Rev:', pdsRevCounts);
+            console.log('Piezas Defecto:', defectCounts);
+            console.log('Porcentajes:', percentages);
+            console.log('==============================');
+            
+            // Calcular el máximo dinámico para el eje Y1 (porcentaje)
+            const validPercentages = percentages.filter(p => p > 0);
+            const maxPercentage = validPercentages.length > 0 ? Math.max(...validPercentages) : 1;
+            // Redondear hacia arriba al siguiente entero
+            const dynamicMax = Math.ceil(maxPercentage);
+            console.log(`Max % encontrado: ${maxPercentage.toFixed(2)}%, Eje Y1 max: ${dynamicMax}%`);
+            
+            // Destruir gráfico anterior si existe
+            if (window.trendChartInstance) {
+                window.trendChartInstance.destroy();
+            }
+            
+            // Crear nuevo gráfico
+            window.trendChartInstance = new Chart(ctx, {
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Pds Rev.',
+                            data: pdsRevCounts,
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y',
+                            order: 2,
+                            datalabels: {
+                                display: true,
+                                align: 'end',
+                                anchor: 'end',
+                                offset: -2,
+                                color: '#000',
+                                font: {
+                                    family: 'Calibri, sans-serif',
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                formatter: function(value) {
+                                    if (value === 0) return '';
+                                    return formatNum(value);
+                                }
+                            }
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Cantidad de Piezas (Defecto)',
+                            data: defectCounts,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y',
+                            order: 3,
+                            datalabels: {
+                                display: true,
+                                align: 'end',
+                                anchor: 'end',
+                                offset: -2,
+                                color: '#000',
+                                font: {
+                                    family: 'Calibri, sans-serif',
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                formatter: function(value) {
+                                    if (value === 0) return '';
+                                    return formatNum(value);
+                                }
+                            }
+                        },
+                        {
+                            type: 'line',
+                            label: '% del Defecto',
+                            data: percentages,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderWidth: 3,
+                            pointRadius: 6,
+                            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            yAxisID: 'y1',
+                            tension: 0.3,
+                            spanGaps: true,
+                            fill: false,
+                            order: 1,
+                            datalabels: {
+                                display: true,
+                                align: 'top',
+                                anchor: 'end',
+                                offset: 4,
+                                color: '#ff0000',
+                                font: {
+                                    family: 'Calibri, sans-serif',
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                formatter: function(value) {
+                                    if (value === null || value === 0) return '';
+                                    return value.toFixed(2) + '%';
+                                }
+                            }
+                        }
+                    ]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        datalabels: {
+                            display: false
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 12 },
+                                padding: 10
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataset.type === 'line') {
+                                        if (context.parsed.y === null) return null;
+                                        return '% del Defecto: ' + context.parsed.y.toFixed(2) + '%';
+                                    }
+                                    return context.dataset.label + ': ' + formatNum(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Pds Rev. / Cantidad de Piezas',
+                                font: { size: 12 }
+                            },
+                            beginAtZero: true
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '% del Defecto',
+                                font: { size: 12 },
+                                color: 'rgba(255, 99, 132, 1)'
+                            },
+                            beginAtZero: true,
+                            max: dynamicMax,
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            ticks: {
+                                color: 'rgba(255, 99, 132, 1)',
+                                callback: function(value) {
+                                    return value.toFixed(2) + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Mostrar modal
+            modal.style.display = 'flex';
+            
+            // Bind cierre
+            const closeBtn = document.getElementById('trendModalClose');
+            function close() {
+                modal.style.display = 'none';
+            }
+            closeBtn.onclick = close;
+            modal.onclick = function(e) {
+                if (e.target === modal) close();
+            };
         }
 
         // Mostrar modal con tabla de detalle para un defecto
@@ -1614,6 +2261,138 @@
             }
             closeBtn.onclick = close;
             // Cerrar al clickear fuera del contenido
+            modal.onclick = function(e) {
+                if (e.target === modal) close();
+            };
+        }
+
+        function showTelaDetail(telaName) {
+            const modal = document.getElementById('telaDetailModal');
+            const title = document.getElementById('telaDetailModalTitle');
+            const thead = document.getElementById('telaDetailHead');
+            const tbody = document.getElementById('telaDetailBody');
+
+            title.textContent = `Detalle de TELA: ${telaName}`;
+
+            // Obtener filtros actuales del modal TELA
+            const year = document.getElementById('telaYearSelect').value;
+            const periodType = document.getElementById('telaPeriodTypeSelect').value;
+            const week = document.getElementById('telaWeekSelect').value;
+            const month = document.getElementById('telaMonthSelect').value;
+            const cliente = document.getElementById('telaClienteSelect').value;
+
+            // Filtrar datos con los mismos filtros del modal TELA + coincidencia de TELA
+            let filteredRows = (baseData || []).filter(r => {
+                const tela = (r.TELA !== undefined && r.TELA !== null) ? String(r.TELA).trim() : '';
+                const normalizedTela = tela ? tela.toUpperCase().replace(/"/g, '') : '';
+                if (normalizedTela !== telaName) return false;
+                
+                // Aplicar los mismos filtros que en buildTelaResumenTable
+                if (year && r._year && String(r._year) !== String(year)) return false;
+                if (periodType === 'week' && week) {
+                    if (!((r._week && String(r._week) === String(week)) || (r.SEM && String(r.SEM) === String(week)))) return false;
+                }
+                if (periodType === 'month' && month) {
+                    if (!((r._month && String(r._month) === String(month)) || (r.MES && String(r.MES) === String(month)))) return false;
+                }
+                if (cliente && r.CLIENTE !== cliente) return false;
+                
+                return true;
+            });
+
+            // Función para sanear valores
+            function sanitizeRemoveLeading1(val) {
+                if (val === undefined || val === null) return '';
+                const s = String(val).trim();
+                if (s === '') return '';
+                let cleaned = s;
+                if (cleaned.charAt(0) === '1') cleaned = cleaned.slice(1);
+                const n = parseInt(cleaned, 10);
+                return isNaN(n) ? cleaned : String(n);
+            }
+
+            // Determinar qué columnas de defectos tienen datos (al menos un valor > 0)
+            const defectsWithData = [];
+            (defectColumns || []).forEach(col => {
+                const hasData = filteredRows.some(r => toNum(r[col]) > 0);
+                if (hasData) {
+                    defectsWithData.push(col);
+                }
+            });
+
+            // Construir encabezados: OP_TELA-PTDA, COLOR, + columnas de defectos con datos
+            const headers = ['OP_TELA-PTDA', 'COLOR'];
+            defectsWithData.forEach(col => headers.push(col));
+
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            const trh = document.createElement('tr');
+            headers.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                th.style.padding = '6px';
+                th.style.borderBottom = '1px solid #ddd';
+                th.style.backgroundColor = 'rgb(43,108,167)';
+                th.style.color = '#fff';
+                th.style.textAlign = (h === 'OP_TELA-PTDA' || h === 'COLOR') ? 'left' : 'right';
+                trh.appendChild(th);
+            });
+            thead.appendChild(trh);
+
+            // Construir filas
+            filteredRows.forEach(r => {
+                const tr = document.createElement('tr');
+
+                const op_tela_raw = r.OP_TELA || r['OP_TELA'] || r['OP TELA'] || r.Op_Tela || '';
+                const ptda_raw = (r.PTDA !== undefined && r.PTDA !== null) ? r.PTDA : (r.PTDS !== undefined ? r.PTDS : '');
+                const color = r.COLOR || r.Color || '';
+
+                const op_tela_clean = sanitizeRemoveLeading1(op_tela_raw);
+                const ptda_clean = (ptda_raw === undefined || ptda_raw === null || ptda_raw === '') ? '' : String(parseInt(ptda_raw, 10));
+
+                // OP_TELA-PTDA concatenado
+                const tdOpTelaPtda = document.createElement('td');
+                const combined = ptda_clean ? `${op_tela_clean}-${ptda_clean}` : op_tela_clean;
+                tdOpTelaPtda.textContent = combined;
+                tdOpTelaPtda.style.padding = '4px';
+                tdOpTelaPtda.style.borderBottom = '1px solid #f0f0f0';
+                tdOpTelaPtda.style.textAlign = 'left';
+                tr.appendChild(tdOpTelaPtda);
+
+                // COLOR - normalizar HEATHERED a HTR
+                const tdColor = document.createElement('td');
+                const normalizedColor = color.replace(/HEATHERED/gi, 'HTR');
+                tdColor.textContent = normalizedColor;
+                tdColor.style.padding = '4px';
+                tdColor.style.borderBottom = '1px solid #f0f0f0';
+                tdColor.style.textAlign = 'left';
+                tr.appendChild(tdColor);
+
+                // Columnas de defectos - solo las que tienen datos
+                defectsWithData.forEach(defCol => {
+                    const tdDef = document.createElement('td');
+                    const val = toNum(r[defCol]);
+                    tdDef.textContent = val > 0 ? formatNum(val) : '';
+                    tdDef.style.padding = '4px';
+                    tdDef.style.borderBottom = '1px solid #f0f0f0';
+                    tdDef.style.textAlign = 'right';
+                    tr.appendChild(tdDef);
+                });
+
+                tbody.appendChild(tr);
+            });
+
+            // Mostrar modal
+            modal.style.display = 'flex';
+
+            // Bind cierre
+            const closeBtn = document.getElementById('telaDetailModalClose');
+            function close() {
+                modal.style.display = 'none';
+                tbody.innerHTML = '';
+            }
+            closeBtn.onclick = close;
             modal.onclick = function(e) {
                 if (e.target === modal) close();
             };
@@ -1998,15 +2777,19 @@
                 </tr>
             `).join('') : '<tr><td colspan="4" style="padding:8px;color:#999;text-align:center;">No hay clientes con pérdidas</td></tr>';
 
-            opsTbody.innerHTML = opsArr.length ? opsArr.map(o => `
+            opsTbody.innerHTML = opsArr.length ? opsArr.map(o => {
+                // Normalizar HEATHERED a HTR en el color
+                const normalizedColor = o.color.replace(/HEATHERED/gi, 'HTR');
+                return `
                 <tr>
                     <td style="padding:6px;border-bottom:1px solid #f0f0f0;text-align:left;">${esc(o.op)}</td>
-                    <td style="padding:6px;border-bottom:1px solid #f0f0f0;text-align:left;">${esc(o.color)}</td>
+                    <td style="padding:6px;border-bottom:1px solid #f0f0f0;text-align:left;">${esc(normalizedColor)}</td>
                     <td style="padding:6px;border-bottom:1px solid #f0f0f0;text-align:right;">${formatNum(o.cortadas)}</td>
                     <td style="padding:6px;border-bottom:1px solid #f0f0f0;text-align:right;">${formatNum(o.dep)}</td>
                     <td style="padding:6px;border-bottom:1px solid #f0f0f0;text-align:right;">${formatPercent(o.pct, 1)}</td>
                 </tr>
-            `).join('') : '<tr><td colspan="5" style="padding:8px;color:#999;text-align:center;">No hay OPs con pérdidas</td></tr>';
+                `;
+            }).join('') : '<tr><td colspan="5" style="padding:8px;color:#999;text-align:center;">No hay OPs con pérdidas</td></tr>';
         }
 
         // ---- Funcionalidad para modal OP/Resumen ----
@@ -2357,6 +3140,29 @@
             if (telaRefresh) telaRefresh.addEventListener('click', buildTelaResumenTable);
             const telaExport = document.getElementById('telaExportBtn');
             if (telaExport) telaExport.addEventListener('click', exportTelaResumenExcel);
+
+            // Event listeners para menú contextual de defectos
+            const contextMenuDetail = document.getElementById('contextMenuDetail');
+            const contextMenuTrend = document.getElementById('contextMenuTrend');
+            
+            if (contextMenuDetail) {
+                contextMenuDetail.addEventListener('click', function() {
+                    closeContextMenu();
+                    if (currentDefectForMenu) {
+                        const rows = getFilteredData().filter(r => toNum(r[currentDefectForMenu]) > 0);
+                        showDefectModal(currentDefectForMenu, rows);
+                    }
+                });
+            }
+            
+            if (contextMenuTrend) {
+                contextMenuTrend.addEventListener('click', function() {
+                    closeContextMenu();
+                    if (currentDefectForMenu) {
+                        showDefectTrendModal(currentDefectForMenu);
+                    }
+                });
+            }
         });
 
         function exportOpResumenExcel() {
@@ -2529,7 +3335,8 @@
             const grouped = {};
             rows.forEach(r => {
                 const tela = (r.TELA !== undefined && r.TELA !== null) ? String(r.TELA).trim() : '';
-                const key = tela || '(SIN TELA)';
+                // Normalizar a mayúsculas y eliminar comillas para agrupar telas consistentemente
+                const key = tela ? tela.toUpperCase().replace(/"/g, '') : '(SIN TELA)';
                 if (!grouped[key]) grouped[key] = { TELA: key, CLIENTES: new Set(), CORTADA: 0, REAL_NO_RECUPERADO: 0, PZAS_DEFECT: 0 };
                 const clienteRaw = (r.CLIENTE || r.Cliente || '').toString().trim();
                 if (clienteRaw) grouped[key].CLIENTES.add(clienteRaw);
@@ -2565,11 +3372,12 @@
             const headers = ['CLIENTE','TELA', 'PDS REVISADAS', 'PDS DEPURADAS', '%DEPURADO', 'PZAS DEPURADAS'];
             // No fijar ancho para CLIENTE (permitir tamaño necesario). Anchos para las demás columnas:
             const colWidths = {
-                'TELA': '30%',
-                'PDS REVISADAS': '12.5%',
-                'PDS DEPURADAS': '12.5%',
-                '%DEPURADO': '12.5%',
-                'PZAS DEPURADAS': '12.5%'
+                'CLIENTE': 'auto',
+                'TELA': '45%',
+                'PDS REVISADAS': '11%',
+                'PDS DEPURADAS': '11%',
+                '%DEPURADO': '11%',
+                'PZAS DEPURADAS': '11%'
             };
             const trh = document.createElement('tr');
             headers.forEach(h => {
@@ -2580,8 +3388,10 @@
                 // Alinear izquierda para CLIENTE y TELA, derecha para el resto
                 th.style.textAlign = (h === 'CLIENTE' || h === 'TELA') ? 'left' : 'right';
                 // Garantizar un ancho mínimo para la columna CLIENTE
-                if (h === 'CLIENTE') th.style.minWidth = '40px';
-                if (colWidths[h]) th.style.width = colWidths[h];
+                if (h === 'CLIENTE') {
+                    th.style.whiteSpace = 'nowrap';
+                }
+                if (colWidths[h] && colWidths[h] !== 'auto') th.style.width = colWidths[h];
                 trh.appendChild(th);
             });
             head.appendChild(trh);
@@ -2593,11 +3403,22 @@
                 tdCliente.textContent = row.CLIENTE || '';
                 tdCliente.style.textAlign = 'left';
                 tdCliente.style.padding = '4px';
-                // min-width solicitado para CLIENTE
-                tdCliente.style.minWidth = '40px';
-                if (colWidths['CLIENTE']) tdCliente.style.width = colWidths['CLIENTE'];
+                // ajustar ancho a contenido para CLIENTE
+                tdCliente.style.whiteSpace = 'nowrap';
                 tr.appendChild(tdCliente);
-                const tdTela = document.createElement('td'); tdTela.textContent = row.TELA; tdTela.style.textAlign = 'left'; tdTela.style.padding = '4px'; if (colWidths['TELA']) tdTela.style.width = colWidths['TELA']; tr.appendChild(tdTela);
+                const tdTela = document.createElement('td');
+                tdTela.textContent = row.TELA;
+                tdTela.style.textAlign = 'left';
+                tdTela.style.padding = '4px';
+                tdTela.style.cursor = 'pointer';
+                tdTela.style.color = '#2a5298';
+                tdTela.style.textDecoration = 'underline';
+                tdTela.title = 'Click para ver detalle';
+                tdTela.addEventListener('click', function() {
+                    showTelaDetail(row.TELA);
+                });
+                if (colWidths['TELA']) tdTela.style.width = colWidths['TELA'];
+                tr.appendChild(tdTela);
                 const tdCort = document.createElement('td'); tdCort.textContent = formatNum(row.CORTADA); tdCort.style.textAlign = 'right'; tdCort.style.padding = '4px'; if (colWidths['PDS REVISADAS']) tdCort.style.width = colWidths['PDS REVISADAS']; tr.appendChild(tdCort);
                 const tdReal = document.createElement('td'); tdReal.textContent = formatNum(row.REAL_NO_RECUPERADO); tdReal.style.textAlign = 'right'; tdReal.style.padding = '4px'; if (colWidths['PDS DEPURADAS']) tdReal.style.width = colWidths['PDS DEPURADAS']; tr.appendChild(tdReal);
                 const tdPct = document.createElement('td'); tdPct.textContent = formatPercent(row.PCTDEP, 2); tdPct.style.textAlign = 'right'; tdPct.style.padding = '4px'; if (colWidths['%DEPURADO']) tdPct.style.width = colWidths['%DEPURADO']; tr.appendChild(tdPct);
@@ -2673,6 +3494,9 @@
             currentFilters.week = document.getElementById('weekSelect').value;
             currentFilters.cliente = document.getElementById('clienteSelect').value;
 
+            console.log('========== APLICANDO FILTROS ==========');
+            console.log('Filtros activos:', currentFilters);
+
             const filteredData = getFilteredData();
             const filteredProdCorte = getFilteredProdCorteData();
 
@@ -2715,6 +3539,25 @@
                 console.log('Datos cargados - base:', baseData.length, 'prod_corte:', prodCorteData.length);
 
                 defectColumns = detectDefectColumns(baseData);
+                
+                // Log para verificar nombres de columnas exactos
+                if (baseData.length > 0) {
+                    const firstRow = baseData[0];
+                    const allColumns = Object.keys(firstRow);
+                    console.log('📋 Columnas disponibles en la primera fila:', allColumns);
+                    
+                    // Buscar columnas que contengan "DEPURADO" o "DEPL"
+                    const depColumns = allColumns.filter(col => 
+                        col.toUpperCase().includes('DEPURADO') || 
+                        col.toUpperCase().includes('DEPL')
+                    );
+                    console.log('📊 Columnas relacionadas con DEPURADO:', depColumns);
+                    
+                    // Mostrar valor de ejemplo
+                    depColumns.forEach(col => {
+                        console.log(`  - "${col}": ${firstRow[col]}`);
+                    });
+                }
                 
                 if (defectColumns.length === 0) {
                     console.warn('No se detectaron columnas de defectos');
@@ -2781,4 +3624,3 @@
     </script>
 </body>
 </html>
-

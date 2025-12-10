@@ -238,6 +238,29 @@
             padding-bottom: 6px;
             border-bottom: 2px solid #f0f0f0;
             flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chart-title-text {
+            flex: 1;
+        }
+
+        .btn-acciones {
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #2a5298;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-acciones:hover {
+            background: #1e3c72;
         }
 
         .chart-container {
@@ -702,7 +725,10 @@
             </div>
 
             <div class="chart-card pareto-section">
-                <h3 class="chart-title">📊 Pareto de Defectos (Piezas Depuradas)</h3>
+                <h3 class="chart-title">
+                    <span class="chart-title-text">📊 Pareto de Defectos (Piezas Depuradas)</span>
+                    <button id="btnAcciones" class="btn-acciones">Acciones</button>
+                </h3>
                 <div class="chart-container">
                     <canvas id="paretoChart"></canvas>
                 </div>
@@ -824,10 +850,13 @@
             <!-- Modal para Tendencia del defecto -->
             <div id="trendModal" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
                 <div class="modal-card" role="document">
-                    <div class="modal-header">
-                        <div class="modal-title" id="trendModalTitle">Tendencia del Defecto</div>
-                        <button id="trendModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
-                    </div>
+                            <div class="modal-header">
+                                <div class="modal-title" id="trendModalTitle">Tendencia del Defecto</div>
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <button id="trendModalAccion" class="btn-acciones" style="background:#1e7a4d;">Accion</button>
+                                    <button id="trendModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
+                                </div>
+                            </div>
                     <div class="modal-body">
                         <div class="trend-chart-container">
                             <canvas id="trendChart"></canvas>
@@ -843,6 +872,27 @@
                 </div>
                 <div class="context-menu-item" id="contextMenuTrend">
                     📈 Tendencia
+                </div>
+            </div>
+
+            <!-- Modal para tabla de Acciones -->
+            <div id="accionesModal" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+                <div class="modal-card" role="document" style="max-width:95%;width:95%;">
+                    <div class="modal-header">
+                        <div class="modal-title">📋 Tabla de Acciones</div>
+                        <button id="accionesModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="overflow:auto;max-height:600px;">
+                            <table id="accionesTable" class="modal-table" style="border-collapse:collapse;font-family:Calibri, sans-serif;font-size:12px;width:100%;">
+                                <thead id="accionesTableHead" style="position:sticky;top:0;z-index:10;">
+                                    <tr></tr>
+                                </thead>
+                                <tbody id="accionesTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -919,9 +969,11 @@
         const SHEET_ID = '1sFkWMxxLM7DO4erVoQtvHyrUk8ynJ4E1PVf6dIwnuBg';
         const BASE_SHEET = 'base';
         const PROD_CORTE_SHEET = 'prod_corte';
+        const ACCIONES_SHEET = 'acciones';
 
         let baseData = [];
         let prodCorteData = [];
+        let accionesData = [];
         let defectColumns = [];
         let currentFilters = { year: '', periodType: 'week', month: '', week: '', cliente: '' };
         let paretoChart = null;
@@ -1876,6 +1928,8 @@
             const modal = document.getElementById('trendModal');
             const title = document.getElementById('trendModalTitle');
             const ctx = document.getElementById('trendChart');
+            // Guardar defecto actual para acciones rápidas
+            window.currentTrendDefect = defectName;
             
             title.textContent = `Tendencia: ${defectName}`;
             
@@ -3163,7 +3217,142 @@
                     }
                 });
             }
+
+            // Event listener para botón de Acciones (Pareto)
+            const btnAcciones = document.getElementById('btnAcciones');
+            if (btnAcciones) {
+                btnAcciones.addEventListener('click', function() { showAccionesModal(); });
+            }
+
+            // Event listener para botón Accion dentro del modal Trend
+            const trendAccBtn = document.getElementById('trendModalAccion');
+            if (trendAccBtn) {
+                trendAccBtn.addEventListener('click', function() {
+                    const defect = window.currentTrendDefect || null;
+                    if (!defect) {
+                        alert('No hay defecto seleccionado');
+                        return;
+                    }
+                    showAccionesForDefect(defect);
+                });
+            }
+
+            const accionesModalClose = document.getElementById('accionesModalClose');
+            if (accionesModalClose) {
+                accionesModalClose.addEventListener('click', closeAccionesModal);
+            }
+
+            const accionesModalEl = document.getElementById('accionesModal');
+            if (accionesModalEl) {
+                accionesModalEl.addEventListener('click', function(ev) {
+                    if (ev.target === accionesModalEl) closeAccionesModal();
+                });
+            }
         });
+
+        function showAccionesModal(rows, titleSuffix) {
+            const modal = document.getElementById('accionesModal');
+            const thead = document.getElementById('accionesTableHead');
+            const tbody = document.getElementById('accionesTableBody');
+
+            // Limpiar tabla
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            const data = (rows && rows.length) ? rows : (accionesData || []);
+
+            // Ajustar título del modal si se pasa sufijo
+            const titleEl = modal.querySelector('.modal-title');
+            if (titleEl) {
+                titleEl.textContent = titleSuffix ? `📋 Tabla de Acciones - ${titleSuffix}` : '📋 Tabla de Acciones';
+            }
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;">No hay datos de acciones disponibles</td></tr>';
+                modal.style.display = 'flex';
+                return;
+            }
+
+            // Columnas específicas con anchos definidos
+            const columnConfig = [
+                { key: 'DEFECTO', label: 'DEFECTO', width: '20%' },
+                { key: 'ACCIONES', label: 'ACCIONES', width: '60%' },
+                { key: 'RESPONSABLES', label: 'RESPONSABLES', width: '10%' },
+                { key: 'FECHA FIN', label: 'FECHA FIN', width: '10%' }
+            ];
+            
+            // Crear encabezados
+            const headerRow = document.createElement('tr');
+            columnConfig.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col.label;
+                th.style.background = 'rgb(155,194,230)';
+                th.style.color = '#000';
+                th.style.fontWeight = '700';
+                th.style.padding = '8px';
+                th.style.border = '1px solid #ddd';
+                th.style.width = col.width;
+                th.style.whiteSpace = 'normal';
+                th.style.wordWrap = 'break-word';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            // Crear filas de datos
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                if (index % 2 === 1) {
+                    tr.style.backgroundColor = '#f9f9f9';
+                }
+                
+                columnConfig.forEach(col => {
+                    const td = document.createElement('td');
+                    const value = row[col.key] || row[col.label] || '';
+                    td.textContent = value !== undefined && value !== null ? String(value) : '';
+                    td.style.padding = '6px 8px';
+                    td.style.border = '1px solid #f0f0f0';
+                    td.style.width = col.width;
+                    td.style.whiteSpace = 'normal';
+                    td.style.wordWrap = 'break-word';
+                    td.style.verticalAlign = 'top';
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            });
+
+            // Mostrar modal
+            modal.style.display = 'flex';
+        }
+
+        function closeAccionesModal() {
+            const modal = document.getElementById('accionesModal');
+            modal.style.display = 'none';
+        }
+
+        function showAccionesForDefect(defectName) {
+            if (!defectName) {
+                showAccionesModal();
+                return;
+            }
+            // Determinar la clave de columna que contiene la palabra 'DEFECT'
+            let defectKey = null;
+            if (accionesData && accionesData.length > 0) {
+                const keys = Object.keys(accionesData[0]);
+                for (const k of keys) {
+                    if (k && k.toString().toUpperCase().includes('DEFECT')) { defectKey = k; break; }
+                }
+            }
+
+            if (!defectKey) defectKey = 'DEFECTO';
+
+            const filtered = (accionesData || []).filter(r => {
+                const v = r[defectKey] || r['DEFECTO'] || r['Defecto'] || '';
+                return String(v).toUpperCase().trim().includes(String(defectName).toUpperCase().trim());
+            });
+
+            showAccionesModal(filtered, defectName);
+        }
 
         function exportOpResumenExcel() {
             if (!window.XLSX) {
@@ -3525,10 +3714,14 @@
             try {
                 updateStatus('Cargando...', 'loading');
 
-                // Cargar ambas hojas en paralelo
-                [baseData, prodCorteData] = await Promise.all([
+                // Cargar las tres hojas en paralelo
+                [baseData, prodCorteData, accionesData] = await Promise.all([
                     loadSheetJSONP(SHEET_ID, BASE_SHEET),
-                    loadSheetJSONP(SHEET_ID, PROD_CORTE_SHEET)
+                    loadSheetJSONP(SHEET_ID, PROD_CORTE_SHEET),
+                    loadSheetJSONP(SHEET_ID, ACCIONES_SHEET).catch(err => {
+                        console.warn('No se pudo cargar la hoja de acciones:', err);
+                        return [];
+                    })
                 ]);
 
                 if (baseData.length === 0) {
@@ -3536,7 +3729,7 @@
                     return;
                 }
 
-                console.log('Datos cargados - base:', baseData.length, 'prod_corte:', prodCorteData.length);
+                console.log('Datos cargados - base:', baseData.length, 'prod_corte:', prodCorteData.length, 'acciones:', accionesData.length);
 
                 defectColumns = detectDefectColumns(baseData);
                 

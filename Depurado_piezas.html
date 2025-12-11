@@ -827,7 +827,10 @@
                 <div class="modal-card" role="document">
                     <div class="modal-header">
                         <div class="modal-title" id="defectModalTitle">Detalle</div>
-                        <button id="defectModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
+                        <div style="display:flex;gap:8px;">
+                            <button id="defectDetailExportBtn" class="btn" style="padding:8px 12px;background:#fff;border:1px solid #fff;color:#2a5298;font-weight:600;">Excel</button>
+                            <button id="defectModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
+                        </div>
                     </div>
                     <div class="modal-body">
                         <div style="overflow:auto;">
@@ -901,7 +904,10 @@
                 <div class="modal-card" role="document" style="max-width:95%;width:95%;">
                     <div class="modal-header">
                         <div class="modal-title" id="telaDetailModalTitle">Detalle de TELA</div>
-                        <button id="telaDetailModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
+                        <div style="display:flex;gap:8px;">
+                            <button id="telaDetailExportBtn" class="btn" style="padding:8px 12px;background:#fff;border:1px solid #fff;color:#2a5298;font-weight:600;">Excel</button>
+                            <button id="telaDetailModalClose" class="btn-close" aria-label="Cerrar">Cerrar</button>
+                        </div>
                     </div>
                     <div class="modal-body">
                         <div style="overflow:auto;max-height:600px;position:relative;">
@@ -919,7 +925,13 @@
 
             <div class="right-section">
                 <div class="chart-card compact" style="flex: 1;">
-                    <h3 class="chart-title">Pds Cortadas/Revisadas Vs No recuperados</h3>
+                    <h3 class="chart-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Pds Cortadas/Revisadas Vs No recuperados</span>
+                        <select id="periodSelector" style="padding: 3px 8px; font-size: 11px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                            <option value="semanal">Semanal</option>
+                            <option value="mensual">Mensual</option>
+                        </select>
+                    </h3>
                     <div class="chart-container">
                         <canvas id="factoryChart"></canvas>
                     </div>
@@ -2232,6 +2244,12 @@
 
             title.textContent = `Detalle: ${defectName}`;
 
+            // Guardar datos para exportación
+            window._currentDefectDetailData = {
+                defectName: defectName,
+                rows: rows
+            };
+
             // Encabezados: CLIENTE, OP_TELA-PTDA, OP, COLOR, <defecto>
             const headers = ['CLIENTE', 'OP_TELA-PTDA', 'OP', 'COLOR', defectName];
 
@@ -2327,6 +2345,18 @@
             const tbody = document.getElementById('telaDetailBody');
 
             title.textContent = `Detalle de TELA: ${telaName}`;
+
+            // Guardar datos para exportación
+            window._currentTelaDetailData = {
+                telaName: telaName,
+                filters: {
+                    year: document.getElementById('telaYearSelect').value,
+                    periodType: document.getElementById('telaPeriodTypeSelect').value,
+                    week: document.getElementById('telaWeekSelect').value,
+                    month: document.getElementById('telaMonthSelect').value,
+                    cliente: document.getElementById('telaClienteSelect').value
+                }
+            };
 
             // Obtener filtros actuales del modal TELA
             const year = document.getElementById('telaYearSelect').value;
@@ -2602,6 +2632,96 @@
             };
         }
 
+        // Función para obtener datos por mes (últimos 10 meses)
+        function calculateMonthComparison(baseAll, prodCorteAll) {
+            const base = baseAll && baseAll.length ? baseAll : (typeof baseData !== 'undefined' ? baseData : []);
+            const prod = prodCorteAll && prodCorteAll.length ? prodCorteAll : (typeof prodCorteData !== 'undefined' ? prodCorteData : []);
+
+            console.log('=== CALCULANDO DATOS MENSUALES ===');
+            console.log('Base rows:', base.length);
+            console.log('Prod rows:', prod.length);
+
+            // Verificar campos disponibles
+            if (base.length > 0) {
+                console.log('Base sample:', { _year: base[0]._year, _month: base[0]._month, 'REAL NO RECUPERADO': base[0]['REAL NO RECUPERADO'] });
+            }
+            if (prod.length > 0) {
+                console.log('Prod sample:', { AÑO: prod[0]['AÑO'] || prod[0].AÑO, MES: prod[0].MES || prod[0]['MES'], SEM: prod[0].SEM });
+            }
+
+            const today = new Date();
+            const months = [];
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+            // Generar últimos 10 meses incluyendo el mes actual
+            for (let i = 9; i >= 0; i--) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                months.push({
+                    year: d.getFullYear(),
+                    month: d.getMonth() + 1, // 1-12
+                    label: monthNames[d.getMonth()]
+                });
+            }
+
+            const labels = months.map(m => m.label);
+            const cortadas = [];
+            const revisadas = [];
+            const realNoRecuperado = [];
+            const pctRealNoRecuperado = [];
+
+            months.forEach(monthObj => {
+                // Filtrar prodCorteData por AÑO y MES
+                const prodRows = prod.filter(r => {
+                    const year = toNum(r['AÑO']) || toNum(r.AÑO);
+                    // El campo MES puede ser texto (ej: 'ENERO') o número
+                    let month = toNum(r.MES) || toNum(r['MES']);
+                    // Si es 0, intentar convertir de texto a número
+                    if (month === 0) {
+                        const mesTexto = (r.MES || r['MES'] || '').toString().toUpperCase().trim();
+                        const mesesMap = {
+                            'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4, 'MAYO': 5, 'JUNIO': 6,
+                            'JULIO': 7, 'AGOSTO': 8, 'SEPTIEMBRE': 9, 'SETIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12
+                        };
+                        month = mesesMap[mesTexto] || 0;
+                    }
+                    return year === monthObj.year && month === monthObj.month;
+                });
+
+                const cort = prodRows.reduce((s, r) => s + (toNum(r['CANTIDAD CORTADA']) || toNum(r.CANTIDAD_CORTADA) || toNum(r['CANT. CORTADA']) || 0), 0);
+                const rev = prodRows.reduce((s, r) => s + (toNum(r['CANTIDAD REVISADA']) || toNum(r.CANTIDAD_REVISADA) || 0), 0);
+
+                // Filtrar baseData por _year y _month (campos pre-calculados)
+                const baseRows = base.filter(r => {
+                    return r._year === monthObj.year && r._month === monthObj.month;
+                });
+
+                const real = baseRows.reduce((s, r) => s + toNum(r['REAL NO RECUPERADO']), 0);
+
+                console.log(`Mes ${monthObj.label} (${monthObj.year}-${monthObj.month}):`, {
+                    prodRows: prodRows.length,
+                    baseRows: baseRows.length,
+                    cortadas: cort,
+                    revisadas: rev,
+                    realNoRecuperado: real
+                });
+
+                cortadas.push(cort);
+                revisadas.push(rev);
+                realNoRecuperado.push(real);
+
+                const pct = rev > 0 ? (real / rev) * 100 : 0;
+                pctRealNoRecuperado.push(pct);
+            });
+
+            return {
+                labels,
+                cortadas,
+                revisadas,
+                realNoRecuperado,
+                pctRealNoRecuperado
+            };
+        }
+
         function renderWeekComparisonChart() {
             const canvas = document.getElementById('factoryChart');
             if (!canvas) return;
@@ -2722,6 +2842,144 @@
                                     const abs = Math.abs(v);
                                     if (abs >= 1000) {
                                         // Show without decimal when divisible by 1000, otherwise one decimal
+                                        if (v % 1000 === 0) return (v / 1000) + 'k';
+                                        return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+                                    }
+                                    return v;
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: { display: false },
+                            min: 0,
+                            max: y1Max,
+                            grid: { drawOnChartArea: false },
+                            ticks: { callback: v => v + '%', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMonthComparisonChart() {
+            const canvas = document.getElementById('factoryChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            if (factoryChart) {
+                factoryChart.destroy();
+            }
+
+            // Usar datos globales para mostrar últimos 10 meses
+            const monthData = calculateMonthComparison();
+
+            function niceMaxPercent(value) {
+                if (!isFinite(value) || value <= 0) return 1;
+                const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+                const scaled = value / magnitude;
+                const choices = [1,2,4,5,10];
+                for (let i = 0; i < choices.length; i++) {
+                    if (scaled <= choices[i]) return choices[i] * magnitude;
+                }
+                return 10 * magnitude;
+            }
+
+            const maxPct = monthData.pctRealNoRecuperado && monthData.pctRealNoRecuperado.length ? Math.max(...monthData.pctRealNoRecuperado) : 0;
+            const y1Max = niceMaxPercent(maxPct);
+
+            factoryChart = new Chart(ctx, {
+                data: {
+                    labels: monthData.labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Pds Corte',
+                            data: monthData.cortadas,
+                            backgroundColor: 'rgba(54,162,235,0.8)',
+                            borderColor: 'rgba(54,162,235,1)',
+                            borderWidth: 1,
+                            yAxisID: 'y',
+                            datalabels: {
+                                display: false
+                            }
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Pds Rev.',
+                            data: monthData.revisadas,
+                            backgroundColor: 'rgba(75,192,192,0.8)',
+                            borderColor: 'rgba(75,192,192,1)',
+                            borderWidth: 1,
+                            yAxisID: 'y',
+                            datalabels: {
+                                display: false
+                            }
+                        },
+                        {
+                            type: 'line',
+                            label: '%Pds depuradas',
+                            data: monthData.pctRealNoRecuperado,
+                            borderColor: 'rgba(155,89,182,1)',
+                            backgroundColor: 'rgba(155,89,182,0.1)',
+                            yAxisID: 'y1',
+                            tension: 0.2,
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(155,89,182,1)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            datalabels: {
+                                display: true,
+                                align: 'end',
+                                anchor: 'end',
+                                formatter: function(value) { return formatPercent(value, 2); },
+                                color: '#000',
+                                font: { family: 'Calibri, sans-serif', weight: 'bold', size: 14 },
+                                offset: -4
+                            }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'start',
+                            labels: {
+                                font: { family: 'Calibri, sans-serif', size: 12 },
+                                boxWidth: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataset.type === 'line') {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                                    }
+                                    return context.dataset.label + ': ' + formatNum(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: false },
+                            ticks: {
+                                font: { size: 10 },
+                                callback: function(value) {
+                                    const v = Number(value);
+                                    if (isNaN(v)) return value;
+                                    const abs = Math.abs(v);
+                                    if (abs >= 1000) {
                                         if (v % 1000 === 0) return (v / 1000) + 'k';
                                         return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
                                     }
@@ -3195,6 +3453,14 @@
             const telaExport = document.getElementById('telaExportBtn');
             if (telaExport) telaExport.addEventListener('click', exportTelaResumenExcel);
 
+            // Event listener para botón de exportación del detalle de TELA
+            const telaDetailExport = document.getElementById('telaDetailExportBtn');
+            if (telaDetailExport) telaDetailExport.addEventListener('click', exportTelaDetailExcel);
+
+            // Event listener para botón de exportación del detalle de defectos
+            const defectDetailExport = document.getElementById('defectDetailExportBtn');
+            if (defectDetailExport) defectDetailExport.addEventListener('click', exportDefectDetailExcel);
+
             // Event listeners para menú contextual de defectos
             const contextMenuDetail = document.getElementById('contextMenuDetail');
             const contextMenuTrend = document.getElementById('contextMenuTrend');
@@ -3664,6 +3930,181 @@
             XLSX.writeFile(wb, `Resumen_TELA_${stamp}.xlsx`);
         }
 
+        function exportDefectDetailExcel() {
+            if (!window.XLSX) {
+                alert('La librería de exportación no está disponible.');
+                return;
+            }
+            
+            const detailData = window._currentDefectDetailData;
+            if (!detailData || !detailData.rows || detailData.rows.length === 0) {
+                alert('No hay datos para exportar.');
+                return;
+            }
+
+            const defectName = detailData.defectName;
+            const rows = detailData.rows;
+
+            // Función para sanear valores
+            function sanitizeRemoveLeading1(val) {
+                if (val === undefined || val === null) return '';
+                const s = String(val).trim();
+                if (s === '') return '';
+                let cleaned = s;
+                if (cleaned.charAt(0) === '1') cleaned = cleaned.slice(1);
+                const n = parseInt(cleaned, 10);
+                return isNaN(n) ? cleaned : String(n);
+            }
+
+            // Ordenar filas por la columna del defecto (descendente)
+            const sortedRows = [...rows].sort((a, b) => toNum(b[defectName]) - toNum(a[defectName]));
+
+            // Construir encabezados
+            const headers = ['CLIENTE', 'OP_TELA-PTDA', 'OP', 'COLOR', defectName];
+
+            // Construir datos
+            const aoa = [headers];
+            sortedRows.forEach(r => {
+                const row = [];
+                
+                // CLIENTE
+                const cliente = r.CLIENTE || r.Cliente || '';
+                row.push(cliente);
+                
+                // OP_TELA-PTDA
+                const op_tela_raw = r.OP_TELA || r['OP_TELA'] || r['OP TELA'] || r.Op_Tela || '';
+                const ptda_raw = (r.PTDA !== undefined && r.PTDA !== null) ? r.PTDA : (r.PTDS !== undefined ? r.PTDS : '');
+                const op_tela_clean = sanitizeRemoveLeading1(op_tela_raw);
+                const ptda_clean = (ptda_raw === undefined || ptda_raw === null || ptda_raw === '') ? '' : String(parseInt(ptda_raw, 10));
+                const combined = ptda_clean ? `${op_tela_clean}-${ptda_clean}` : op_tela_clean;
+                row.push(combined);
+                
+                // OP
+                const op_raw = r.OP || r.Op || '';
+                const op_clean = sanitizeRemoveLeading1(op_raw);
+                row.push(op_clean);
+                
+                // COLOR
+                const color = r.COLOR || r.Color || '';
+                row.push(color);
+                
+                // Valor del defecto
+                row.push(toNum(r[defectName]));
+                
+                aoa.push(row);
+            });
+
+            // Crear worksheet y workbook
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Detalle_Defecto');
+            
+            // Generar nombre de archivo
+            const stamp = (new Date()).toISOString().slice(0,19).replace(/[:T]/g,'-');
+            const fileName = `Detalle_${defectName}_${stamp}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        function exportTelaDetailExcel() {
+            if (!window.XLSX) {
+                alert('La librería de exportación no está disponible.');
+                return;
+            }
+            
+            const detailData = window._currentTelaDetailData;
+            if (!detailData) {
+                alert('No hay datos para exportar.');
+                return;
+            }
+
+            const telaName = detailData.telaName;
+            const filters = detailData.filters;
+
+            // Función para sanear valores
+            function sanitizeRemoveLeading1(val) {
+                if (val === undefined || val === null) return '';
+                const s = String(val).trim();
+                if (s === '') return '';
+                let cleaned = s;
+                if (cleaned.charAt(0) === '1') cleaned = cleaned.slice(1);
+                const n = parseInt(cleaned, 10);
+                return isNaN(n) ? cleaned : String(n);
+            }
+
+            // Filtrar datos
+            let filteredRows = (baseData || []).filter(r => {
+                const tela = (r.TELA !== undefined && r.TELA !== null) ? String(r.TELA).trim() : '';
+                const normalizedTela = tela ? tela.toUpperCase().replace(/"/g, '') : '';
+                if (normalizedTela !== telaName) return false;
+                
+                if (filters.year && r._year && String(r._year) !== String(filters.year)) return false;
+                if (filters.periodType === 'week' && filters.week) {
+                    if (!((r._week && String(r._week) === String(filters.week)) || (r.SEM && String(r.SEM) === String(filters.week)))) return false;
+                }
+                if (filters.periodType === 'month' && filters.month) {
+                    if (!((r._month && String(r._month) === String(filters.month)) || (r.MES && String(r.MES) === String(filters.month)))) return false;
+                }
+                if (filters.cliente && r.CLIENTE !== filters.cliente) return false;
+                
+                return true;
+            });
+
+            if (filteredRows.length === 0) {
+                alert('No hay datos para exportar.');
+                return;
+            }
+
+            // Determinar qué columnas de defectos tienen datos
+            const defectsWithData = [];
+            (defectColumns || []).forEach(col => {
+                const hasData = filteredRows.some(r => toNum(r[col]) > 0);
+                if (hasData) {
+                    defectsWithData.push(col);
+                }
+            });
+
+            // Construir encabezados
+            const headers = ['OP_TELA-PTDA', 'COLOR'];
+            defectsWithData.forEach(col => headers.push(col));
+
+            // Construir datos
+            const aoa = [headers];
+            filteredRows.forEach(r => {
+                const row = [];
+                
+                // OP_TELA-PTDA
+                const op_tela_raw = r.OP_TELA || r['OP_TELA'] || r['OP TELA'] || r.Op_Tela || '';
+                const ptda_raw = (r.PTDA !== undefined && r.PTDA !== null) ? r.PTDA : (r.PTDS !== undefined ? r.PTDS : '');
+                const op_tela_clean = sanitizeRemoveLeading1(op_tela_raw);
+                const ptda_clean = (ptda_raw === undefined || ptda_raw === null || ptda_raw === '') ? '' : String(parseInt(ptda_raw, 10));
+                const combined = ptda_clean ? `${op_tela_clean}-${ptda_clean}` : op_tela_clean;
+                row.push(combined);
+                
+                // COLOR - normalizar HEATHERED a HTR
+                const color = r.COLOR || r.Color || '';
+                const normalizedColor = color.replace(/HEATHERED/gi, 'HTR');
+                row.push(normalizedColor);
+                
+                // Columnas de defectos
+                defectsWithData.forEach(defCol => {
+                    const val = toNum(r[defCol]);
+                    row.push(val > 0 ? val : '');
+                });
+                
+                aoa.push(row);
+            });
+
+            // Crear worksheet y workbook
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Detalle_TELA');
+            
+            // Generar nombre de archivo
+            const stamp = (new Date()).toISOString().slice(0,19).replace(/[:T]/g,'-');
+            const fileName = `Detalle_TELA_${telaName}_${stamp}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
         function renderCharts(data, prodCorteFiltered) {
             const paretoData = calculatePareto(data);
             renderParetoChart(paretoData);
@@ -3812,6 +4253,20 @@
                 updateStatus('Error: ' + error.message, 'error');
             }
         }
+
+        // Event listener para el selector de período del gráfico
+        document.addEventListener('DOMContentLoaded', function() {
+            const periodSelector = document.getElementById('periodSelector');
+            if (periodSelector) {
+                periodSelector.addEventListener('change', function() {
+                    if (this.value === 'semanal') {
+                        renderWeekComparisonChart();
+                    } else if (this.value === 'mensual') {
+                        renderMonthComparisonChart();
+                    }
+                });
+            }
+        });
 
         window.addEventListener('DOMContentLoaded', init);
     </script>

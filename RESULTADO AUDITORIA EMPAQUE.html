@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reporte Resumen - GRID</title>
+
+  <!-- (Opcional) Para exportar a Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  
+  <!-- Chart.js para gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+  <style>
+    :root{
+      --header-bg: #e3f2fd;
+      --grid: #e0e0e0;
+      --subtotal: #99ff99;
+      --text: #222;
+    }
+
+    body{
+      font-family: Calibri, Arial, sans-serif;
+      margin: 18px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .header-container{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 14px 0;
+    }
+
+    h1{
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: .2px;
+      flex: 1;
+    }
+
+    .btn-volver{
+      padding: 8px 20px;
+      background: #001a54;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.3s ease;
+    }
+
+    .btn-volver:hover{
+      background: #003580;
+    }
+
+    .bar{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .left-controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    label{
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    select, button{
+      font-family: Calibri, Arial, sans-serif;
+      font-size: 13px;
+      padding: 6px 10px;
+      border: 1px solid #cfcfcf;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    button{
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button:disabled{
+      cursor:not-allowed;
+      opacity:.55;
+    }
+
+    .badge{
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge.loading{
+      background:#fff8e1;
+      border-color:#ffeaa7;
+      color:#856404;
+    }
+    .badge.success{
+      background:#e6ffef;
+      border-color:#c3e6cb;
+      color:#155724;
+    }
+    .badge.error{
+      background:#fff0f0;
+      border-color:#f5c6cb;
+      color:#721c24;
+    }
+
+    .wrap{
+      border: 1px solid #f0f0f0;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+      overflow: hidden;
+      width: 55%;
+      max-width: 55%;
+    }
+
+    .table-scroll{
+      overflow:auto;
+      max-height: 65vh;
+    }
+
+    table{
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 13px;
+      background:#fff;
+    }
+
+    thead th{
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--header-bg);
+      border: 1px solid #b3d9ff;
+      padding: 8px 8px;
+      text-align: center;
+      font-weight: 700;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    tbody td{
+      border: 1px solid var(--grid);
+      padding: 7px 8px;
+      text-align: center;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    tbody tr:nth-child(even){ background:#fafafa; }
+    tbody tr:hover{ background:#f0f7ff; }
+
+    td.left{ text-align:left; }
+
+    tr.subtotal td{
+      background: var(--subtotal) !important;
+      font-weight: 700;
+    }
+
+    tr.grandtotal td{
+      background: #f2f2f2 !important;
+      font-weight: 800;
+    }
+
+    .note{
+      margin-top: 10px;
+      font-size: 12px;
+      color:#666;
+    }
+    tr.rejected td{
+      background: #ffecec !important;
+    }
+    .zero{ color: transparent; }
+
+    /* Labelframes y switches */
+    .filter-section{
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .right-controls{
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .labelframe{
+      border: 1px solid #d0d0d0;
+      border-radius: 10px;
+      padding: 16px 18px;
+      position: relative;
+      background: #fafafa;
+    }
+
+    .labelframe-title{
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: #fff;
+      padding: 0 8px;
+      font-weight: 700;
+      font-size: 13px;
+      color: #444;
+    }
+
+    .labelframe-content{
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .switch-group{
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .switch{
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+    }
+
+    .switch input{
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider{
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 26px;
+    }
+
+    .slider:before{
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider{
+      background-color: #4CAF50;
+    }
+
+    input:checked + .slider:before{
+      transform: translateX(22px);
+    }
+
+    .switch-label{
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      white-space: nowrap;
+    }
+
+    #weekSelect{
+      min-width: 80px;
+    }
+
+    /* Customer Filter Dropdown */
+    .customer-filter-wrapper{
+      position: relative;
+      display: inline-block;
+    }
+
+    .customer-filter-button{
+      padding: 8px 16px;
+      background: #fff;
+      border: 1px solid #cfcfcf;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 180px;
+      justify-content: space-between;
+    }
+
+    .customer-filter-button:hover{
+      background: #f5f5f5;
+    }
+
+    .customer-dropdown{
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      background: white;
+      border: 1px solid #cfcfcf;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.15);
+      min-width: 220px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      padding: 8px 0;
+    }
+
+    .customer-dropdown.show{
+      display: block;
+    }
+
+    .customer-option{
+      padding: 8px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .customer-option:hover{
+      background: #e3f2fd;
+    }
+
+    .customer-option input[type="checkbox"]{
+      cursor: pointer;
+    }
+
+    .customer-option label{
+      cursor: pointer;
+      flex: 1;
+      font-weight: normal;
+    }
+
+    /* Layout para tabla + gráficos */
+    .content-container{
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .charts-container{
+      width: 40%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .chart-box{
+      border: 1px solid #f0f0f0;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+      padding: 15px;
+      background: #fff;
+      max-height: 31vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-title{
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-align: center;
+      color: #333;
+    }
+
+    .chart-canvas{
+      width: 100% !important;
+      height: auto !important;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 1200px){
+      .content-container{
+        flex-direction: column;
+      }
+      .wrap, .charts-container{
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-container">
+    <h1>REPORTE DE AUDITORIAS DE EMPAQUE</h1>
+    <a href="index.html" class="btn-volver">VOLVER</a>
+  </div>
+
+  <div class="filter-section">
+    <div class="labelframe">
+      <span class="labelframe-title">Week:</span>
+      <div class="labelframe-content">
+        <select id="weekSelect" disabled>
+          <option value="">Cargando...</option>
+        </select>
+        <div class="switch-group">
+          <label class="switch">
+            <input type="checkbox" id="lastWeekSwitch">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">Last Week</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="labelframe">
+      <span class="labelframe-title">Factory Filters:</span>
+      <div class="labelframe-content">
+        <div class="switch-group">
+          <label class="switch">
+            <input type="checkbox" id="filterCofaco">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">Cofaco</span>
+        </div>
+        <div class="switch-group">
+          <label class="switch">
+            <input type="checkbox" id="filterCititex1">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">Cititex 1</span>
+        </div>
+        <div class="switch-group">
+          <label class="switch">
+            <input type="checkbox" id="filterCititex2">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">Cititex 2</span>
+        </div>
+        <div class="switch-group">
+          <label class="switch">
+            <input type="checkbox" id="filterCititexEstanos">
+            <span class="slider"></span>
+          </label>
+          <span class="switch-label">Cititex-Estaños</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="labelframe">
+      <span class="labelframe-title">Customer Filter:</span>
+      <div class="labelframe-content">
+        <div class="customer-filter-wrapper">
+          <button class="customer-filter-button" id="customerFilterBtn" type="button">
+            <span id="customerFilterLabel">Seleccione Customers</span>
+            <span>▼</span>
+          </button>
+          <div class="customer-dropdown" id="customerDropdown">
+            <!-- Opciones se llenarán dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-controls">
+      <button id="btnExport" disabled>Descargar Excel</button>
+      <span id="status" class="badge loading">Cargando datos desde Google Sheets…</span>
+    </div>
+  </div>
+
+  <div class="content-container">
+    <div class="wrap">
+      <div class="table-scroll">
+        <table id="summaryTable">
+          <thead>
+            <tr>
+              <th style="width:19%">Factory Code</th>
+              <th style="width:14%">Customer</th>
+              <th style="width:27%">Result</th>
+              <th style="width:8%">A1</th>
+              <th style="width:8%">A2</th>
+              <th style="width:8%">A3</th>
+              <th style="width:8%">A4</th>
+              <th style="width:8%">TT</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="8" style="padding:16px;text-align:center;color:#777">Sin datos</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="charts-container">
+      <!-- Gráfico 1: Comparativo por Factory -->
+      <div class="chart-box">
+        <div class="chart-title">% Aprobación por Factory Code</div>
+        <canvas id="factoryChart" class="chart-canvas"></canvas>
+      </div>
+
+      <!-- Gráfico 2: Distribución por Customer -->
+      <div class="chart-box">
+        <div class="chart-title">Distribución de Auditorías por Customer</div>
+        <canvas id="customerChart" class="chart-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  
+
+<script>
+  // Registrar plugin de datalabels
+  if(typeof ChartDataLabels !== 'undefined'){
+    Chart.register(ChartDataLabels);
+    // Desregistrar globalmente para que solo se use donde lo especifiquemos
+    Chart.defaults.set('plugins.datalabels', { display: false });
+  }
+
+  // =========================================================
+  // CONFIG
+  // =========================================================
+  const SHEET_ID = "1RB48rgEm2anTARE_54XXcxeSs6G8Kt6N";  // tu sheet
+  const SHEET_NAME = "GRID";
+
+  // =========================================================
+  // ORDEN PERSONALIZADO PARA FACTORY CODES
+  // =========================================================
+  const FACTORY_ORDER = ["Cofaco", "Cititex 1", "Cititex 2", "Cititex-Estaños"];
+  
+  function getFactoryOrder(factoryCode){
+    const fc = String(factoryCode || "").trim();
+    const idx = FACTORY_ORDER.findIndex(f => fc.toLowerCase().includes(f.toLowerCase()));
+    return idx >= 0 ? idx : 999; // Los no encontrados van al final
+  }
+  
+  function sortFactories(factories){
+    return Array.from(factories.entries())
+      .sort((a, b) => getFactoryOrder(a[0]) - getFactoryOrder(b[0]));
+  }
+
+  // =========================================================
+  // GVIZ JSONP loader (mismo patrón que tu ejemplo) :contentReference[oaicite:3]{index=3}
+  // =========================================================
+  function gvizToObjects(resp){
+    if(!resp || !resp.table) return [];
+    const cols = (resp.table.cols || []).map(c => String(c.label || c.id || "").trim());
+    return (resp.table.rows || []).map(r => {
+      const o = {};
+      cols.forEach((h,i) => {
+        const cell = r.c && r.c[i] ? r.c[i] : null;
+        o[h] = (cell && cell.v !== null && cell.v !== undefined) ? cell.v : "";
+      });
+      return o;
+    });
+  }
+
+  function loadSheetJSONP(sheetId, sheetName){
+    const TIMEOUT_MS = 20000;
+    return new Promise((resolve,reject)=>{
+      const cbName = "GVIZ_CB_" + Math.random().toString(36).slice(2);
+      let script = document.createElement("script");
+      let timer = setTimeout(()=>{
+        cleanup();
+        reject(new Error(`Timeout cargando "${sheetName}"`));
+      }, TIMEOUT_MS);
+
+      function cleanup(){
+        if(timer){ clearTimeout(timer); timer=null; }
+        delete window[cbName];
+        if(script && script.parentNode){ script.parentNode.removeChild(script); script=null; }
+      }
+
+      window[cbName] = function(resp){
+        cleanup();
+        try{ resolve(gvizToObjects(resp)); }
+        catch(e){ reject(new Error("Error procesando datos: " + e.message)); }
+      };
+
+      script.onerror = () => {
+        cleanup();
+        reject(new Error(`No se pudo cargar la hoja "${sheetName}". Verifica que sea pública.`));
+      };
+
+      const base = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`;
+      const url  = `${base}?sheet=${encodeURIComponent(sheetName)}&headers=1&tq=${encodeURIComponent("select *")}&tqx=out:json;responseHandler:${cbName}&nocache=${Date.now()}`;
+      script.src = url;
+      document.head.appendChild(script);
+    });
+  }
+
+  // =========================================================
+  // Helpers: lectura robusta de columnas (aliases)
+  // =========================================================
+  function normKey(s){
+    return String(s || "")
+      .toLowerCase()
+      .replace(/\s+/g,"")
+      .replace(/[°º#\.\-_/]/g,"")
+      .replace(/ñ/g,"n");
+  }
+
+  function getField(row, candidates){
+    // candidates: ["Factory Code", "FactoryCode", ...]
+    const map = {};
+    for(const k of Object.keys(row)){
+      map[normKey(k)] = k;
+    }
+    for(const cand of candidates){
+      const hit = map[normKey(cand)];
+      if(hit !== undefined) return row[hit];
+    }
+    return "";
+  }
+
+  function asText(v){
+    if(v === null || v === undefined) return "";
+    return String(v).trim();
+  }
+
+  function asWeek(v){
+    // Week puede venir como número o texto
+    const t = asText(v);
+    if(t === "") return "";
+    // Si es 49.0 -> 49
+    const n = Number(t);
+    if(!Number.isNaN(n) && Number.isFinite(n)) return String(parseInt(n,10));
+    return t;
+  }
+
+  function parseAttempt(v){
+    const t = asText(v);
+    if(!t) return null;
+    // soporta "1" o "A1"
+    if(/^a\d+$/i.test(t)) return parseInt(t.slice(1),10);
+    const n = parseInt(t,10);
+    if(Number.isNaN(n)) return null;
+    return n;
+  }
+
+  // =========================================================
+  // UI
+  // =========================================================
+  const weekSelect  = document.getElementById("weekSelect");
+  const btnRefresh  = document.getElementById("btnRefresh");
+  const btnExport   = document.getElementById("btnExport");
+  const statusEl    = document.getElementById("status");
+  const tbody       = document.getElementById("tbody");
+
+  const lastWeekSwitch = document.getElementById("lastWeekSwitch");
+  const filterCofaco = document.getElementById("filterCofaco");
+  const filterCititex1 = document.getElementById("filterCititex1");
+  const filterCititex2 = document.getElementById("filterCititex2");
+  const filterCititexEstanos = document.getElementById("filterCititexEstanos");
+
+  const customerFilterBtn = document.getElementById("customerFilterBtn");
+  const customerDropdown = document.getElementById("customerDropdown");
+  const customerFilterLabel = document.getElementById("customerFilterLabel");
+  
+  let selectedCustomers = new Set(); // Almacena los customers seleccionados
+
+  function formatCellNumber(n){
+    const num = Number(n) || 0;
+    return num === 0 ? `<span class="zero">${num}</span>` : String(num);
+  }
+
+  function getActiveFactories(){
+    const active = [];
+    if(filterCofaco.checked) active.push("Cofaco");
+    if(filterCititex1.checked) active.push("Cititex 1");
+    if(filterCititex2.checked) active.push("Cititex 2");
+    if(filterCititexEstanos.checked) active.push("Cititex-Estaños");
+    return active;
+  }
+
+  function getActiveCustomers(){
+    return Array.from(selectedCustomers);
+  }
+
+  function matchesCustomer(customer, activeCustomers){
+    if(activeCustomers.length === 0) return true;
+    const cust = String(customer || "").trim();
+    return activeCustomers.includes(cust);
+  }
+
+  function matchesFactory(factoryCode, activeFactories){
+    if(activeFactories.length === 0) return true;
+    const fc = String(factoryCode || "").toLowerCase().trim();
+    for(const af of activeFactories){
+      if(fc.includes(af.toLowerCase())) return true;
+    }
+    return false;
+  }
+
+  let grid = [];
+  let currentRowsForExport = []; // array de objetos ya resumidos
+
+  function setStatus(text, cls){
+    statusEl.textContent = text;
+    statusEl.className = "badge " + cls;
+  }
+
+  function fillWeekSelect(weeks){
+    weekSelect.innerHTML = `<option value="">Seleccione...</option>`;
+    weeks.forEach(w=>{
+      const opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = w;
+      weekSelect.appendChild(opt);
+    });
+    weekSelect.disabled = false;
+  }
+
+  // =========================================================
+  // Core: construir resumen
+  // (Inspirado en tu ejemplo: filtrar por Week y usar Intento) :contentReference[oaicite:4]{index=4} :contentReference[oaicite:5]{index=5}
+  // =========================================================
+  function buildSummary(selectedWeek){
+    const groups = new Map();
+    const activeFactories = getActiveFactories();
+    const activeCustomers = getActiveCustomers();
+
+    for(const r of grid){
+      if(r.Week !== selectedWeek) continue;
+
+      const factory = r.FactoryCode || "Sin código";
+      
+      // Aplicar filtro de factory
+      if(!matchesFactory(factory, activeFactories)) continue;
+      const customer = r.Customer || "Sin cliente";
+      
+      // Aplicar filtro de customer
+      if(!matchesCustomer(customer, activeCustomers)) continue;
+      const result = r.Result || "Sin result";
+      const key = factory + "|||" + customer + "|||" + result;
+
+      if(!groups.has(key)){
+        groups.set(key, {
+          FactoryCode: factory,
+          Customer: customer,
+          Result: result,
+          Reports: new Set(),
+          A1: 0, A2: 0, A3: 0, A4: 0
+        });
+      }
+      const g = groups.get(key);
+
+      if(r.Report) g.Reports.add(r.Report);
+
+      const att = parseAttempt(r.Intento);
+      if(att === 1) g.A1++;
+      else if(att === 2) g.A2++;
+      else if(att === 3) g.A3++;
+      else if(att === 4) g.A4++;
+    }
+
+    // pasar a array
+    const out = Array.from(groups.values()).map(g=>{
+      const totalReports = g.Reports.size;     // Cuenta de Nº Report (únicos)
+      const TT = g.A1 + g.A2 + g.A3 + g.A4;    // total intentos
+      return {
+        FactoryCode: g.FactoryCode,
+        Customer: g.Customer,
+        Result: g.Result,
+        TotalReports: totalReports,
+        A1: g.A1, A2: g.A2, A3: g.A3, A4: g.A4,
+        TT
+      };
+    });
+
+    // ordenar como Excel: Factory -> Customer -> Result
+    out.sort((a,b)=>{
+      const fa = a.FactoryCode.localeCompare(b.FactoryCode);
+      if(fa !== 0) return fa;
+      const cu = a.Customer.localeCompare(b.Customer);
+      if(cu !== 0) return cu;
+      return a.Result.localeCompare(b.Result);
+    });
+
+    return out;
+  }
+
+  function renderSummary(rows){
+    tbody.innerHTML = "";
+    currentRowsForExport = rows.slice();
+
+    if(rows.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="8" style="padding:16px;text-align:center;color:#777">No hay datos para esa Week</td>`;
+      tbody.appendChild(tr);
+      btnExport.disabled = true;
+      return;
+    }
+
+    // subtotales por factory
+    const factories = new Map();
+    rows.forEach(r=>{
+      if(!factories.has(r.FactoryCode)){
+        factories.set(r.FactoryCode, []);
+      }
+      factories.get(r.FactoryCode).push(r);
+    });
+
+    let grand = { A1:0, A2:0, A3:0, A4:0, TT:0 };
+
+    // Ordenar factories según orden personalizado
+    const sortedFactories = sortFactories(factories);
+
+    for(const [factory, list] of sortedFactories){
+      let sub = { A1:0, A2:0, A3:0, A4:0, TT:0 };
+
+      list.forEach(r=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="left">${escapeHtml(r.FactoryCode)}</td>
+          <td class="left">${escapeHtml(r.Customer)}</td>
+          <td>${escapeHtml(r.Result)}</td>
+          <td>${formatCellNumber(r.A1)}</td>
+          <td>${formatCellNumber(r.A2)}</td>
+          <td>${formatCellNumber(r.A3)}</td>
+          <td>${formatCellNumber(r.A4)}</td>
+          <td>${r.TT}</td>
+        `;
+        // Resaltar si Result contiene 'Rejected' (case-insensitive)
+        try{
+          if(/rejected/i.test(String(r.Result || ""))) tr.classList.add('rejected');
+        }catch(e){}
+        tbody.appendChild(tr);
+
+        sub.A1 += r.A1; sub.A2 += r.A2; sub.A3 += r.A3; sub.A4 += r.A4;
+        sub.TT += r.TT;
+      });
+
+      // subtotal row
+      const trSub = document.createElement("tr");
+      trSub.className = "subtotal";
+      trSub.innerHTML = `
+        <td class="left">Total ${escapeHtml(factory)}</td>
+        <td></td><td></td>
+        <td>${sub.A1}</td>
+        <td>${sub.A2}</td>
+        <td>${sub.A3}</td>
+        <td>${sub.A4}</td>
+        <td>${sub.TT}</td>
+      `;
+      tbody.appendChild(trSub);
+
+      grand.A1 += sub.A1; grand.A2 += sub.A2; grand.A3 += sub.A3; grand.A4 += sub.A4;
+      grand.TT += sub.TT;
+    }
+
+    // grand total
+    const trG = document.createElement("tr");
+    trG.className = "grandtotal";
+    trG.innerHTML = `
+      <td class="left">Total general</td>
+      <td></td><td></td>
+      <td>${grand.A1}</td>
+      <td>${grand.A2}</td>
+      <td>${grand.A3}</td>
+      <td>${grand.A4}</td>
+      <td>${grand.TT}</td>
+    `;
+    tbody.appendChild(trG);
+
+    btnExport.disabled = false;
+    
+    // Actualizar gráficos
+    updateCharts(rows);
+  }
+
+  // =========================================================
+  // GRÁFICOS
+  // =========================================================
+  let factoryChartInstance = null;
+  let customerChartInstance = null;
+
+  function updateCharts(rows){
+    if(rows.length === 0){
+      // Destruir gráficos si no hay datos
+      if(factoryChartInstance) factoryChartInstance.destroy();
+      if(customerChartInstance) customerChartInstance.destroy();
+      return;
+    }
+
+    // Preparar datos para gráficos
+    const factoryData = calculateFactoryApproval(rows);
+    const customerData = calculateCustomerDistribution(rows);
+
+    // Crear/actualizar gráfico de factory
+    createFactoryChart(factoryData);
+    
+    // Crear/actualizar gráfico de customer
+    createCustomerChart(customerData);
+  }
+
+  function calculateFactoryApproval(rows){
+    const factoryStats = new Map();
+    
+    rows.forEach(r => {
+      const factory = r.FactoryCode;
+      if(!factoryStats.has(factory)){
+        factoryStats.set(factory, { approved: 0, rejected: 0, total: 0 });
+      }
+      
+      const stats = factoryStats.get(factory);
+      stats.total += r.TT;
+      
+      // Si Result contiene "Approved" o "Pass", es aprobado
+      const result = String(r.Result || "").toLowerCase();
+      if(result.includes("approved") || result.includes("pass")){
+        stats.approved += r.TT;
+      } else if(result.includes("rejected")){
+        stats.rejected += r.TT;
+      } else {
+        // Si no está claro, contarlo como aprobado por defecto
+        stats.approved += r.TT;
+      }
+    });
+
+    const labels = [];
+    const percentages = [];
+    const colors = [];
+    
+    // Ordenar según orden personalizado
+    const sortedStats = sortFactories(factoryStats);
+    
+    for(const [factory, stats] of sortedStats){
+      labels.push(factory);
+      const percentage = stats.total > 0 ? (stats.approved / stats.total * 100) : 0;
+      percentages.push(percentage.toFixed(1));
+      
+      // Color verde para >95%, amarillo para 90-95%, rojo para <90%
+      if(percentage >= 95){
+        colors.push('rgba(75, 192, 75, 0.8)');
+      } else if(percentage >= 90){
+        colors.push('rgba(255, 206, 86, 0.8)');
+      } else {
+        colors.push('rgba(255, 99, 132, 0.8)');
+      }
+    }
+
+    return { labels, percentages, colors };
+  }
+
+  function calculateCustomerDistribution(rows){
+    const customerTotals = new Map();
+    
+    rows.forEach(r => {
+      const customer = r.Customer;
+      if(!customerTotals.has(customer)){
+        customerTotals.set(customer, 0);
+      }
+      customerTotals.set(customer, customerTotals.get(customer) + r.TT);
+    });
+
+    // Ordenar por total descendente
+    const sorted = Array.from(customerTotals.entries())
+      .sort((a, b) => b[1] - a[1]);
+
+    const labels = sorted.map(x => x[0]);
+    const data = sorted.map(x => x[1]);
+    
+    // Colores variados para el donut
+    const colors = [
+      'rgba(54, 162, 235, 0.8)',
+      'rgba(255, 99, 132, 0.8)',
+      'rgba(255, 206, 86, 0.8)',
+      'rgba(75, 192, 192, 0.8)',
+      'rgba(153, 102, 255, 0.8)',
+      'rgba(255, 159, 64, 0.8)',
+      'rgba(199, 199, 199, 0.8)',
+      'rgba(83, 102, 255, 0.8)',
+      'rgba(255, 99, 255, 0.8)',
+      'rgba(99, 255, 132, 0.8)',
+    ];
+
+    return { labels, data, colors };
+  }
+
+  function createFactoryChart(data){
+    const ctx = document.getElementById('factoryChart').getContext('2d');
+    
+    if(factoryChartInstance){
+      factoryChartInstance.destroy();
+    }
+
+    factoryChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: '% Aprobación',
+          data: data.percentages,
+          backgroundColor: data.colors,
+          borderColor: data.colors.map(c => c.replace('0.8', '1')),
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2.2,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context){
+                return context.parsed.y + '%';
+              }
+            }
+          },
+          datalabels: {
+            display: true,
+            anchor: 'end',
+            align: 'top',
+            font: {
+              weight: 'bold',
+              size: 13
+            },
+            color: '#333',
+            formatter: function(value) {
+              return value + '%';
+            }
+          }
+        },
+        layout: {
+          padding: {
+            top: 30
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: function(value){
+                return value + '%';
+              }
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function createCustomerChart(data){
+    const ctx = document.getElementById('customerChart').getContext('2d');
+    
+    if(customerChartInstance){
+      customerChartInstance.destroy();
+    }
+
+    customerChartInstance = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          data: data.data,
+          backgroundColor: data.colors,
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 1.8,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              boxWidth: 12,
+              padding: 8,
+              font: {
+                size: 10
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context){
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            }
+          },
+          datalabels: {
+            display: true,
+            color: '#fff',
+            font: {
+              weight: 'bold',
+              size: 12
+            },
+            formatter: function(value, context) {
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return value + '\n(' + percentage + '%)';
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function onWeekChange(){
+    const w = weekSelect.value;
+    if(!w){
+      renderSummary([]);
+      return;
+    }
+    const rows = buildSummary(w);
+    renderSummary(rows);
+  }
+
+  // =========================================================
+  // Export Excel (opcional)
+  // =========================================================
+  function exportExcel(){
+    if(!currentRowsForExport || currentRowsForExport.length === 0) return;
+
+    const w = weekSelect.value || "NA";
+    const aoa = [
+      ["Week", w],
+      [],
+      ["Factory Code","Customer","Result","A1","A2","A3","A4","TT"],
+    ];
+
+    // reconstruir con subtotales + total general
+    const rows = currentRowsForExport.slice();
+    const factories = new Map();
+    rows.forEach(r=>{
+      if(!factories.has(r.FactoryCode)) factories.set(r.FactoryCode, []);
+      factories.get(r.FactoryCode).push(r);
+    });
+
+    let grand = { A1:0, A2:0, A3:0, A4:0, TT:0 };
+
+    for(const [factory, list] of factories.entries()){
+      let sub = { A1:0, A2:0, A3:0, A4:0, TT:0 };
+
+      list.forEach(r=>{
+        aoa.push([r.FactoryCode, r.Customer, r.Result, r.A1, r.A2, r.A3, r.A4, r.TT]);
+        sub.A1+=r.A1; sub.A2+=r.A2; sub.A3+=r.A3; sub.A4+=r.A4;
+        sub.TT+=r.TT;
+      });
+
+      aoa.push([`Total ${factory}`,"","", sub.A1, sub.A2, sub.A3, sub.A4, sub.TT]);
+
+      grand.A1+=sub.A1; grand.A2+=sub.A2; grand.A3+=sub.A3; grand.A4+=sub.A4;
+      grand.TT+=sub.TT;
+    }
+
+    aoa.push(["Total general","","", grand.A1, grand.A2, grand.A3, grand.A4, grand.TT]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // anchos (parecido a tu formato)
+    ws["!cols"] = [
+      {wch:16},{wch:22},{wch:12},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "tabla resultado");
+    XLSX.writeFile(wb, `Cuadro_resumen_week_${w}.xlsx`);
+  }
+
+  // =========================================================
+  // INIT: cargar datos
+  // =========================================================
+  async function init(){
+    setStatus("Cargando datos desde Google Sheets…", "loading");
+    weekSelect.disabled = true;
+    if(btnRefresh) btnRefresh.disabled = true;
+    btnExport.disabled = true;
+
+    try{
+      const raw = await loadSheetJSONP(SHEET_ID, SHEET_NAME);
+
+      // Mapear SOLO lo necesario, como en tu ejemplo :contentReference[oaicite:6]{index=6}
+      grid = raw.map(row=>{
+        const Week = asWeek(getField(row, ["Week","WEEK","Semana"]));
+        const FactoryCode = asText(getField(row, ["Factory Code","FactoryCode","Factory"]));
+        const Customer = asText(getField(row, ["Customer","CUSTOMER","Cliente"]));
+        const Result = asText(getField(row, ["Result","RESULT","Resultado"]));
+        const Intento = asText(getField(row, ["Intento","Intent","Attempt","AttemptNo","Attempt #"]));
+        const Report = asText(getField(row, ["Nº Report","N° Report","No Report","Report","Report No","N Report"]));
+        return { Week, FactoryCode, Customer, Result, Intento, Report };
+      });
+
+      const weeks = Array.from(new Set(grid.map(r=>r.Week).filter(Boolean)));
+      weeks.sort((a,b)=>{
+        const na = parseInt(a,10), nb = parseInt(b,10);
+        if(!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+        return a.localeCompare(b);
+      });
+
+      fillWeekSelect(weeks);
+
+      // default: última week disponible
+      if(weeks.length){
+        weekSelect.value = weeks[weeks.length-1];
+        // Llenar filtro de customers después de seleccionar la semana
+        populateCustomerFilter();
+        onWeekChange();
+      }else{
+        renderSummary([]);
+      }
+
+      setStatus("Datos ✓", "success");
+      if(btnRefresh) btnRefresh.disabled = false;
+
+    }catch(err){
+      console.error(err);
+      setStatus("Error: " + err.message, "error");
+      tbody.innerHTML = `<tr><td colspan="8" style="padding:16px;text-align:center;color:#b00020">
+        No se pudo cargar el GRID. Verifica: (1) Sheet público, (2) hoja se llama "GRID".
+      </td></tr>`;
+    }
+  }
+
+  // Last Week switch handler
+  lastWeekSwitch.addEventListener("change", function(){
+    if(this.checked){
+      const weeks = Array.from(weekSelect.options).map(o => o.value).filter(Boolean);
+      if(weeks.length > 1){
+        weekSelect.value = weeks[weeks.length - 2]; // penúltima semana
+      }
+    } else {
+      const weeks = Array.from(weekSelect.options).map(o => o.value).filter(Boolean);
+      if(weeks.length){
+        weekSelect.value = weeks[weeks.length - 1]; // última semana
+      }
+    }
+    populateCustomerFilter();
+    onWeekChange();
+  });
+
+  // Factory filters handlers
+  filterCofaco.addEventListener("change", function(){
+    populateCustomerFilter();
+    onWeekChange();
+  });
+  filterCititex1.addEventListener("change", function(){
+    populateCustomerFilter();
+    onWeekChange();
+  });
+  filterCititex2.addEventListener("change", function(){
+    populateCustomerFilter();
+    onWeekChange();
+  });
+  filterCititexEstanos.addEventListener("change", function(){
+    populateCustomerFilter();
+    onWeekChange();
+  });
+
+  // Customer filter handlers
+  function populateCustomerFilter(){
+    const selectedWeek = weekSelect.value;
+    const activeFactories = getActiveFactories();
+    
+    // Filtrar solo los customers que están en los datos visibles
+    const visibleCustomers = new Set();
+    for(const r of grid){
+      if(selectedWeek && r.Week !== selectedWeek) continue;
+      if(!matchesFactory(r.FactoryCode, activeFactories)) continue;
+      if(r.Customer) visibleCustomers.add(r.Customer);
+    }
+    
+    const customers = Array.from(visibleCustomers);
+    customers.sort();
+    
+    // Mantener solo los customers que aún están visibles
+    const newSelectedCustomers = new Set();
+    customers.forEach(c => {
+      if(selectedCustomers.has(c)){
+        newSelectedCustomers.add(c);
+      } else {
+        // Si es un customer nuevo (no estaba antes), seleccionarlo por defecto
+        newSelectedCustomers.add(c);
+      }
+    });
+    selectedCustomers = newSelectedCustomers;
+    
+    customerDropdown.innerHTML = '';
+    customers.forEach(customer => {
+      const option = document.createElement('div');
+      option.className = 'customer-option';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `customer_${customer.replace(/\s+/g, '_')}`;
+      checkbox.checked = selectedCustomers.has(customer);
+      checkbox.dataset.customer = customer;
+      
+      const label = document.createElement('label');
+      label.textContent = customer;
+      label.htmlFor = checkbox.id;
+      
+      checkbox.addEventListener('change', function(){
+        if(this.checked){
+          selectedCustomers.add(customer);
+        } else {
+          selectedCustomers.delete(customer);
+        }
+        updateCustomerFilterLabel();
+        onWeekChange();
+      });
+      
+      option.appendChild(checkbox);
+      option.appendChild(label);
+      customerDropdown.appendChild(option);
+    });
+    
+    updateCustomerFilterLabel();
+  }
+
+  function updateCustomerFilterLabel(){
+    const total = customerDropdown.querySelectorAll('input[type="checkbox"]').length;
+    const selected = selectedCustomers.size;
+    
+    if(selected === 0){
+      customerFilterLabel.textContent = 'Ninguno seleccionado';
+    } else if(selected === total){
+      customerFilterLabel.textContent = 'Todos los Customers';
+    } else {
+      customerFilterLabel.textContent = `${selected} de ${total} Customers`;
+    }
+  }
+
+  customerFilterBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    customerDropdown.classList.toggle('show');
+  });
+
+  // Cerrar dropdown al hacer click fuera
+  document.addEventListener('click', function(e){
+    if(!customerFilterBtn.contains(e.target) && !customerDropdown.contains(e.target)){
+      customerDropdown.classList.remove('show');
+    }
+  });
+
+  weekSelect.addEventListener("change", function(){
+    lastWeekSwitch.checked = false; // reset switch al cambiar manual
+    populateCustomerFilter();
+    onWeekChange();
+  });
+  
+  if(btnRefresh) btnRefresh.addEventListener("click", init);
+  btnExport.addEventListener("click", exportExcel);
+
+  document.addEventListener("DOMContentLoaded", init);
+</script>
+
+</body>
+</html>

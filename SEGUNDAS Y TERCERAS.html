@@ -246,7 +246,7 @@
             box-shadow: 0 2px 8px rgba(59,130,246,0.25);
         }
         .btn-graficos .ico { width:18px; height:18px; display:inline-block; }
-        .modal.modal-large { max-width: 900px; width: 90%; }
+        .modal.modal-large { max-width: 1080px; width: 90%; }
     .charts-controls { display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; margin-bottom:6px; }
         /* Compact filters: Calibri 10px */
         .charts-controls label { display:flex; align-items:center; gap:6px; white-space:nowrap; font-family: Calibri, Arial, sans-serif; font-size:10px; margin:0; }
@@ -315,7 +315,7 @@
         <!-- Ensure .modal.modal-large wins over the generic .modal rules so the charts modal is large on first open -->
         <style>
             .modal.modal-large {
-                max-width: 900px !important;
+                max-width: 1080px !important;
                 width: 90% !important;
             }
         </style>
@@ -434,17 +434,32 @@
                             </span>
                         </label>
                     </label>
+                    <label>Periodo:
+                        <select id="chartPeriodo" class="small-select">
+                            <option value="SEMANA">Semanal</option>
+                            <option value="MES">Mensual</option>
+                        </select>
+                    </label>
+                    <!-- Controles comunes -->
                     <label>Desde Año:
                         <select id="chartDesdeYear"></select>
                     </label>
-                    <label>Desde Semana:
+                    <!-- Controles para vista SEMANAL -->
+                    <label id="lblDesdeWeek">Desde Semana:
                         <select id="chartDesdeWeek"></select>
+                    </label>
+                    <!-- Controles para vista MENSUAL -->
+                    <label id="lblDesdeMonth" style="display:none;">Desde Mes:
+                        <select id="chartDesdeMonth"></select>
                     </label>
                     <label>Hasta Año:
                         <select id="chartHastaYear"></select>
                     </label>
-                    <label>Hasta Semana:
+                    <label id="lblHastaWeek">Hasta Semana:
                         <select id="chartHastaWeek"></select>
+                    </label>
+                    <label id="lblHastaMonth" style="display:none;">Hasta Mes:
+                        <select id="chartHastaMonth"></select>
                     </label>
                     <!-- Removed Update button and 'Últimas 10 semanas' checkbox; chart updates on select change and defaults to last 10 weeks -->
                 </div>
@@ -1177,6 +1192,23 @@
         const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
         return weekNo;
     }
+    
+    // Convertir año/semana ISO a fecha (primer día de la semana)
+    function getDateFromWeek(year, week) {
+        try {
+            const simple = new Date(year, 0, 1 + (week - 1) * 7);
+            const dayOfWeek = simple.getDay();
+            const ISOweekStart = simple;
+            if (dayOfWeek <= 4) {
+                ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+            } else {
+                ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+            }
+            return ISOweekStart;
+        } catch(e) {
+            return null;
+        }
+    }
 
     function detectFechaKey(rows) {
         if (!rows || !rows.length) return null;
@@ -1750,15 +1782,19 @@
         const chartsModalClose = document.getElementById('chartsModalClose');
     const chartSwitchSeg = document.getElementById('chartSwitchSeg');
     const chartSwitchTer = document.getElementById('chartSwitchTer');
+    const chartPeriodo = document.getElementById('chartPeriodo');
     const chartDesdeYear = document.getElementById('chartDesdeYear');
     const chartDesdeWeek = document.getElementById('chartDesdeWeek');
     const chartHastaYear = document.getElementById('chartHastaYear');
     const chartHastaWeek = document.getElementById('chartHastaWeek');
+    const chartDesdeMonth = document.getElementById('chartDesdeMonth');
+    const chartHastaMonth = document.getElementById('chartHastaMonth');
         const chartsCanvas = document.getElementById('chartsCanvas');
         let chartInstance = null;
 
         function openChartsModal(){
-            populateChartYearWeekSelectors();
+            populateChartSelectors();
+            togglePeriodoControls();
             chartsModalOverlay.classList.add('open');
             chartsModalOverlay.setAttribute('aria-hidden', 'false');
             // Ensure the modal's layout is fully applied before drawing the chart.
@@ -1788,6 +1824,18 @@
         chartsModalOverlay && chartsModalOverlay.addEventListener('click', (ev)=>{ if (ev.target === chartsModalOverlay) closeChartsModal(); });
 
         function getWeekKey(year, week){ return `${year}|${String(week).padStart(2,'0')}`; }
+        function getMonthKey(year, month){ return `${year}|${String(month).padStart(2,'0')}`; }
+        
+        function togglePeriodoControls(){
+            const periodo = chartPeriodo.value;
+            const isWeekly = periodo === 'SEMANA';
+            // Mostrar/ocultar controles semanales (solo semanas)
+            document.getElementById('lblDesdeWeek').style.display = isWeekly ? '' : 'none';
+            document.getElementById('lblHastaWeek').style.display = isWeekly ? '' : 'none';
+            // Mostrar/ocultar controles mensuales (solo meses)
+            document.getElementById('lblDesdeMonth').style.display = isWeekly ? 'none' : '';
+            document.getElementById('lblHastaMonth').style.display = isWeekly ? 'none' : '';
+        }
 
         function lastNWeeks(n){
             const out = [];
@@ -1801,7 +1849,29 @@
             }
             return out;
         }
+        
+        function lastNMonths(n){
+            const out = [];
+            const now = new Date();
+            for (let i = n-1; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const y = d.getFullYear();
+                const m = d.getMonth() + 1; // 1-12
+                const key = getMonthKey(y, m);
+                if (!out.find(o=>o.key===key)) out.push({year:y, month:m, key});
+            }
+            return out;
+        }
 
+        function populateChartSelectors(){
+            const periodo = chartPeriodo.value;
+            if (periodo === 'SEMANA') {
+                populateChartYearWeekSelectors();
+            } else {
+                populateChartMonthSelectors();
+            }
+        }
+        
         function populateChartYearWeekSelectors(){
             // reuse detectFechaKey/getYearsFromRows/getWeeksForYear
             chartDesdeYear.innerHTML = '';
@@ -1856,6 +1926,60 @@
                 chartHastaWeek.value = String(lastIt.week);
             }
         }
+        
+        function populateChartMonthSelectors(){
+            chartDesdeMonth.innerHTML = '';
+            chartHastaMonth.innerHTML = '';
+            chartDesdeYear.innerHTML = '';
+            chartHastaYear.innerHTML = '';
+            
+            const monthNames = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DIC'];
+            
+            // Obtener los últimos 10 meses
+            const last = lastNMonths(10);
+            if (last && last.length) {
+                // Extraer años únicos
+                const yearsSet = new Set(last.map(item => item.year));
+                const years = Array.from(yearsSet).sort();
+                
+                // Poblar selectores de año
+                years.forEach(y => {
+                    const optDesde = document.createElement('option');
+                    optDesde.value = String(y);
+                    optDesde.textContent = String(y);
+                    chartDesdeYear.appendChild(optDesde);
+                    
+                    const optHasta = document.createElement('option');
+                    optHasta.value = String(y);
+                    optHasta.textContent = String(y);
+                    chartHastaYear.appendChild(optHasta);
+                });
+                
+                // Poblar selectores de mes
+                last.forEach(item => {
+                    const m = item.month;
+                    const label = monthNames[m-1];
+                    const value = String(m);
+                    
+                    const optDesde = document.createElement('option');
+                    optDesde.value = value;
+                    optDesde.textContent = label;
+                    chartDesdeMonth.appendChild(optDesde);
+                    
+                    const optHasta = document.createElement('option');
+                    optHasta.value = value;
+                    optHasta.textContent = label;
+                    chartHastaMonth.appendChild(optHasta);
+                });
+                
+                // Seleccionar por defecto: primer mes (hace 9 meses) hasta último mes (actual)
+                const first = last[0]; const lastIt = last[last.length - 1];
+                chartDesdeYear.value = String(first.year);
+                chartDesdeMonth.value = String(first.month);
+                chartHastaYear.value = String(lastIt.year);
+                chartHastaMonth.value = String(lastIt.month);
+            }
+        }
 
         function parseControlRange(){
             // determine tipo from switches: SEGUNDA / TERCERA / AMBOS
@@ -1864,15 +1988,126 @@
                 if (chartSwitchSeg && chartSwitchSeg.checked) tipo = 'SEGUNDA';
                 else if (chartSwitchTer && chartSwitchTer.checked) tipo = 'TERCERA';
             } catch(e) { tipo = 'AMBOS'; }
-            const desdeY = chartDesdeYear.value || '';
-            const desdeW = chartDesdeWeek.value || '';
-            const hastaY = chartHastaYear.value || '';
-            const hastaW = chartHastaWeek.value || '';
-            // Si el usuario no seleccionó ningún Desde/Hasta usar las últimas 10 semanas
-            const useLast = !(desdeY || desdeW || hastaY || hastaW);
-            return { useLast, tipo, desdeY, desdeW, hastaY, hastaW };
+            
+            const periodo = chartPeriodo.value;
+            
+            if (periodo === 'SEMANA') {
+                const desdeY = chartDesdeYear.value || '';
+                const desdeW = chartDesdeWeek.value || '';
+                const hastaY = chartHastaYear.value || '';
+                const hastaW = chartHastaWeek.value || '';
+                // Si el usuario no seleccionó ningún Desde/Hasta usar las últimas 10 semanas
+                const useLast = !(desdeY || desdeW || hastaY || hastaW);
+                return { periodo, useLast, tipo, desdeY, desdeW, hastaY, hastaW };
+            } else {
+                const desdeY = chartDesdeYear.value || '';
+                const desdeM = chartDesdeMonth.value || '';
+                const hastaY = chartHastaYear.value || '';
+                const hastaM = chartHastaMonth.value || '';
+                const useLast = !(desdeY || desdeM || hastaY || hastaM);
+                return { periodo, useLast, tipo, desdeY: desdeY, desdeM: desdeM, hastaY: hastaY, hastaM: hastaM };
+            }
         }
 
+        function aggregateMonthlyData(opts){
+            const fechaKeyDef = detectFechaKey(_originalDefectos);
+            const defectsMap = new Map();
+            const ingresoMap = new Map();
+            
+            // Acumular defectos por mes desde FECHA DE TIMBRADO
+            (_originalDefectos||[]).forEach(r => {
+                const d = tryParseDate(r[fechaKeyDef]);
+                if (!d) return;
+                const y = d.getFullYear();
+                const m = d.getMonth() + 1; // 1-12
+                const key = getMonthKey(y, m);
+                const tipoRow = toUpperTrim(r['TIPO']);
+                if (opts.tipo !== 'AMBOS' && tipoRow !== opts.tipo) return;
+                let sum = 0;
+                DEFECT_DEFS.forEach(def => { sum += toNumber(r[def.col]); });
+                if (!sum) sum = 0;
+                defectsMap.set(key, (defectsMap.get(key) || 0) + sum);
+            });
+            
+            // Acumular ingreso por mes - la hoja ingreso tiene AÑO y SEMANA, necesitamos convertir semanas a meses
+            const ingresoCol = detectarColumnaIngreso(_originalIngreso);
+            const ingresoKeys = _originalIngreso && _originalIngreso.length ? Object.keys(_originalIngreso[0]) : [];
+            const keyAno = ingresoKeys.find(k => toUpperTrim(k).replace(/\s+/g,'') === 'AÑO' || toUpperTrim(k).replace(/\s+/g,'') === 'ANO' || toUpperTrim(k) === 'AÑO');
+            const keySemana = ingresoKeys.find(k => toUpperTrim(k).includes('SEMANA'));
+            
+            if (keyAno && keySemana) {
+                // La hoja de ingreso tiene columnas AÑO y SEMANA, convertir a mes
+                (_originalIngreso||[]).forEach(r => {
+                    const rv = r[keyAno];
+                    const sv = r[keySemana];
+                    const y = rv === null || rv === undefined || rv === '' ? null : Number(String(rv).toString().replace(/\s+/g, ''));
+                    const w = sv === null || sv === undefined || sv === '' ? null : Number(String(sv).toString().replace(/\D+/g, ''));
+                    if (!y || !w) return;
+                    
+                    // Convertir año/semana a fecha para obtener el mes
+                    const dateFromWeek = getDateFromWeek(y, w);
+                    if (!dateFromWeek) return;
+                    const m = dateFromWeek.getMonth() + 1; // 1-12
+                    const key = getMonthKey(y, m);
+                    const val = toNumber(r[ingresoCol]);
+                    ingresoMap.set(key, (ingresoMap.get(key) || 0) + val);
+                });
+            } else {
+                // Fallback: intentar usar fecha directa si existe
+                const fechaKeyIng = detectFechaKey(_originalIngreso);
+                (_originalIngreso||[]).forEach(r => {
+                    const d = tryParseDate(r[fechaKeyIng]);
+                    if (!d) return;
+                    const y = d.getFullYear();
+                    const m = d.getMonth() + 1;
+                    const key = getMonthKey(y, m);
+                    const val = toNumber(r[ingresoCol]);
+                    ingresoMap.set(key, (ingresoMap.get(key) || 0) + val);
+                });
+            }
+            
+            // Construir array de meses
+            let keys = [];
+            if (ingresoMap.size > 0) keys = Array.from(ingresoMap.keys());
+            else keys = Array.from(new Set([...defectsMap.keys(), ...ingresoMap.keys()]));
+            
+            let arr = keys.map(k => {
+                const [y, m] = k.split('|');
+                return { key: k, year: Number(y), month: Number(m), defects: defectsMap.get(k) || 0, ingreso: ingresoMap.get(k) || 0 };
+            });
+            arr.sort((a,b) => (a.year*100 + a.month) - (b.year*100 + b.month));
+            
+            if (opts.useLast) {
+                const last = lastNMonths(10);
+                const order = last.map(x => x.key);
+                arr = order.map(k => {
+                    const found = arr.find(a => a.key === k);
+                    if (found) return found;
+                    const [y, m] = k.split('|');
+                    return { key: k, year: Number(y), month: Number(m), defects: 0, ingreso: 0 };
+                }).filter(Boolean);
+            } else if (opts.desdeY || opts.desdeM || opts.hastaY || opts.hastaM) {
+                // Filtrar por rango de año/mes
+                const desdeNum = (opts.desdeY && opts.desdeM) ? (Number(opts.desdeY)*100 + Number(opts.desdeM)) : null;
+                const hastaNum = (opts.hastaY && opts.hastaM) ? (Number(opts.hastaY)*100 + Number(opts.hastaM)) : null;
+                arr = arr.filter(a => {
+                    const v = a.year*100 + a.month;
+                    if (desdeNum !== null && v < desdeNum) return false;
+                    if (hastaNum !== null && v > hastaNum) return false;
+                    return true;
+                });
+            }
+            
+            const monthNames = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DIC'];
+            const yearsSet = new Set(arr.map(a => a.year));
+            const includeYear = yearsSet.size > 1;
+            const labels = arr.map(a => includeYear ? `${monthNames[a.month-1]}-${a.year}` : monthNames[a.month-1]);
+            const defects = arr.map(a => a.defects);
+            const ingresos = arr.map(a => a.ingreso);
+            const percent = arr.map(a => (a.ingreso && a.ingreso > 0) ? (a.defects / a.ingreso) * 100 : 0);
+            return { labels, defects, ingresos, percent };
+        }
+        
         function aggregateWeeklyData(opts){
             const fechaKeyDef = detectFechaKey(_originalDefectos);
             const fechaKeyIng = detectFechaKey(_originalIngreso);
@@ -2100,15 +2335,30 @@
 
         function renderChartFromControls(){
             const opts = parseControlRange();
-            const data = aggregateWeeklyData(opts);
+            let data;
+            if (opts.periodo === 'SEMANA') {
+                data = aggregateWeeklyData(opts);
+            } else {
+                data = aggregateMonthlyData(opts);
+            }
             // if no labels, show empty message in canvas by drawing blank chart
             drawChart(data);
         }
 
         // Re-render chart automatically when any selector changes
-        [chartDesdeYear, chartDesdeWeek, chartHastaYear, chartHastaWeek].forEach(el => {
+        [chartDesdeYear, chartDesdeWeek, chartHastaYear, chartHastaWeek, chartDesdeMonth, chartHastaMonth].forEach(el => {
             if (el) el.addEventListener('change', () => { renderChartFromControls(); });
         });
+        
+        // Evento para cambio de periodo
+        if (chartPeriodo) {
+            chartPeriodo.addEventListener('change', () => {
+                populateChartSelectors();
+                togglePeriodoControls();
+                renderChartFromControls();
+            });
+        }
+        
         // Setup switches behavior for charts (mutually exclusive, redraw)
         if (chartSwitchSeg && chartSwitchTer) {
             chartSwitchSeg.addEventListener('change', () => {

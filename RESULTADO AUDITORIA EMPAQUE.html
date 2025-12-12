@@ -128,8 +128,8 @@
       border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,.06);
       overflow: hidden;
-      width: 55%;
-      max-width: 55%;
+      width: 70%;
+      max-width: 70%;
     }
 
     .table-scroll{
@@ -373,7 +373,7 @@
     }
 
     .charts-container{
-      width: 40%;
+      width: 30%;
       display: flex;
       flex-direction: column;
       gap: 20px;
@@ -385,7 +385,7 @@
       box-shadow: 0 2px 10px rgba(0,0,0,.06);
       padding: 15px;
       background: #fff;
-      max-height: 31vh;
+      max-height: 35vh;
       display: flex;
       flex-direction: column;
     }
@@ -501,18 +501,28 @@
         <table id="summaryTable">
           <thead>
             <tr>
-              <th style="width:19%">Factory Code</th>
-              <th style="width:14%">Customer</th>
-              <th style="width:27%">Result</th>
-              <th style="width:8%">A1</th>
-              <th style="width:8%">A2</th>
-              <th style="width:8%">A3</th>
-              <th style="width:8%">A4</th>
-              <th style="width:8%">TT</th>
+              <th style="width:10%">Factory Code</th>
+              <th style="width:12%">Customer</th>
+              <th style="width:5%">Lot Box</th>
+              <th style="width:5%">Total Cajas</th>
+              <th style="width:8%">Ctd Incorrecta</th>
+              <th style="width:6%">xAvios</th>
+              <th style="width:6%">xRotulo</th>
+              <th style="width:6%">xTalla</th>
+              <th style="width:6%">s/sticker bolsa</th>
+              <th style="width:6%">Peso exc.</th>
+              <th style="width:7%">Objetos extraños</th>
+              <th style="width:5%">Tot. Def.</th>
+              <th style="width:5.5%">%Def.</th>
+              <th style="width:2.5%">A1</th>
+              <th style="width:2.5%">A2</th>
+              <th style="width:2.5%">A3</th>
+              <th style="width:2.5%">A4</th>
+              <th style="width:2.5%">TT</th>
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr><td colspan="8" style="padding:16px;text-align:center;color:#777">Sin datos</td></tr>
+            <tr><td colspan="18" style="padding:16px;text-align:center;color:#777">Sin datos</td></tr>
           </tbody>
         </table>
       </div>
@@ -757,21 +767,38 @@
       
       // Aplicar filtro de customer
       if(!matchesCustomer(customer, activeCustomers)) continue;
-      const result = r.Result || "Sin result";
-      const key = factory + "|||" + customer + "|||" + result;
+      const key = factory + "|||" + customer;
 
       if(!groups.has(key)){
         groups.set(key, {
           FactoryCode: factory,
           Customer: customer,
-          Result: result,
           Reports: new Set(),
+          LotBoxes: new Set(),
+          TotalCajas: 0,
+          CantidadIncorrecta: 0,
+          AviosIncorrectos: 0,
+          RotuloIncorrecto: 0,
+          TallaEquivocada: 0,
+          SinStickerBolsa: 0,
+          PesoExcedido: 0,
+          ObjetosExtranos: 0,
           A1: 0, A2: 0, A3: 0, A4: 0
         });
       }
       const g = groups.get(key);
 
       if(r.Report) g.Reports.add(r.Report);
+      if(r.LotBox) g.LotBoxes.add(r.LotBox);
+      
+      g.TotalCajas += r.TotalCajas;
+      g.CantidadIncorrecta += r.CantidadIncorrecta;
+      g.AviosIncorrectos += r.AviosIncorrectos;
+      g.RotuloIncorrecto += r.RotuloIncorrecto;
+      g.TallaEquivocada += r.TallaEquivocada;
+      g.SinStickerBolsa += r.SinStickerBolsa;
+      g.PesoExcedido += r.PesoExcedido;
+      g.ObjetosExtranos += r.ObjetosExtranos;
 
       const att = parseAttempt(r.Intento);
       if(att === 1) g.A1++;
@@ -784,23 +811,34 @@
     const out = Array.from(groups.values()).map(g=>{
       const totalReports = g.Reports.size;     // Cuenta de Nº Report (únicos)
       const TT = g.A1 + g.A2 + g.A3 + g.A4;    // total intentos
+      const lotBoxCount = g.LotBoxes.size;
+      const TotDef = g.CantidadIncorrecta + g.AviosIncorrectos + g.RotuloIncorrecto + g.TallaEquivocada + g.SinStickerBolsa + g.PesoExcedido + g.ObjetosExtranos;
+      const PctDef = g.TotalCajas > 0 ? Math.round((TotDef / g.TotalCajas) * 100) : 0;
       return {
         FactoryCode: g.FactoryCode,
         Customer: g.Customer,
-        Result: g.Result,
+        LotBox: lotBoxCount,
+        TotalCajas: g.TotalCajas,
+        CantidadIncorrecta: g.CantidadIncorrecta,
+        AviosIncorrectos: g.AviosIncorrectos,
+        RotuloIncorrecto: g.RotuloIncorrecto,
+        TallaEquivocada: g.TallaEquivocada,
+        SinStickerBolsa: g.SinStickerBolsa,
+        PesoExcedido: g.PesoExcedido,
+        ObjetosExtranos: g.ObjetosExtranos,
+        TotDef: TotDef,
+        PctDef: PctDef,
         TotalReports: totalReports,
         A1: g.A1, A2: g.A2, A3: g.A3, A4: g.A4,
         TT
       };
     });
 
-    // ordenar como Excel: Factory -> Customer -> Result
+    // ordenar como Excel: Factory -> Customer
     out.sort((a,b)=>{
       const fa = a.FactoryCode.localeCompare(b.FactoryCode);
       if(fa !== 0) return fa;
-      const cu = a.Customer.localeCompare(b.Customer);
-      if(cu !== 0) return cu;
-      return a.Result.localeCompare(b.Result);
+      return a.Customer.localeCompare(b.Customer);
     });
 
     return out;
@@ -812,7 +850,7 @@
 
     if(rows.length === 0){
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td colspan="8" style="padding:16px;text-align:center;color:#777">No hay datos para esa Week</td>`;
+      tr.innerHTML = `<td colspan="18" style="padding:16px;text-align:center;color:#777">No hay datos para esa Week</td>`;
       tbody.appendChild(tr);
       btnExport.disabled = true;
       return;
@@ -827,32 +865,48 @@
       factories.get(r.FactoryCode).push(r);
     });
 
-    let grand = { A1:0, A2:0, A3:0, A4:0, TT:0 };
+    let grand = { LotBox:0, TotalCajas:0, CantidadIncorrecta:0, AviosIncorrectos:0, RotuloIncorrecto:0, TallaEquivocada:0, SinStickerBolsa:0, PesoExcedido:0, ObjetosExtranos:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
 
     // Ordenar factories según orden personalizado
     const sortedFactories = sortFactories(factories);
 
     for(const [factory, list] of sortedFactories){
-      let sub = { A1:0, A2:0, A3:0, A4:0, TT:0 };
+      let sub = { LotBox:0, TotalCajas:0, CantidadIncorrecta:0, AviosIncorrectos:0, RotuloIncorrecto:0, TallaEquivocada:0, SinStickerBolsa:0, PesoExcedido:0, ObjetosExtranos:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
 
       list.forEach(r=>{
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td class="left">${escapeHtml(r.FactoryCode)}</td>
           <td class="left">${escapeHtml(r.Customer)}</td>
-          <td>${escapeHtml(r.Result)}</td>
+          <td>${formatCellNumber(r.LotBox)}</td>
+          <td>${formatCellNumber(r.TotalCajas)}</td>
+          <td>${formatCellNumber(r.CantidadIncorrecta)}</td>
+          <td>${formatCellNumber(r.AviosIncorrectos)}</td>
+          <td>${formatCellNumber(r.RotuloIncorrecto)}</td>
+          <td>${formatCellNumber(r.TallaEquivocada)}</td>
+          <td>${formatCellNumber(r.SinStickerBolsa)}</td>
+          <td>${formatCellNumber(r.PesoExcedido)}</td>
+          <td>${formatCellNumber(r.ObjetosExtranos)}</td>
+          <td>${formatCellNumber(r.TotDef)}</td>
+          <td>${r.PctDef}%</td>
           <td>${formatCellNumber(r.A1)}</td>
           <td>${formatCellNumber(r.A2)}</td>
           <td>${formatCellNumber(r.A3)}</td>
           <td>${formatCellNumber(r.A4)}</td>
           <td>${r.TT}</td>
         `;
-        // Resaltar si Result contiene 'Rejected' (case-insensitive)
-        try{
-          if(/rejected/i.test(String(r.Result || ""))) tr.classList.add('rejected');
-        }catch(e){}
         tbody.appendChild(tr);
 
+        sub.LotBox += r.LotBox;
+        sub.TotalCajas += r.TotalCajas;
+        sub.CantidadIncorrecta += r.CantidadIncorrecta;
+        sub.AviosIncorrectos += r.AviosIncorrectos;
+        sub.RotuloIncorrecto += r.RotuloIncorrecto;
+        sub.TallaEquivocada += r.TallaEquivocada;
+        sub.SinStickerBolsa += r.SinStickerBolsa;
+        sub.PesoExcedido += r.PesoExcedido;
+        sub.ObjetosExtranos += r.ObjetosExtranos;
+        sub.TotDef += r.TotDef;
         sub.A1 += r.A1; sub.A2 += r.A2; sub.A3 += r.A3; sub.A4 += r.A4;
         sub.TT += r.TT;
       });
@@ -860,9 +914,21 @@
       // subtotal row
       const trSub = document.createElement("tr");
       trSub.className = "subtotal";
+      const subPctDef = sub.TotalCajas > 0 ? Math.round((sub.TotDef / sub.TotalCajas) * 100) : 0;
       trSub.innerHTML = `
         <td class="left">Total ${escapeHtml(factory)}</td>
-        <td></td><td></td>
+        <td></td>
+        <td>${sub.LotBox}</td>
+        <td>${sub.TotalCajas}</td>
+        <td>${sub.CantidadIncorrecta}</td>
+        <td>${sub.AviosIncorrectos}</td>
+        <td>${sub.RotuloIncorrecto}</td>
+        <td>${sub.TallaEquivocada}</td>
+        <td>${sub.SinStickerBolsa}</td>
+        <td>${sub.PesoExcedido}</td>
+        <td>${sub.ObjetosExtranos}</td>
+        <td>${sub.TotDef}</td>
+        <td>${subPctDef}%</td>
         <td>${sub.A1}</td>
         <td>${sub.A2}</td>
         <td>${sub.A3}</td>
@@ -871,6 +937,16 @@
       `;
       tbody.appendChild(trSub);
 
+      grand.LotBox += sub.LotBox;
+      grand.TotalCajas += sub.TotalCajas;
+      grand.CantidadIncorrecta += sub.CantidadIncorrecta;
+      grand.AviosIncorrectos += sub.AviosIncorrectos;
+      grand.RotuloIncorrecto += sub.RotuloIncorrecto;
+      grand.TallaEquivocada += sub.TallaEquivocada;
+      grand.SinStickerBolsa += sub.SinStickerBolsa;
+      grand.PesoExcedido += sub.PesoExcedido;
+      grand.ObjetosExtranos += sub.ObjetosExtranos;
+      grand.TotDef += sub.TotDef;
       grand.A1 += sub.A1; grand.A2 += sub.A2; grand.A3 += sub.A3; grand.A4 += sub.A4;
       grand.TT += sub.TT;
     }
@@ -878,9 +954,21 @@
     // grand total
     const trG = document.createElement("tr");
     trG.className = "grandtotal";
+    const grandPctDef = grand.TotalCajas > 0 ? Math.round((grand.TotDef / grand.TotalCajas) * 100) : 0;
     trG.innerHTML = `
       <td class="left">Total general</td>
-      <td></td><td></td>
+      <td></td>
+      <td>${grand.LotBox}</td>
+      <td>${grand.TotalCajas}</td>
+      <td>${grand.CantidadIncorrecta}</td>
+      <td>${grand.AviosIncorrectos}</td>
+      <td>${grand.RotuloIncorrecto}</td>
+      <td>${grand.TallaEquivocada}</td>
+      <td>${grand.SinStickerBolsa}</td>
+      <td>${grand.PesoExcedido}</td>
+      <td>${grand.ObjetosExtranos}</td>
+      <td>${grand.TotDef}</td>
+      <td>${grandPctDef}%</td>
       <td>${grand.A1}</td>
       <td>${grand.A2}</td>
       <td>${grand.A3}</td>
@@ -1101,7 +1189,15 @@
       options: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 1.8,
+        aspectRatio: 2.8,
+        layout: {
+          padding: {
+            top: 20,
+            right: 20,
+            bottom: 20,
+            left: 20
+          }
+        },
         plugins: {
           legend: {
             position: 'right',
@@ -1125,20 +1221,60 @@
             }
           },
           datalabels: {
-            display: true,
-            color: '#fff',
-            font: {
-              weight: 'bold',
-              size: 12
-            },
-            formatter: function(value, context) {
-              const total = context.dataset.data.reduce((a, b) => a + b, 0);
-              const percentage = ((value / total) * 100).toFixed(1);
-              return value + '\n(' + percentage + '%)';
-            }
+            display: false
           }
         }
-      }
+      },
+      plugins: [ChartDataLabels, {
+        id: 'customLabels',
+        afterDatasetsDraw: function(chart) {
+          const ctx = chart.ctx;
+          const meta = chart.getDatasetMeta(0);
+          const dataset = chart.data.datasets[0];
+          const total = dataset.data.reduce((a, b) => a + b, 0);
+          
+          meta.data.forEach((arc, index) => {
+            const value = dataset.data[index];
+            const percentage = ((value / total) * 100).toFixed(1);
+            const label = `${value} (${percentage}%)`;
+            
+            // Posición del centro del arco
+            const centerAngle = (arc.startAngle + arc.endAngle) / 2;
+            const radius = arc.outerRadius;
+            
+            // Punto en el borde del arco
+            const x1 = arc.x + Math.cos(centerAngle) * radius;
+            const y1 = arc.y + Math.sin(centerAngle) * radius;
+            
+            // Punto intermedio de la línea guía
+            const lineLength = 25;
+            const x2 = arc.x + Math.cos(centerAngle) * (radius + lineLength);
+            const y2 = arc.y + Math.sin(centerAngle) * (radius + lineLength);
+            
+            // Línea horizontal
+            const horizontalLength = 30;
+            const x3 = x2 + (Math.cos(centerAngle) > 0 ? horizontalLength : -horizontalLength);
+            const y3 = y2;
+            
+            // Dibujar línea guía
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x3, y3);
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // Dibujar texto
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = Math.cos(centerAngle) > 0 ? 'left' : 'right';
+            ctx.textBaseline = 'middle';
+            const textX = x3 + (Math.cos(centerAngle) > 0 ? 5 : -5);
+            ctx.fillText(label, textX, y3);
+          });
+        }
+      }]
     });
   }
 
@@ -1171,7 +1307,7 @@
     const aoa = [
       ["Week", w],
       [],
-      ["Factory Code","Customer","Result","A1","A2","A3","A4","TT"],
+      ["Factory Code","Customer","Lot Box","Total Cajas","Ctd Incorrecta","xAvios","xRotulo","xTalla","s/sticker bolsa","Peso exc.","Objetos extraños","Tot. Def.","%Def.","A1","A2","A3","A4","TT"],
     ];
 
     // reconstruir con subtotales + total general
@@ -1182,24 +1318,26 @@
       factories.get(r.FactoryCode).push(r);
     });
 
-    let grand = { A1:0, A2:0, A3:0, A4:0, TT:0 };
+    let grand = { LotBox:0, TotalCajas:0, CantidadIncorrecta:0, AviosIncorrectos:0, RotuloIncorrecto:0, TallaEquivocada:0, SinStickerBolsa:0, PesoExcedido:0, ObjetosExtranos:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
 
     for(const [factory, list] of factories.entries()){
-      let sub = { A1:0, A2:0, A3:0, A4:0, TT:0 };
+      let sub = { LotBox:0, TotalCajas:0, CantidadIncorrecta:0, AviosIncorrectos:0, RotuloIncorrecto:0, TallaEquivocada:0, SinStickerBolsa:0, PesoExcedido:0, ObjetosExtranos:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
 
       list.forEach(r=>{
-        aoa.push([r.FactoryCode, r.Customer, r.Result, r.A1, r.A2, r.A3, r.A4, r.TT]);
+        aoa.push([r.FactoryCode, r.Customer, r.LotBox, r.TotalCajas, r.CantidadIncorrecta, r.AviosIncorrectos, r.RotuloIncorrecto, r.TallaEquivocada, r.SinStickerBolsa, r.PesoExcedido, r.ObjetosExtranos, r.TotDef, r.PctDef+"%", r.A1, r.A2, r.A3, r.A4, r.TT]);
+        sub.LotBox+=r.LotBox; sub.TotalCajas+=r.TotalCajas; sub.CantidadIncorrecta+=r.CantidadIncorrecta; sub.AviosIncorrectos+=r.AviosIncorrectos; sub.RotuloIncorrecto+=r.RotuloIncorrecto; sub.TallaEquivocada+=r.TallaEquivocada; sub.SinStickerBolsa+=r.SinStickerBolsa; sub.PesoExcedido+=r.PesoExcedido; sub.ObjetosExtranos+=r.ObjetosExtranos; sub.TotDef+=r.TotDef;
         sub.A1+=r.A1; sub.A2+=r.A2; sub.A3+=r.A3; sub.A4+=r.A4;
         sub.TT+=r.TT;
       });
+      const subPctDef = sub.TotalCajas > 0 ? Math.round((sub.TotDef / sub.TotalCajas) * 100) : 0;
+      aoa.push([`Total ${factory}`,"", sub.LotBox, sub.TotalCajas, sub.CantidadIncorrecta, sub.AviosIncorrectos, sub.RotuloIncorrecto, sub.TallaEquivocada, sub.SinStickerBolsa, sub.PesoExcedido, sub.ObjetosExtranos, sub.TotDef, subPctDef+"%", sub.A1, sub.A2, sub.A3, sub.A4, sub.TT]);
 
-      aoa.push([`Total ${factory}`,"","", sub.A1, sub.A2, sub.A3, sub.A4, sub.TT]);
-
+      grand.LotBox+=sub.LotBox; grand.TotalCajas+=sub.TotalCajas; grand.CantidadIncorrecta+=sub.CantidadIncorrecta; grand.AviosIncorrectos+=sub.AviosIncorrectos; grand.RotuloIncorrecto+=sub.RotuloIncorrecto; grand.TallaEquivocada+=sub.TallaEquivocada; grand.SinStickerBolsa+=sub.SinStickerBolsa; grand.PesoExcedido+=sub.PesoExcedido; grand.ObjetosExtranos+=sub.ObjetosExtranos; grand.TotDef+=sub.TotDef;
       grand.A1+=sub.A1; grand.A2+=sub.A2; grand.A3+=sub.A3; grand.A4+=sub.A4;
       grand.TT+=sub.TT;
     }
-
-    aoa.push(["Total general","","", grand.A1, grand.A2, grand.A3, grand.A4, grand.TT]);
+    const grandPctDef = grand.TotalCajas > 0 ? Math.round((grand.TotDef / grand.TotalCajas) * 100) : 0;
+    aoa.push(["Total general","", grand.LotBox, grand.TotalCajas, grand.CantidadIncorrecta, grand.AviosIncorrectos, grand.RotuloIncorrecto, grand.TallaEquivocada, grand.SinStickerBolsa, grand.PesoExcedido, grand.ObjetosExtranos, grand.TotDef, grandPctDef+"%", grand.A1, grand.A2, grand.A3, grand.A4, grand.TT]);
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -1233,7 +1371,16 @@
         const Result = asText(getField(row, ["Result","RESULT","Resultado"]));
         const Intento = asText(getField(row, ["Intento","Intent","Attempt","AttemptNo","Attempt #"]));
         const Report = asText(getField(row, ["Nº Report","N° Report","No Report","Report","Report No","N Report"]));
-        return { Week, FactoryCode, Customer, Result, Intento, Report };
+        const LotBox = asText(getField(row, ["Lot Box","LotBox","Lote"]));
+        const TotalCajas = parseFloat(getField(row, ["Total Cajas","TotalCajas","Total Boxes"])) || 0;
+        const CantidadIncorrecta = parseFloat(getField(row, ["Cantidad Incorrecta","CantidadIncorrecta","Incorrect Quantity"])) || 0;
+        const AviosIncorrectos = parseFloat(getField(row, ["Avios incorrectos","AviosIncorrectos","Incorrect Trims"])) || 0;
+        const RotuloIncorrecto = parseFloat(getField(row, ["Rotulo incorrecto","RotuloIncorrecto","Incorrect Label"])) || 0;
+        const TallaEquivocada = parseFloat(getField(row, ["Talla equivocada","TallaEquivocada","Wrong Size"])) || 0;
+        const SinStickerBolsa = parseFloat(getField(row, ["Sin sticker de bolsa","SinStickerBolsa","No Bag Sticker"])) || 0;
+        const PesoExcedido = parseFloat(getField(row, ["Peso excedido","PesoExcedido","Overweight"])) || 0;
+        const ObjetosExtranos = parseFloat(getField(row, ["Objetos extraños","ObjetosExtranos","Foreign Objects"])) || 0;
+        return { Week, FactoryCode, Customer, Result, Intento, Report, LotBox, TotalCajas, CantidadIncorrecta, AviosIncorrectos, RotuloIncorrecto, TallaEquivocada, SinStickerBolsa, PesoExcedido, ObjetosExtranos };
       });
 
       const weeks = Array.from(new Set(grid.map(r=>r.Week).filter(Boolean)));
@@ -1261,7 +1408,7 @@
     }catch(err){
       console.error(err);
       setStatus("Error: " + err.message, "error");
-      tbody.innerHTML = `<tr><td colspan="8" style="padding:16px;text-align:center;color:#b00020">
+      tbody.innerHTML = `<tr><td colspan="18" style="padding:16px;text-align:center;color:#b00020">
         No se pudo cargar el GRID. Verifica: (1) Sheet público, (2) hoja se llama "GRID".
       </td></tr>`;
     }

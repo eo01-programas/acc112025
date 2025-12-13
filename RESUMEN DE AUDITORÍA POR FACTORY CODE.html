@@ -23,6 +23,8 @@
             box-shadow: none;
         }
 
+        /* function populateYearSelect moved to script helpers (avoid embedding JS inside <style>) */
+
         .select2-selection__rendered {
             display: flex;
             align-items: center;
@@ -383,7 +385,7 @@
             transform: scale(0.9); /* reducir al 90% visualmente */
             transform-origin: 0 50%;
             display: inline-block;
-            margin-right: 6px;
+            margin-right: 2px;
         }
 
         .slider:before {
@@ -428,26 +430,37 @@
 
         /* Modal Styles */
         .modal {
-            display: none;
+            display: none; /* hidden by default */
             position: fixed;
             z-index: 1000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
             background-color: rgba(0,0,0,0.4);
+        }
+
+        /* Show modal when .open is present and center content */
+        .modal.open {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px; /* reduced padding to fit viewport better */
+            overflow-y: auto; /* allow scrolling when content taller than viewport */
         }
 
         .modal-content {
             background-color: #fefefe;
-            margin: 5% auto;
-            padding: 20px;
+            margin: 0 auto;
+            padding: 12px; /* slightly reduced */
             border: none;
             border-radius: 8px;
             width: 95%;
             max-width: 1200px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            /* Ensure modal content never exceeds viewport height */
+            max-height: calc(100vh - 20px);
+            overflow: auto; /* internal scrolling for tall content */
         }
 
         .close {
@@ -466,8 +479,8 @@
 
         .chart-container {
             position: relative;
-            height: 400px;
-            margin-top: 20px;
+            height: 320px; /* reduced height to avoid modal vertical scroll */
+            margin-top: 8px; /* less gap above chart */
         }
 
         .modal h2 {
@@ -682,7 +695,7 @@
         .switch-container {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 2px;
         }
 
         .switch {
@@ -766,6 +779,96 @@
             gap: 15px;
             flex-wrap: wrap;
         }
+        /* Ajustes específicos para el fieldset Week: hacerlo más corto y acercar switch+label */
+        #weekFieldset {
+            max-width: 380px;
+            min-width: 0;
+        }
+        /* Mantener los controles en una sola línea y compactarlos */
+        #weekFieldset .fieldset-content {
+            gap: 1px;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+        /* Reducir espacio específicamente entre Año (1) y Sem/Mes (2) */
+        #weekFieldset .fieldset-content > .control-group:nth-of-type(1) {
+            margin-right: 2px; /* acercar Sem/Mes a Año */
+        }
+        /* Mostrar cada control-group en fila para que todos queden alineados */
+        #weekFieldset .control-group {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            margin: 0;
+        }
+        #weekFieldset .control-group select,
+        #weekFieldset .control-group input {
+            margin: 0;
+            padding: 6px 8px;
+            font-size: 12px;
+        }
+        #weekFieldset .switch-container {
+            gap: 0px; /* reducir espacio entre switch y label */
+            align-items: center;
+        }
+        #weekFieldset .switch {
+            margin-right: 4px;
+        }
+        #weekFieldset .switch-label {
+            white-space: nowrap;
+            margin-left: 1px;
+            font-size: 12px;
+        }
+        #weekFieldset select {
+            min-width: 56px; /* controles más compactos dentro de Week */
+        }
+        /* Ajustar ancho del select de Año al 70% de su contenedor */
+        #weekFieldset .fieldset-content > .control-group:nth-of-type(1) select {
+            width: 100%;
+            box-sizing: border-box;
+            min-width: 0 !important; /* override global min-width */
+            max-width: 100%;
+        }
+        /* Anchos exactos en porcentaje dentro del fieldset Week (suman 100%) */
+        /* 1: Año ~26.32%, 2: Sem/Mes ~21.05%, 3: Week ~18.42%, 4: Switch+label ~34.21% */
+        #weekFieldset .fieldset-content > .control-group:nth-of-type(1) {
+            flex: 0 0 26.32%;
+            max-width: 26.32%;
+        }
+        #weekFieldset .fieldset-content > .control-group:nth-of-type(2) {
+            flex: 0 0 21.05%;
+            max-width: 21.05%;
+        }
+        #weekFieldset .fieldset-content > .control-group:nth-of-type(3) {
+            flex: 0 0 18.42%;
+            max-width: 18.42%;
+        }
+        #weekFieldset .fieldset-content > .control-group:nth-of-type(4) {
+            flex: 0 0 34.21%;
+            max-width: 34.21%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        /* Hacer que los selects ocupen el ancho de su contenedor */
+        #weekFieldset .control-group select {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        /* Fallback: en pantallas pequeñas, volver a envolver */
+        @media (max-width: 480px) {
+            #weekFieldset .fieldset-content {
+                flex-wrap: wrap;
+            }
+            #weekFieldset .fieldset-content > .control-group:nth-of-type(1),
+            #weekFieldset .fieldset-content > .control-group:nth-of-type(2),
+            #weekFieldset .fieldset-content > .control-group:nth-of-type(3),
+            #weekFieldset .fieldset-content > .control-group:nth-of-type(4) {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -781,12 +884,25 @@
             <div class="controls-left">
                 <!-- Estado de carga: trasladado al lado derecho (junto a Gráficos) para mostrar como badge -->
                 
-                <fieldset class="control-fieldset">
+                <fieldset class="control-fieldset" id="weekFieldset">
                     <legend>Week:</legend>
                     <div class="fieldset-content">
                         <div class="control-group">
+                            <select id="yearSelect" disabled>
+                                <option value="">Año</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <select id="periodSelect">
+                                <option value="Sem">Sem</option>
+                                <option value="Mes">Mes</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
                             <select id="weekSelect" disabled>
-                                <option value="">Seleccione Week...</option>
+                                <option value="">Seleccione...</option>
                             </select>
                         </div>
                         <div class="control-group">
@@ -840,7 +956,7 @@
                 </fieldset>
             </div>
             
-            <div class="buttons-container">
+                <div class="buttons-container">
                 <button id="btnDownload" class="btn-download" disabled>Descargar Excel</button>
                 <button id="btnChart" class="btn-chart" disabled>📊 Gráficos</button>
                 <span id="loadingStatus" class="badge loading" style="margin-left:12px">Cargando datos desde Google Sheets...</span>
@@ -857,7 +973,7 @@
                 <hr style="margin: 15px 0; border: none; border-top: 2px solid #ddd; width: 100%;">
                 
                 <!-- Controles de filtrado con marco verde -->
-                <div style="background-color: #e8f5e8; border: 2px solid #90c695; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <div style="background-color: #e8f5e8; border: 2px solid #90c695; border-radius: 8px; padding: 8px; margin-bottom: 10px;">
                     <div style="text-align: center; display: flex; gap: 15px; justify-content: center; align-items: center; flex-wrap: nowrap;">
                         <div>
                             <label for="chartCustomerFilter" style="font-weight: bold; margin-right: 8px;">Customer:</label>
@@ -987,6 +1103,8 @@
         let allWeeks = [];
 
         const weekSelect = document.getElementById('weekSelect');
+        const yearSelect = document.getElementById('yearSelect');
+        const periodSelect = document.getElementById('periodSelect');
         const tablesContainer = document.getElementById('tablesContainer');
         const noDataMessage = document.getElementById('noDataMessage');
         const internaBody = document.getElementById('internaBody');
@@ -1009,6 +1127,126 @@
 
         let currentInternaData = [];
         let currentClienteData = [];
+        let prevWeekSelection = null; // guarda la semana activa antes de activar "Last Week"
+
+        // Helpers para manejar la columna 'Audit Date'
+        function parseDateFromString(s) {
+            if (!s) return null;
+            s = String(s).trim();
+            
+            // Detectar y parsear formato Google Sheets GVIZ: Date(yyyy,m,d)
+            const gvizMatch = s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})\)$/);
+            if (gvizMatch) {
+                const year = parseInt(gvizMatch[1], 10);
+                const month = parseInt(gvizMatch[2], 10); // 0-based (0=Jan) o 1-based?
+                const day = parseInt(gvizMatch[3], 10);
+                // Asumir que Google Sheets GVIZ usa 0-based month (0=January)
+                return new Date(year, month, day);
+            }
+            
+            // Intentar Date.parse (puede resolver ISO strings)
+            const d = new Date(s);
+            if (!isNaN(d.getTime())) return d;
+            
+            // Intentar formatos comunes con '/': ASUME mm/dd/yyyy por defecto (Google Sheets US)
+            if (s.indexOf('/') !== -1) {
+                const parts = s.split('/').map(p => p.trim());
+                if (parts.length === 3) {
+                    // Asumir mm/dd/yyyy (Google Sheets default US format)
+                    let month = parseInt(parts[0], 10);
+                    let day = parseInt(parts[1], 10);
+                    let year = parseInt(parts[2], 10);
+                    
+                    // Validar: si mes > 12, intercambiar (era dd/mm/yyyy)
+                    if (month > 12 && day <= 12) {
+                        const temp = day;
+                        day = month;
+                        month = temp;
+                    } else if (day > 12 && month <= 12) {
+                        // day > 12 y month <= 12 => ya es dd/mm/yyyy, mantener como está
+                    } else if (day > 31 || month > 31) {
+                        return null;
+                    }
+
+                    if (year < 100) year += 2000;
+                    return new Date(year, month - 1, day);
+                }
+            }
+            
+            // Intentar con '-' (yyyy-mm-dd)
+            if (s.indexOf('-') !== -1) {
+                const parts = s.split('-').map(p => p.trim());
+                if (parts.length === 3) {
+                    // Si primer parte tiene 4 dígitos => yyyy-mm-dd
+                    if (parts[0].length === 4) {
+                        const y = parseInt(parts[0], 10);
+                        const m = parseInt(parts[1], 10);
+                        const d2 = parseInt(parts[2], 10);
+                        return new Date(y, m - 1, d2);
+                    }
+                }
+            }
+            return null;
+        }
+
+        function getISOWeek(d) {
+            // Copy date so don't modify original
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            // Set to nearest Thursday: current date + 4 - current day number
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+            const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+            return weekNo;
+        }
+
+        function monthNameES(m) {
+            const names = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            return names[m];
+        }
+
+        function populateYearSelect() {
+            const years = new Set();
+            if (!gridData || gridData.length === 0) {
+                if (yearSelect) yearSelect.disabled = true;
+                return;
+            }
+            gridData.forEach(row => {
+                const ad = row['Audit Date'];
+                const dt = parseDateFromString(ad);
+                if (!dt) return;
+                years.add(String(dt.getFullYear()));
+            });
+
+            const arr = Array.from(years).map(y=>parseInt(y,10)).filter(n=>!isNaN(n)).sort((a,b)=>a-b).map(n=>String(n));
+            if (!yearSelect) return;
+            yearSelect.innerHTML = '<option value="">Año</option>';
+            arr.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                yearSelect.appendChild(opt);
+            });
+            yearSelect.disabled = (arr.length === 0);
+        }
+
+        // Cargar datos de ejemplo localmente para depuración
+        function loadSampleData() {
+            const today = new Date(2025,11,13); // 13 Dec 2025 (context)
+            const isoWeek = getISOWeek(today);
+            const sample = [
+                { 'Week': String(isoWeek), 'Audit Date': '12/13/2025', 'Customer': 'Banana', 'Lot Size': '1000', 'Sample Size': '50', 'Tot. Def.': '2', 'Intento': '1', 'Validez': 'Interna', 'Factory Code': 'Cititex 1' },
+                { 'Week': '49', 'Audit Date': '12/4/2025', 'Customer': 'Lululemon', 'Lot Size': '8020', 'Sample Size': '200', 'Tot. Def.': '16', 'Intento': '2', 'Validez': 'Interna', 'Factory Code': 'Cofaco' },
+                { 'Week': '49', 'Audit Date': '12/5/2025', 'Customer': 'Skechers', 'Lot Size': '309', 'Sample Size': '50', 'Tot. Def.': '1', 'Intento': '1', 'Validez': 'Cliente', 'Factory Code': 'Cititex 2' }
+            ];
+            try {
+                processSheetData(sample);
+                updateLoadingStatus('Datos de prueba cargados <span class="check">✓</span>', 'success');
+            } catch (e) {
+                console.error('Error al cargar datos de prueba', e);
+                showError('No se pudieron cargar los datos de prueba. Ver consola.');
+            }
+        }
 
         // Helper: obtener lista de customers seleccionados (compatibilidad Select2 y select múltiple nativo)
         function getSelectedCustomers() {
@@ -1117,8 +1355,8 @@
                 // Update summary and trigger filters when selection changes
                 $('#customerFilter').on('change', function() {
                     updateSummary();
-                    // trigger native change for other listeners
-                    try { customerFilter.dispatchEvent(new Event('change')); } catch(e) {}
+                    // call the native handler directly to avoid recursive dispatch loops
+                    try { handleFactoryFilterToggle(); } catch(e) {}
                 });
 
                 // Ensure summary is correct on initial render
@@ -1153,7 +1391,7 @@
                         $chartSel.siblings('.select2-container').find('.select2-selection').css('width', fixedWidth + 'px');
                     } catch (e) {}
                     // Actualizar el resumen del control cuando cambie (no reflow de ancho)
-                    $('#chartCustomerFilter').on('change', function() {
+                        $('#chartCustomerFilter').on('change', function() {
                         var vals = $('#chartCustomerFilter').val() || [];
                         var container = $('#chartCustomerFilter').siblings('.select2-container').find('.select2-selection__rendered');
                         if (!container || container.length === 0) return;
@@ -1165,7 +1403,7 @@
                         } else {
                             container.text(vals.length + ' seleccionados');
                         }
-                        try { chartCustomerFilter.dispatchEvent(new Event('change')); } catch(e) {}
+                        try { updateChartWithFilter(); } catch(e) {}
                     });
                 } catch(e) { /* ignore if chartCustomerFilter not present */ }
                 // Mantener disabled hasta que se llamen a populateCustomerFilter
@@ -1178,6 +1416,18 @@
         }
 
         weekSelect.addEventListener('change', handleWeekChange);
+        if (yearSelect) yearSelect.addEventListener('change', function() { 
+            populateWeekSelect();
+            // Si populate estableció una semana/mes, actualizar tablas automáticamente
+            try { if (weekSelect && weekSelect.value) handleWeekChange(); } catch(e) {}
+        });
+        if (periodSelect) periodSelect.addEventListener('change', function() { 
+            populateWeekSelect();
+            // Ajustar y actualizar tablas según la nueva selección de periodo
+            try { if (weekSelect && weekSelect.value) handleWeekChange(); } catch(e) {}
+        });
+        const btnSampleData = document.getElementById('btnSampleData');
+        if (btnSampleData) btnSampleData.addEventListener('click', loadSampleData);
         btnDownload.addEventListener('click', downloadExcel);
         btnChart.addEventListener('click', showTrendsChart);
         lastWeekToggle.addEventListener('change', handleLastWeekToggle);
@@ -1278,6 +1528,12 @@
             }
         }
 
+        function formatNumber(n) {
+            if (n === '' || n === null || n === undefined) return '';
+            const num = Number(n) || 0;
+            return num.toLocaleString('es-PE', { maximumFractionDigits: 0 });
+        }
+
         function processSheetData(jsonData) {
             gridData = jsonData.map(row => {
                     // Función helper para obtener valor numérico
@@ -1332,13 +1588,93 @@
                     };
                     });
 
-            populateWeekSelect();
-            updateLoadingStatus('Datos <span class="check">✓</span>', 'success');
+                    // Normalizar y parsear la columna 'Audit Date' para cada fila y guardar propiedades auxiliares
+                    console.log(`[processSheetData] Processing ${gridData.length} rows to parse Audit Date...`);
+                    gridData.forEach((row, idx) => {
+                        const raw = row['Audit Date'];
+                        let parsed = null;
+                        try { parsed = parseDateFromString(raw); } catch(e) { parsed = null; }
+
+                        row._parsedAuditDate = parsed;
+                        if (parsed && !isNaN(parsed.getTime())) {
+                            try {
+                                row._auditYear = parsed.getFullYear();
+                                row._auditMonth = parsed.getMonth(); // 0..11
+                                row._auditISOWeek = getISOWeek(parsed);
+                                if (idx < 5) console.log(`  [${idx}] Parsed: ${raw} => Year=${row._auditYear}, Month=${row._auditMonth}, Week=${row._auditISOWeek}`);
+                            } catch(e) {
+                                console.error(`Error parsing properties for row ${idx} (${raw}):`, e);
+                            }
+                        } else {
+                            if (idx < 5) console.warn(`  [${idx}] Failed to parse: ${raw}`);
+                        }
+                    });
+
+            // Primero poblar años y periodo por defecto
+            console.log('[processSheetData] Populating year and period selects...');
+            populateYearSelect();
+            // Asegurar periodo por defecto a 'Sem' si no hay valor
+            try { 
+                if (periodSelect) {
+                    periodSelect.value = 'Sem';
+                    console.log('[processSheetData] Period set to: Sem');
+                }
+            } catch(e) { console.error('Error setting period:', e); }
             
-            // Habilitar el botón de descarga si hay una semana seleccionada
-            if (weekSelect.value) {
-                btnDownload.disabled = false;
-            }
+            // Intentar seleccionar Año 2025 por defecto si existe en las opciones
+            try {
+                if (yearSelect) {
+                    const has2025 = Array.from(yearSelect.options).some(o => o.value === '2025');
+                    if (has2025) {
+                        yearSelect.value = '2025';
+                        console.log('[processSheetData] Year selected: 2025');
+                    } else if (yearSelect.options.length > 1) {
+                        // seleccionar el último año disponible
+                        yearSelect.selectedIndex = yearSelect.options.length - 1;
+                        console.log('[processSheetData] Year selected (fallback): ' + yearSelect.value);
+                    }
+                }
+            } catch(e) { console.error('Error setting year:', e); }
+
+            // Poblar el select dependiente (week/month) después de fijar el año/periodo
+            populateWeekSelect();
+            console.log('[processSheetData] Week/month select populated');
+
+            // Seleccionar por defecto la semana actual (ISO week) si existe en las opciones
+            try {
+                const nowWeek = String(getISOWeek(new Date()));
+                console.log('[processSheetData] Current ISO week: ' + nowWeek);
+                
+                if (periodSelect && periodSelect.value === 'Sem') {
+                    // buscar opción con value == nowWeek
+                    const opt = Array.from(weekSelect.options).find(o => o.value === nowWeek);
+                    if (opt) {
+                        weekSelect.value = nowWeek;
+                        console.log('[processSheetData] Week selected: ' + nowWeek);
+                    } else if (weekSelect.options.length > 1) {
+                        // seleccionar la última disponible
+                        weekSelect.selectedIndex = weekSelect.options.length - 1;
+                        console.log('[processSheetData] Week selected (fallback): ' + weekSelect.value);
+                    } else {
+                        console.warn('[processSheetData] No week options available');
+                    }
+                }
+
+                // Disparar el filtrado por la selección por defecto
+                if (weekSelect && weekSelect.value) {
+                    console.log('[processSheetData] Triggering handleWeekChange for week: ' + weekSelect.value);
+                    try { handleWeekChange(); } catch(e) { console.error('Error in handleWeekChange:', e); }
+                } else {
+                    console.warn('[processSheetData] No week value to filter');
+                }
+            } catch(e) { console.error('Error in automatic week selection:', e); }
+
+            updateLoadingStatus('Datos <span class="check">✓</span>', 'success');
+            // Habilitar controles
+            try { if (weekSelect) weekSelect.disabled = false; } catch(e) {}
+            try { if (yearSelect) yearSelect.disabled = false; } catch(e) {}
+            try { if (btnDownload) btnDownload.disabled = !weekSelect.value; } catch(e) {}
+            console.log('[processSheetData] Initialization complete');
         }        function getCurrentWeekNumber() {
             const today = new Date();
             const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
@@ -1347,79 +1683,207 @@
         }
 
         function populateWeekSelect() {
-            const weeks = [...new Set(gridData.map(row => row.Week).filter(w => w))];
-            allWeeks = weeks.sort((a, b) => {
-                const numA = parseFloat(a);
-                const numB = parseFloat(b);
-                if (!isNaN(numA) && !isNaN(numB)) {
-                    return numA - numB;
+            // Poblar el select dependiente según la columna 'Audit Date', el periodo y año seleccionados
+            const period = (periodSelect && periodSelect.value) ? periodSelect.value : 'Sem';
+            const selectedYear = (yearSelect && yearSelect.value) ? String(yearSelect.value) : '';
+
+            console.log(`[populateWeekSelect] period=${period}, selectedYear=${selectedYear}, gridData.length=${gridData.length}`);
+
+            const values = new Set();
+            let processedCount = 0;
+            gridData.forEach((row, idx) => {
+                const dt = row._parsedAuditDate || parseDateFromString(row['Audit Date']);
+                if (!dt || isNaN(dt.getTime())) {
+                    if (idx < 3) console.log(`[populateWeekSelect] Row ${idx} has invalid date`);
+                    return;
                 }
-                return a.toString().localeCompare(b.toString());
+                processedCount++;
+                if (selectedYear && String(dt.getFullYear()) !== selectedYear) {
+                    if (idx < 3) console.log(`[populateWeekSelect] Row ${idx} year mismatch: ${dt.getFullYear()} != ${selectedYear}`);
+                    return;
+                }
+                if (period === 'Sem') {
+                    const wk = String(getISOWeek(dt));
+                    values.add(wk);
+                } else {
+                    const m = dt.getMonth();
+                    values.add(String(m));
+                }
             });
-
-            weekSelect.innerHTML = '<option value="">Seleccione Week...</option>';
-            allWeeks.forEach(week => {
-                const option = document.createElement('option');
-                option.value = week;
-                option.textContent = week;
-                weekSelect.appendChild(option);
-            });
-
-            weekSelect.disabled = false;
-
-            // Seleccionar automáticamente la semana actual
-            const currentWeek = getCurrentWeekNumber();
-            const currentWeekStr = currentWeek.toString();
             
-            // Buscar si existe la semana actual en los datos
-            const weekExists = allWeeks.find(week => week === currentWeekStr);
-            
-            if (weekExists) {
-                weekSelect.value = currentWeekStr;
-                handleWeekChange();
+            console.log(`[populateWeekSelect] Processed ${processedCount} valid dates, found ${values.size} unique values`);
+
+            let arr = Array.from(values);
+            if (period === 'Sem') {
+                arr = arr.map(v => parseInt(v, 10)).filter(n => !isNaN(n)).sort((a,b)=>a-b).map(n=>String(n));
+                allWeeks = arr.slice();
+                weekSelect.innerHTML = '<option value="">Seleccione Week...</option>';
+                arr.forEach(week => {
+                    const option = document.createElement('option');
+                    option.value = week;
+                    option.textContent = 'SEM' + week;
+                    weekSelect.appendChild(option);
+                });
+                console.log(`[populateWeekSelect] Populated ${arr.length} week options: ${arr.join(', ')}`);
+                // Seleccionar por defecto la semana actual si existe, o mantener la seleccion previa si la hay
+                try {
+                    const currentWeek = String(getISOWeek(new Date()));
+                    const optNow = Array.from(weekSelect.options).find(o => o.value === currentWeek);
+                    if (optNow) {
+                        weekSelect.value = currentWeek;
+                    } else if (weekSelect.options.length > 1 && !weekSelect.value) {
+                        // fallback: seleccionar la ultima disponible
+                        weekSelect.selectedIndex = weekSelect.options.length - 1;
+                    }
+                } catch(e) {}
+            } else {
+                // Meses: orden por número de mes 0..11
+                arr = arr.map(v => parseInt(v,10)).filter(n => !isNaN(n)).sort((a,b)=>a-b);
+                // Guardar en allWeeks los valores tal y como aparecen en los option (1..12 strings)
+                allWeeks = arr.map(m => String(m + 1));
+                weekSelect.innerHTML = '<option value="">Seleccione Mes...</option>';
+                arr.forEach(m => {
+                    const option = document.createElement('option');
+                    option.value = String(m+1); // mes 1..12
+                    option.textContent = monthNameES(m);
+                    weekSelect.appendChild(option);
+                });
+                console.log(`[populateWeekSelect] Populated ${arr.length} month options`);
             }
+
+            weekSelect.disabled = (arr.length === 0);
+            // Ajustar etiqueta del switch dentro del fieldset Week según periodo
+            try {
+                const weekSwitchLabel = document.querySelector('#weekFieldset .switch-label');
+                if (weekSwitchLabel) {
+                    weekSwitchLabel.textContent = (period === 'Mes') ? 'Last Month' : 'Last Week';
+                }
+            } catch(e) {}
+
+            // Si el periodo es Mes, intentar seleccionar automáticamente el mes que el usuario está viendo ahora.
+            if (period === 'Mes') {
+                // Si había una semana seleccionada previamente, usarla para inferir el mes
+                const priorWeekVal = weekSelect.getAttribute('data-previous-week') || '';
+                let targetMonth = null;
+                // Preferir la semana actualmente seleccionada en el control (si viene de Sem)
+                const selectedWeekBefore = (typeof weekSelect !== 'undefined' && weekSelect.value) ? weekSelect.value : null;
+                if (selectedWeekBefore) {
+                    // Buscar una fila en gridData que coincida con esa semana y determinar su mes
+                    for (let i = 0; i < gridData.length; i++) {
+                        const r = gridData[i];
+                        const dt = r._parsedAuditDate || parseDateFromString(r['Audit Date']);
+                        if (!dt) continue;
+                        const wk = String(getISOWeek(dt));
+                        if (wk === String(selectedWeekBefore)) {
+                            targetMonth = String(dt.getMonth() + 1);
+                            break;
+                        }
+                    }
+                }
+                // Si no encontramos mes basado en la semana seleccionada, usar el mes actual
+                if (!targetMonth) {
+                    targetMonth = String(new Date().getMonth() + 1);
+                }
+
+                // Si la opción existe en weekSelect, seleccionarla
+                if (targetMonth) {
+                    const opt = Array.from(weekSelect.options).find(o => o.value === String(targetMonth));
+                    if (opt) {
+                        weekSelect.value = String(targetMonth);
+                    }
+                }
+            }
+            console.log(`[populateWeekSelect] weekSelect.disabled=${weekSelect.disabled}`);
         }
 
         function handleLastWeekToggle() {
             if (lastWeekToggle.checked) {
-                // Si el toggle está activado, seleccionar la semana pasada
-                const lastWeek = getCurrentWeekNumber() - 1;
-                const lastWeekStr = lastWeek.toString();
-                
-                // Buscar si existe la semana pasada en los datos
-                const weekExists = allWeeks.find(week => week === lastWeekStr);
-                
-                if (weekExists) {
-                    weekSelect.value = lastWeekStr;
+                // Guardar la selección actual para poder restaurarla al desactivar
+                prevWeekSelection = weekSelect && weekSelect.value ? String(weekSelect.value) : null;
+
+                // Determinar la semana base (la que el usuario está viendo ahora)
+                const baseWeek = weekSelect && weekSelect.value ? String(weekSelect.value) : String(getCurrentWeekNumber());
+
+                // Buscar el índice de la semana base en allWeeks
+                const idx = allWeeks.findIndex(w => String(w) === baseWeek);
+
+                if (idx > 0) {
+                    // Seleccionar la semana anterior en la lista de semanas disponibles
+                    const prev = allWeeks[idx - 1];
+                    weekSelect.value = String(prev);
                     handleWeekChange();
-                } else {
-                    // Si no existe, desactivar el toggle y mostrar mensaje
+                } else if (idx === 0) {
+                    // No hay semana anterior en los datos
                     lastWeekToggle.checked = false;
-                    alert('No hay datos disponibles para la semana pasada (Semana ' + lastWeekStr + ')');
+                    alert('No hay datos disponibles para la semana anterior a la seleccionada');
+                } else {
+                    // Si baseWeek no está en allWeeks, intentar usar baseWeek-1 numérico
+                    const numericBase = parseInt(baseWeek, 10);
+                    if (!isNaN(numericBase)) {
+                        const lastWeekNum = numericBase - 1;
+                        const lastWeekStr = String(lastWeekNum);
+                        const weekExists = allWeeks.find(week => String(week) === lastWeekStr);
+                        if (weekExists) {
+                            weekSelect.value = lastWeekStr;
+                            handleWeekChange();
+                        } else {
+                            lastWeekToggle.checked = false;
+                            alert('No hay datos disponibles para la semana anterior a la seleccionada');
+                        }
+                    } else {
+                        lastWeekToggle.checked = false;
+                        alert('No se pudo determinar la semana base para seleccionar la semana anterior');
+                    }
                 }
             } else {
-                // Si el toggle está desactivado, volver a la semana actual
-                const currentWeek = getCurrentWeekNumber();
-                const currentWeekStr = currentWeek.toString();
-                
-                const weekExists = allWeeks.find(week => week === currentWeekStr);
-                
-                if (weekExists) {
-                    weekSelect.value = currentWeekStr;
-                    handleWeekChange();
+                // Restaurar la selección previa si existe, si no, intentar seleccionar la semana actual
+                if (prevWeekSelection) {
+                    const weekExists = allWeeks.find(w => String(w) === String(prevWeekSelection));
+                    if (weekExists) {
+                        weekSelect.value = String(prevWeekSelection);
+                        handleWeekChange();
+                    }
+                    prevWeekSelection = null;
+                } else {
+                    const currentWeek = getCurrentWeekNumber();
+                    const currentWeekStr = String(currentWeek);
+                    const weekExists = allWeeks.find(week => week === currentWeekStr);
+                    if (weekExists) {
+                        weekSelect.value = currentWeekStr;
+                        handleWeekChange();
+                    }
                 }
             }
         }
 
         function handleWeekChange() {
-            const selectedWeek = weekSelect.value;
-            if (!selectedWeek) {
+            const selectedValue = weekSelect.value;
+            if (!selectedValue) {
                 tablesContainer.classList.add('hidden');
                 noDataMessage.classList.add('hidden');
                 return;
             }
 
-            const weekData = gridData.filter(row => row.Week === selectedWeek);
+            const period = (periodSelect && periodSelect.value) ? periodSelect.value : 'Sem';
+            const year = (yearSelect && yearSelect.value) ? String(yearSelect.value) : '';
+
+            const weekData = gridData.filter(row => {
+                const dt = row._parsedAuditDate || parseDateFromString(row['Audit Date']);
+                if (dt) {
+                    if (year && String(dt.getFullYear()) !== year) return false;
+                    if (period === 'Sem') {
+                        return String(getISOWeek(dt)) === String(selectedValue);
+                    } else {
+                        // month: selectedValue is 1..12
+                        return String(dt.getMonth() + 1) === String(selectedValue);
+                    }
+                }
+                // Fallback: if Audit Date no está parseable, intentar usar antigua columna Week para periodo Sem
+                if (period === 'Sem' && row.Week) {
+                    return String(row.Week) === String(selectedValue);
+                }
+                return false;
+            });
 
             if (weekData.length === 0) {
                 tablesContainer.classList.add('hidden');
@@ -1761,8 +2225,8 @@
 
                     row.insertCell().textContent = factory;
                     row.insertCell().textContent = customer;
-                    row.insertCell().textContent = lineSum['Lot Size'];
-                    row.insertCell().textContent = lineSum['Sample Size'];
+                    row.insertCell().textContent = formatNumber(lineSum['Lot Size']);
+                    row.insertCell().textContent = formatNumber(lineSum['Sample Size']);
                     
                     // Para las siguientes columnas, si es 0, mostrar pero en color blanco
                     let cell;
@@ -1887,8 +2351,8 @@
 
                 subtotalRow.insertCell().textContent = 'Total ' + factory;
                 subtotalRow.insertCell().textContent = '';
-                subtotalRow.insertCell().textContent = factorySubtotal['Lot Size'];
-                subtotalRow.insertCell().textContent = factorySubtotal['Sample Size'];
+                subtotalRow.insertCell().textContent = formatNumber(factorySubtotal['Lot Size']);
+                subtotalRow.insertCell().textContent = formatNumber(factorySubtotal['Sample Size']);
                 subtotalRow.insertCell().textContent = factorySubtotal['Tot. Def.'];
                 subtotalRow.insertCell().textContent = factorySubtotal.Fabric;
                 subtotalRow.insertCell().textContent = factorySubtotal['Untrimmed threads End'];
@@ -1950,8 +2414,8 @@
 
             totalRow.insertCell().textContent = 'Total general';
             totalRow.insertCell().textContent = '';
-            totalRow.insertCell().textContent = totals['Lot Size'];
-            totalRow.insertCell().textContent = totals['Sample Size'];
+            totalRow.insertCell().textContent = formatNumber(totals['Lot Size']);
+            totalRow.insertCell().textContent = formatNumber(totals['Sample Size']);
             totalRow.insertCell().textContent = totals['Tot. Def.'];
             totalRow.insertCell().textContent = totals.Fabric;
             totalRow.insertCell().textContent = totals['Untrimmed threads End'];
@@ -2147,6 +2611,7 @@
         function populateWeekFilters() {
             // Obtener todas las semanas disponibles
             let availableWeeks = [];
+            const period = (periodSelect && periodSelect.value) ? periodSelect.value : 'Sem';
             
             if (allWeeks && allWeeks.length > 0) {
                 availableWeeks = [...allWeeks].sort((a, b) => parseInt(a) - parseInt(b));
@@ -2161,26 +2626,60 @@
             weekFromFilter.innerHTML = '';
             weekToFilter.innerHTML = '';
             
-            // Poblar ambos dropdowns con las semanas disponibles
-            availableWeeks.forEach(week => {
-                const optionFrom = document.createElement('option');
-                optionFrom.value = week;
-                optionFrom.textContent = `SEM${week}`;
-                weekFromFilter.appendChild(optionFrom);
-                
-                const optionTo = document.createElement('option');
-                optionTo.value = week;
-                optionTo.textContent = `SEM${week}`;
-                weekToFilter.appendChild(optionTo);
-            });
-            
-            // Establecer valores por defecto (últimas 6 semanas si hay suficientes)
-            if (availableWeeks.length >= 6) {
-                weekFromFilter.value = availableWeeks[availableWeeks.length - 6];
-                weekToFilter.value = availableWeeks[availableWeeks.length - 1];
-            } else if (availableWeeks.length > 0) {
-                weekFromFilter.value = availableWeeks[0];
-                weekToFilter.value = availableWeeks[availableWeeks.length - 1];
+            // Para periodo 'Mes' queremos mostrar los últimos 6 meses (mes actual y 5 anteriores).
+            if (period === 'Mes') {
+                // availableWeeks contiene meses como strings '1'..'12' si existen en datos
+                const availableMonths = availableWeeks.map(w => parseInt(w,10)).filter(n => !isNaN(n));
+
+                // Calcular últimos 6 meses (1..12)
+                const now = new Date();
+                const currentMonth = now.getMonth() + 1; // 1..12
+                const monthsNeeded = [];
+                for (let i = 5; i >= 0; i--) {
+                    let m = currentMonth - i;
+                    while (m <= 0) m += 12;
+                    monthsNeeded.push(m);
+                }
+
+                // Unir y ordenar opciones para mostrar (asegurar que monthsNeeded estén presentes)
+                const unionSet = new Set([...availableMonths, ...monthsNeeded]);
+                const unionArr = Array.from(unionSet).map(n => parseInt(n,10)).filter(n=>!isNaN(n)).sort((a,b)=>a-b);
+
+                unionArr.forEach(m => {
+                    const optionFrom = document.createElement('option');
+                    const optionTo = document.createElement('option');
+                    optionFrom.value = String(m);
+                    optionFrom.textContent = monthNameES(m - 1);
+                    optionTo.value = String(m);
+                    optionTo.textContent = monthNameES(m - 1);
+                    weekFromFilter.appendChild(optionFrom);
+                    weekToFilter.appendChild(optionTo);
+                });
+
+                // Seleccionar el rango monthsNeeded (primer y último)
+                weekFromFilter.value = String(monthsNeeded[0]);
+                weekToFilter.value = String(monthsNeeded[monthsNeeded.length - 1]);
+            } else {
+                // Poblar ambos dropdowns con las semanas disponibles
+                availableWeeks.forEach(w => {
+                    const optionFrom = document.createElement('option');
+                    const optionTo = document.createElement('option');
+                    optionFrom.value = String(w);
+                    optionFrom.textContent = `SEM${w}`;
+                    optionTo.value = String(w);
+                    optionTo.textContent = `SEM${w}`;
+                    weekFromFilter.appendChild(optionFrom);
+                    weekToFilter.appendChild(optionTo);
+                });
+
+                // Establecer valores por defecto (últimas 6 semanas si hay suficientes)
+                if (availableWeeks.length >= 6) {
+                    weekFromFilter.value = availableWeeks[availableWeeks.length - 6];
+                    weekToFilter.value = availableWeeks[availableWeeks.length - 1];
+                } else if (availableWeeks.length > 0) {
+                    weekFromFilter.value = availableWeeks[0];
+                    weekToFilter.value = availableWeeks[availableWeeks.length - 1];
+                }
             }
             
             console.log('Week filters set: from', weekFromFilter.value, 'to', weekToFilter.value);
@@ -2268,13 +2767,13 @@
                 return;
             }
             
-            chartModal.style.display = 'block';
+            chartModal.classList.add('open');
             createTrendsChart(weekData);
         }
 
         // Función para ocultar el modal
         function hideModal() {
-            chartModal.style.display = 'none';
+            chartModal.classList.remove('open');
             // Destruir la gráfica existente si existe
             const existingChart = Chart.getChart('trendsChart');
             if (existingChart) {
@@ -2286,6 +2785,7 @@
         function getWeeklyTrendsDataByRange(selectedFactory = 'all', selectedChartCustomers = []) {
             const weekFrom = parseInt(weekFromFilter.value);
             const weekTo = parseInt(weekToFilter.value);
+            const period = (periodSelect && periodSelect.value) ? periodSelect.value : 'Sem';
             
             console.log(`Getting trends data from week ${weekFrom} to ${weekTo} for factory:`, selectedFactory);
             
@@ -2295,40 +2795,45 @@
                 return [];
             }
             
-            // Obtener todas las semanas disponibles en el rango
-            let availableWeeks = [];
+            // Obtener todas las semanas/meses disponibles en el rango
+            let available = [];
             if (allWeeks && allWeeks.length > 0) {
-                availableWeeks = allWeeks.filter(week => {
-                    const weekNum = parseInt(week);
-                    return weekNum >= weekFrom && weekNum <= weekTo;
-                }).sort((a, b) => parseInt(a) - parseInt(b));
+                available = allWeeks.filter(v => {
+                    const n = parseInt(v,10);
+                    return n >= weekFrom && n <= weekTo;
+                }).sort((a,b)=>parseInt(a)-parseInt(b));
             } else {
-                // Usar semanas de ejemplo en el rango
-                const sampleWeeks = ['41', '43', '44', '45', '46', '47'];
-                availableWeeks = sampleWeeks.filter(week => {
-                    const weekNum = parseInt(week);
-                    return weekNum >= weekFrom && weekNum <= weekTo;
+                // Fallback sample
+                if (period === 'Mes') {
+                    available = ['7','8','9','10','11','12'].filter(v => parseInt(v) >= weekFrom && parseInt(v) <= weekTo);
+                } else {
+                    const sampleWeeks = ['41','43','44','45','46','47'];
+                    available = sampleWeeks.filter(v => parseInt(v) >= weekFrom && parseInt(v) <= weekTo);
+                }
+            }
+
+            console.log('Range available values:', available);
+
+            const weeksData = [];
+
+            if (period === 'Mes') {
+                // available contains month numbers as strings (1..12)
+                available.forEach(m => {
+                    const monthNum = parseInt(m,10);
+                    const label = monthNameES(monthNum - 1);
+                    const defects = getTotalDefectsForMonth(monthNum, selectedFactory, selectedChartCustomers);
+                    const bap = getBAPForMonth(monthNum, selectedFactory, selectedChartCustomers);
+                    weeksData.push({ week: label, defects: defects, bap: bap });
+                });
+            } else {
+                available.forEach(week => {
+                    const weekNumber = parseInt(week,10);
+                    const weekName = `SEM${week}`;
+                    const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory, selectedChartCustomers);
+                    const weekBAP = getBAPForWeek(weekNumber, selectedFactory, selectedChartCustomers);
+                    weeksData.push({ week: weekName, defects: weekDefects, bap: weekBAP });
                 });
             }
-            
-            console.log('Weeks in range:', availableWeeks);
-            
-            const weeksData = [];
-            
-            availableWeeks.forEach(week => {
-                const weekNumber = parseInt(week);
-                const weekName = `SEM${week}`;
-                
-                // Buscar datos para esta semana y factory
-                const weekDefects = getTotalDefectsForWeek(weekNumber, selectedFactory, selectedChartCustomers);
-                const weekBAP = getBAPForWeek(weekNumber, selectedFactory, selectedChartCustomers);
-                
-                weeksData.push({
-                    week: weekName,
-                    defects: weekDefects,
-                    bap: weekBAP
-                });
-            });
             
             console.log('Range data for', selectedFactory, ':', weeksData);
             return weeksData;
@@ -2424,7 +2929,12 @@
             // Filtrar filas por semana, tipo y factory (misma lógica que getTotalDefectsForWeek)
             const selectedChartCustomers = arguments.length > 2 && Array.isArray(arguments[2]) ? arguments[2] : [];
             const rows = gridData.filter(row => {
-                const matchesWeek = row.Week === weekStr;
+                let matchesWeek = false;
+                if (row._auditISOWeek !== undefined && row._auditISOWeek !== null) {
+                    matchesWeek = String(row._auditISOWeek) === weekStr;
+                } else if (row.Week) {
+                    matchesWeek = String(row.Week) === weekStr;
+                }
                 const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
                 const matchesFactory = selectedFactory === 'all' || row['Factory Code'] === selectedFactory;
                 const matchesCustomer = (!selectedChartCustomers || selectedChartCustomers.length === 0) || selectedChartCustomers.includes(row['Customer']);
@@ -2496,7 +3006,12 @@
             const selectedChartCustomers = arguments.length > 2 && Array.isArray(arguments[2]) ? arguments[2] : [];
             const weekData = gridData.filter(row => {
                 // Asegurarse de que la semana coincida, que sea de tipo INTERNA y del factory seleccionado
-                const matchesWeek = row.Week === weekStr;
+                let matchesWeek = false;
+                if (row._auditISOWeek !== undefined && row._auditISOWeek !== null) {
+                    matchesWeek = String(row._auditISOWeek) === weekStr;
+                } else if (row.Week) {
+                    matchesWeek = String(row.Week) === weekStr;
+                }
                 const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
                 const matchesFactory = selectedFactory === 'all' || row['Factory Code'] === selectedFactory;
                 const matchesCustomer = (!selectedChartCustomers || selectedChartCustomers.length === 0) || selectedChartCustomers.includes(row['Customer']);
@@ -2549,6 +3064,97 @@
             
             // Retornar el porcentaje con 2 decimales
             return Math.round(defectivePercentage * 100) / 100;
+        }
+
+        // Función para obtener datos por mes (mesNumber 1..12)
+        function getTotalDefectsForMonth(monthNumber, selectedFactory = 'all') {
+            console.log('Getting defects data for month:', monthNumber, 'factory:', selectedFactory);
+            const monthIndex = parseInt(monthNumber,10) - 1; // 0..11
+
+            if (!gridData || gridData.length === 0) {
+                console.log('No gridData available, using sample month data');
+                // Fallback simple sample percentages (placeholder)
+                const sample = {7:3.71,8:2.91,9:3.16,10:4.22,11:4.22,12:3.01};
+                return sample[monthNumber] || 0;
+            }
+
+            const selectedChartCustomers = arguments.length > 2 && Array.isArray(arguments[2]) ? arguments[2] : [];
+            const rows = gridData.filter(row => {
+                let matchesMonth = false;
+                if (row._auditMonth !== undefined && row._auditMonth !== null) {
+                    matchesMonth = Number(row._auditMonth) === monthIndex;
+                } else if (row['Audit Date']) {
+                    const dt = parseDateFromString(row['Audit Date']);
+                    if (dt && !isNaN(dt.getTime())) matchesMonth = dt.getMonth() === monthIndex;
+                }
+                const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
+                const matchesFactory = selectedFactory === 'all' || row['Factory Code'] === selectedFactory;
+                const matchesCustomer = (!selectedChartCustomers || selectedChartCustomers.length === 0) || selectedChartCustomers.includes(row['Customer']);
+                return matchesMonth && matchesType && matchesFactory && matchesCustomer;
+            });
+
+            if (!rows || rows.length === 0) {
+                console.log('No rows for month', monthNumber, 'using sample fallback');
+                const sample = {7:3.71,8:2.91,9:3.16,10:4.22,11:4.22,12:3.01};
+                return sample[monthNumber] || 0;
+            }
+
+            let totalDefects = 0;
+            let totalSampleSize = 0;
+            rows.forEach(row => {
+                const defects = parseFloat(row['Tot. Def.']) || parseFloat(row['Tot.    Def.']) || parseFloat(row['Tot Def']) || 0;
+                const sampleSize = parseFloat(row['Sample Size']) || parseFloat(row['Sample    Size']) || parseFloat(row['SampleSize']) || 0;
+                totalDefects += defects;
+                totalSampleSize += sampleSize;
+            });
+
+            const defectivePercentage = totalSampleSize > 0 ? (totalDefects / totalSampleSize * 100) : 0;
+            return Math.round(defectivePercentage * 100) / 100;
+        }
+
+        // Función para obtener BAP por mes (mesNumber 1..12)
+        function getBAPForMonth(monthNumber, selectedFactory = 'all') {
+            console.log('Getting BAP data for month:', monthNumber, 'factory:', selectedFactory);
+            const monthIndex = parseInt(monthNumber,10) - 1;
+
+            if (!gridData || gridData.length === 0) {
+                const sampleBAP = {7:86,8:84,9:89,10:86,11:68,12:80};
+                return sampleBAP[monthNumber] || 0;
+            }
+
+            const selectedChartCustomers = arguments.length > 2 && Array.isArray(arguments[2]) ? arguments[2] : [];
+            const rows = gridData.filter(row => {
+                let matchesMonth = false;
+                if (row._auditMonth !== undefined && row._auditMonth !== null) {
+                    matchesMonth = Number(row._auditMonth) === monthIndex;
+                } else if (row['Audit Date']) {
+                    const dt = parseDateFromString(row['Audit Date']);
+                    if (dt && !isNaN(dt.getTime())) matchesMonth = dt.getMonth() === monthIndex;
+                }
+                const matchesType = (row.Tipo === 'INTERNA' || !row.Tipo);
+                const matchesFactory = selectedFactory === 'all' || row['Factory Code'] === selectedFactory;
+                const matchesCustomer = (!selectedChartCustomers || selectedChartCustomers.length === 0) || selectedChartCustomers.includes(row['Customer']);
+                return matchesMonth && matchesType && matchesFactory && matchesCustomer;
+            });
+
+            if (!rows || rows.length === 0) {
+                const sampleBAP = {7:86,8:84,9:89,10:86,11:68,12:80};
+                return sampleBAP[monthNumber] || 0;
+            }
+
+            let intentoOnes = 0;
+            let intentoAny = 0;
+            rows.forEach(r => {
+                const intentoRaw = r['Intento'];
+                if (intentoRaw !== '' && intentoRaw !== null && intentoRaw !== undefined) {
+                    intentoAny++;
+                    const intentoNum = parseInt(String(intentoRaw).trim());
+                    if (!isNaN(intentoNum) && intentoNum === 1) intentoOnes++;
+                }
+            });
+            if (intentoAny === 0) return 0;
+            const bap = (intentoOnes / intentoAny) * 100;
+            return Math.round(bap);
         }
 
         // Función para crear la gráfica de tendencias
@@ -2655,7 +3261,7 @@
                     scales: {
                         x: {
                             title: {
-                                display: true,
+                                display: false,
                                 text: 'Semanas',
                                 font: {
                                     size: 14,

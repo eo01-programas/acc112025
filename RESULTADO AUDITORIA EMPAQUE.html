@@ -128,20 +128,20 @@
       border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,.06);
       overflow: hidden;
-      width: 70%;
-      max-width: 70%;
+      width: 85%; /* aumentado ~10% respecto al valor previo (77%) */
+      max-width: 85%;
     }
 
     .table-scroll{
       overflow:auto;
-      max-height: 65vh;
+      max-height: 75vh; /* aumentado para ocupar más espacio vertical */
     }
 
     table{
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      font-size: 13px;
+      font-size: 11px;
       background:#fff;
     }
 
@@ -191,19 +191,25 @@
     }
     .zero{ color: transparent; }
 
+    /* Fila para mostrar porcentajes relativos a Lot Box (DEFECTUOSO) */
+    tr.defectRow td{
+      background: #0b6623 !important; /* verde oscuro */
+      color: #ffffff !important;
+      font-weight: 800;
+    }
     /* Labelframes y switches */
     .filter-section{
       display: flex;
-      gap: 20px;
+      gap: 8px;
       flex-wrap: wrap;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
       align-items: center;
       justify-content: space-between;
     }
 
     .right-controls{
       display: flex;
-      gap: 12px;
+      gap: 0px;
       align-items: center;
       margin-left: auto;
     }
@@ -211,7 +217,7 @@
     .labelframe{
       border: 1px solid #d0d0d0;
       border-radius: 10px;
-      padding: 16px 18px;
+      padding: 6px 6px;
       position: relative;
       background: #fafafa;
     }
@@ -219,7 +225,7 @@
     .labelframe-title{
       position: absolute;
       top: -10px;
-      left: 14px;
+      left: 8px;
       background: #fff;
       padding: 0 8px;
       font-weight: 700;
@@ -229,14 +235,14 @@
 
     .labelframe-content{
       display: flex;
-      gap: 16px;
+      gap: 6px;
       align-items: center;
       flex-wrap: wrap;
     }
 
     .switch-group{
       display: flex;
-      gap: 10px;
+      gap: 4px;
       align-items: center;
     }
 
@@ -249,7 +255,7 @@
 
     .switch input{
       opacity: 0;
-      width: 0;
+      width: 1;
       height: 0;
     }
 
@@ -303,7 +309,7 @@
     }
 
     .customer-filter-button{
-      padding: 8px 16px;
+      padding: 8px 10px;
       background: #fff;
       border: 1px solid #cfcfcf;
       border-radius: 8px;
@@ -329,10 +335,10 @@
       margin-top: 4px;
       background: white;
       border: 1px solid #cfcfcf;
-      border-radius: 8px;
+      border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,.15);
-      min-width: 220px;
-      max-height: 300px;
+      min-width: 180px;
+      max-height: 200px;
       overflow-y: auto;
       z-index: 1000;
       padding: 8px 0;
@@ -343,7 +349,7 @@
     }
 
     .customer-option{
-      padding: 8px 16px;
+      padding: 6px 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -405,6 +411,47 @@
       min-height: 0;
     }
 
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      font-size: 12px;
+      color: #555;
+    }
+
+    #weekFieldset .control-group label {
+      font-weight: 600;
+      font-size: 11px;
+      color: #666;
+    }
+
+    #weekFieldset .control-group select {
+      font-size: 11px;
+      padding: 5px 6px;
+      border: 1px solid #cfcfcf;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    #weekFieldset .switch-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      margin-bottom: 0;
+      margin-left: 6px; /* pequeño espacio respecto al select */
+    }
+
+    #weekFieldset .switch-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #555;
+      white-space: nowrap;
+    }
+
     @media (max-width: 1200px){
       .content-container{
         flex-direction: column;
@@ -424,18 +471,33 @@
   </div>
 
   <div class="filter-section">
-    <div class="labelframe">
-      <span class="labelframe-title">Week:</span>
-      <div class="labelframe-content">
-        <select id="weekSelect" disabled>
-          <option value="">Cargando...</option>
-        </select>
-        <div class="switch-group">
-          <label class="switch">
+    <div class="labelframe" id="weekFieldset">
+      <span class="labelframe-title">Filter:</span>
+      <div class="labelframe-content" style="display: flex; gap: 2px; align-items: flex-end; flex-wrap: wrap;">
+        <div class="control-group" style="flex: 0 1 22%; min-width: 80px;">
+          <label style="font-size: 11px; display:none;">Year</label>
+          <select id="yearSelect" style="width: 100%; padding: 6px 8px; font-size: 11px;">
+            <option value="">Cargando...</option>
+          </select>
+        </div>
+        <div class="control-group" style="flex: 0 1 21%; min-width: 80px;">
+          <label style="font-size: 11px; display:none;">Sem/Mes</label>
+          <select id="periodSelect" style="width: 100%; padding: 6px 8px; font-size: 11px;">
+            <option value="">Cargando...</option>
+          </select>
+        </div>
+        <div class="control-group" style="flex: 0 1 18%; min-width: 70px;">
+          <label style="font-size: 11px; display:none;">Week</label>
+          <select id="weekSelect" disabled style="width: 100%; padding: 6px 8px; font-size: 11px;">
+            <option value="">Cargando...</option>
+          </select>
+        </div>
+        <div class="switch-group" style="flex: 0 1 auto; align-items: center; gap: 2px;">
+          <label class="switch" style="transform: scale(0.85); margin: 0;">
             <input type="checkbox" id="lastWeekSwitch">
             <span class="slider"></span>
           </label>
-          <span class="switch-label">Last Week</span>
+          <span class="switch-label" id="switchLabel" style="font-size: 11px; white-space: nowrap;">Last Week</span>
         </div>
       </div>
     </div>
@@ -479,7 +541,7 @@
       <div class="labelframe-content">
         <div class="customer-filter-wrapper">
           <button class="customer-filter-button" id="customerFilterBtn" type="button">
-            <span id="customerFilterLabel">Seleccione Customers</span>
+            <span id="customerFilterLabel">Todos</span>
             <span>▼</span>
           </button>
           <div class="customer-dropdown" id="customerDropdown">
@@ -501,8 +563,8 @@
         <table id="summaryTable">
           <thead>
             <tr>
-              <th style="width:10%">Factory Code</th>
-              <th style="width:12%">Customer</th>
+              <th style="width:12%">Factory Code</th>
+              <th style="width:10%">Customer</th>
               <th style="width:5%">Lot Box</th>
               <th style="width:5%">Total Cajas</th>
               <th style="width:8%">Ctd Incorrecta</th>
@@ -528,36 +590,157 @@
       </div>
     </div>
 
-    <div class="charts-container">
-      <!-- Gráfico 1: Comparativo por Factory -->
-      <div class="chart-box">
-        <div class="chart-title">% Aprobación por Factory Code</div>
-        <canvas id="factoryChart" class="chart-canvas"></canvas>
-      </div>
-
-      <!-- Gráfico 2: Distribución por Customer -->
-      <div class="chart-box">
-        <div class="chart-title">Distribución de Auditorías por Customer</div>
-        <canvas id="customerChart" class="chart-canvas"></canvas>
-      </div>
-    </div>
+    <!-- Charts removed per request -->
   </div>
 
   
 
 <script>
-  // Registrar plugin de datalabels
-  if(typeof ChartDataLabels !== 'undefined'){
-    Chart.register(ChartDataLabels);
-    // Desregistrar globalmente para que solo se use donde lo especifiquemos
-    Chart.defaults.set('plugins.datalabels', { display: false });
-  }
-
   // =========================================================
   // CONFIG
   // =========================================================
   const SHEET_ID = "1RB48rgEm2anTARE_54XXcxeSs6G8Kt6N";  // tu sheet
   const SHEET_NAME = "GRID";
+
+  // Helper para parsear fecha de Audit Date
+  function parseAuditDate(s) {
+    const t = String(s || "").trim();
+    if (!t) return null;
+    // Soportar formatos: "12/15/2024", "2024-12-15", etc.
+    const d = new Date(t);
+    return !isNaN(d.getTime()) ? d : null;
+  }
+
+  function getWeekNumber(d) {
+    const first = new Date(d.getFullYear(), 0, 1);
+    const passed = d - first;
+    const oneweek = 1000 * 60 * 60 * 24 * 7;
+    return Math.floor(passed / oneweek) + 1;
+  }
+
+  function getMonthES(m) {
+    const meses = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    return meses[m] || "";
+  }
+
+  // Poblar Year Select basado en datos
+  function populateYearSelect() {
+    const years = new Set();
+    for (const r of grid) {
+      const w = asText(r.Week);
+      if (w) years.add(new Date().getFullYear()); // usar año actual por ahora
+    }
+    const yearArray = Array.from(years).sort((a, b) => b - a);
+    const currentYear = new Date().getFullYear();
+    
+    document.getElementById('yearSelect').innerHTML = `<option value="">Cargando...</option>`;
+    if (yearArray.length === 0) {
+      yearArray.push(currentYear);
+    }
+    
+    yearArray.forEach(y => {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      document.getElementById('yearSelect').appendChild(opt);
+    });
+    
+    if (!document.getElementById('yearSelect').value && yearArray.length > 0) {
+      document.getElementById('yearSelect').value = yearArray[0];
+    }
+  }
+
+  function populatePeriodSelect() {
+    const periods = [
+      { value: "sem", label: "Sem" },
+      { value: "mes", label: "Mes" }
+    ];
+    
+    const periodSelect = document.getElementById('periodSelect');
+    periodSelect.innerHTML = '';
+    
+    periods.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.value;
+      opt.textContent = p.label;
+      periodSelect.appendChild(opt);
+    });
+    
+    periodSelect.value = "sem";
+  }
+
+  function populateWeekSelectByPeriod() {
+    const periodSelect = document.getElementById('periodSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    const weekSelect = document.getElementById('weekSelect');
+    
+    const selectedYear = parseInt(yearSelect.value, 10);
+    const selectedPeriod = periodSelect.value;
+    
+    weekSelect.innerHTML = `<option value="">Seleccione...</option>`;
+    
+    if (selectedPeriod === "sem") {
+      // Mostrar solo semanas que tienen datos
+      const weeksWithData = new Set();
+      for (const r of grid) {
+        const weekNum = parseInt(asWeek(r.Week), 10);
+        if (!isNaN(weekNum) && weekNum >= 1 && weekNum <= 52) {
+          weeksWithData.add(weekNum);
+        }
+      }
+      
+      // Ordenar y mostrar semanas con datos
+      const sortedWeeks = Array.from(weeksWithData).sort((a, b) => a - b);
+      sortedWeeks.forEach(w => {
+        const opt = document.createElement("option");
+        opt.value = w;
+        opt.textContent = "Sem " + w;
+        weekSelect.appendChild(opt);
+      });
+      
+      // Auto-seleccionar semana actual si existe, sino la primera disponible
+      const currentWeek = getCurrentWeek();
+      if (weeksWithData.has(currentWeek)) {
+        weekSelect.value = currentWeek;
+      } else if (sortedWeeks.length > 0) {
+        weekSelect.value = sortedWeeks[sortedWeeks.length - 1]; // última semana disponible
+      }
+    } else if (selectedPeriod === "mes") {
+      // Mostrar solo meses que tienen datos
+      const monthsWithData = new Set();
+      for (const r of grid) {
+        const weekNum = parseInt(asWeek(r.Week), 10);
+        if (!isNaN(weekNum)) {
+          // Mapeo proporcional: distribuir 52 semanas en 12 meses
+          const estimatedMonth = Math.ceil((weekNum * 12) / 52);
+          if (estimatedMonth >= 1 && estimatedMonth <= 12) {
+            monthsWithData.add(estimatedMonth);
+          }
+        }
+      }
+      
+      // Mostrar solo los meses que tienen datos
+      const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+      const sortedMonths = Array.from(monthsWithData).sort((a, b) => a - b);
+      
+      sortedMonths.forEach(monthNum => {
+        const opt = document.createElement("option");
+        opt.value = monthNum;
+        opt.textContent = meses[monthNum - 1];
+        weekSelect.appendChild(opt);
+      });
+      
+      // Auto-seleccionar mes actual si existe, sino el último disponible
+      const currentMonth = getCurrentMonth();
+      if (monthsWithData.has(currentMonth)) {
+        weekSelect.value = currentMonth;
+      } else if (sortedMonths.length > 0) {
+        weekSelect.value = sortedMonths[sortedMonths.length - 1]; // último mes disponible
+      }
+    }
+    
+    weekSelect.disabled = false;
+  }
 
   // =========================================================
   // ORDEN PERSONALIZADO PARA FACTORY CODES
@@ -674,6 +857,42 @@
     return n;
   }
 
+  // Funciones para manejar períodos (Semana / Mes)
+  function getCurrentMonth() {
+    return new Date().getMonth() + 1; // 1-12
+  }
+
+  function getCurrentWeek() {
+    const d = new Date();
+    const first = new Date(d.getFullYear(), 0, 1);
+    const passed = d - first;
+    const oneweek = 1000 * 60 * 60 * 24 * 7;
+    return Math.floor(passed / oneweek) + 1;
+  }
+
+  function getMonthNumber(monthName) {
+    const meses = { "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6, "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12 };
+    return meses[String(monthName).toLowerCase().slice(0, 3)] || null;
+  }
+
+  function getPeriodType() {
+    return document.getElementById('periodSelect').value;
+  }
+
+  function updateSwitchLabel() {
+    const periodType = getPeriodType();
+    const switchLabel = document.getElementById('switchLabel');
+    const lastWeekSwitch = document.getElementById('lastWeekSwitch');
+    if (periodType === "mes") {
+      switchLabel.textContent = "Last Month";
+    } else {
+      switchLabel.textContent = "Last Week";
+    }
+
+    // Reset el checkbox
+    lastWeekSwitch.checked = false;
+  }
+
   // =========================================================
   // UI
   // =========================================================
@@ -683,6 +902,8 @@
   const statusEl    = document.getElementById("status");
   const tbody       = document.getElementById("tbody");
 
+  const yearSelect = document.getElementById("yearSelect");
+  const periodSelect = document.getElementById("periodSelect");
   const lastWeekSwitch = document.getElementById("lastWeekSwitch");
   const filterCofaco = document.getElementById("filterCofaco");
   const filterCititex1 = document.getElementById("filterCititex1");
@@ -977,306 +1198,37 @@
     `;
     tbody.appendChild(trG);
 
+    // fila DEFECTUOSO: combinar primeras 4 celdas y mostrar porcentajes relativos a Lot Box (0 decimales)
+    (function(){
+      const denom = grand.LotBox || 0;
+      const pct = (n)=> denom > 0 ? Math.round((n / denom) * 100) : 0;
+
+      const trDef = document.createElement('tr');
+      trDef.className = 'defectRow';
+      trDef.innerHTML = `
+        <td class="left" colspan="4">DEFECTUOSO</td>
+        <td>${pct(grand.CantidadIncorrecta)}%</td>
+        <td>${pct(grand.AviosIncorrectos)}%</td>
+        <td>${pct(grand.RotuloIncorrecto)}%</td>
+        <td>${pct(grand.TallaEquivocada)}%</td>
+        <td>${pct(grand.SinStickerBolsa)}%</td>
+        <td>${pct(grand.PesoExcedido)}%</td>
+        <td>${pct(grand.ObjetosExtranos)}%</td>
+        <td>${pct(grand.TotDef)}%</td>
+        <td>${pct(grand.TotDef)}%</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      `;
+      tbody.appendChild(trDef);
+    })();
+
     btnExport.disabled = false;
-    
-    // Actualizar gráficos
-    updateCharts(rows);
   }
 
-  // =========================================================
-  // GRÁFICOS
-  // =========================================================
-  let factoryChartInstance = null;
-  let customerChartInstance = null;
-
-  function updateCharts(rows){
-    if(rows.length === 0){
-      // Destruir gráficos si no hay datos
-      if(factoryChartInstance) factoryChartInstance.destroy();
-      if(customerChartInstance) customerChartInstance.destroy();
-      return;
-    }
-
-    // Preparar datos para gráficos
-    const factoryData = calculateFactoryApproval(rows);
-    const customerData = calculateCustomerDistribution(rows);
-
-    // Crear/actualizar gráfico de factory
-    createFactoryChart(factoryData);
-    
-    // Crear/actualizar gráfico de customer
-    createCustomerChart(customerData);
-  }
-
-  function calculateFactoryApproval(rows){
-    const factoryStats = new Map();
-    
-    rows.forEach(r => {
-      const factory = r.FactoryCode;
-      if(!factoryStats.has(factory)){
-        factoryStats.set(factory, { approved: 0, rejected: 0, total: 0 });
-      }
-      
-      const stats = factoryStats.get(factory);
-      stats.total += r.TT;
-      
-      // Si Result contiene "Approved" o "Pass", es aprobado
-      const result = String(r.Result || "").toLowerCase();
-      if(result.includes("approved") || result.includes("pass")){
-        stats.approved += r.TT;
-      } else if(result.includes("rejected")){
-        stats.rejected += r.TT;
-      } else {
-        // Si no está claro, contarlo como aprobado por defecto
-        stats.approved += r.TT;
-      }
-    });
-
-    const labels = [];
-    const percentages = [];
-    const colors = [];
-    
-    // Ordenar según orden personalizado
-    const sortedStats = sortFactories(factoryStats);
-    
-    for(const [factory, stats] of sortedStats){
-      labels.push(factory);
-      const percentage = stats.total > 0 ? (stats.approved / stats.total * 100) : 0;
-      percentages.push(percentage.toFixed(1));
-      
-      // Color verde para >95%, amarillo para 90-95%, rojo para <90%
-      if(percentage >= 95){
-        colors.push('rgba(75, 192, 75, 0.8)');
-      } else if(percentage >= 90){
-        colors.push('rgba(255, 206, 86, 0.8)');
-      } else {
-        colors.push('rgba(255, 99, 132, 0.8)');
-      }
-    }
-
-    return { labels, percentages, colors };
-  }
-
-  function calculateCustomerDistribution(rows){
-    const customerTotals = new Map();
-    
-    rows.forEach(r => {
-      const customer = r.Customer;
-      if(!customerTotals.has(customer)){
-        customerTotals.set(customer, 0);
-      }
-      customerTotals.set(customer, customerTotals.get(customer) + r.TT);
-    });
-
-    // Ordenar por total descendente
-    const sorted = Array.from(customerTotals.entries())
-      .sort((a, b) => b[1] - a[1]);
-
-    const labels = sorted.map(x => x[0]);
-    const data = sorted.map(x => x[1]);
-    
-    // Colores variados para el donut
-    const colors = [
-      'rgba(54, 162, 235, 0.8)',
-      'rgba(255, 99, 132, 0.8)',
-      'rgba(255, 206, 86, 0.8)',
-      'rgba(75, 192, 192, 0.8)',
-      'rgba(153, 102, 255, 0.8)',
-      'rgba(255, 159, 64, 0.8)',
-      'rgba(199, 199, 199, 0.8)',
-      'rgba(83, 102, 255, 0.8)',
-      'rgba(255, 99, 255, 0.8)',
-      'rgba(99, 255, 132, 0.8)',
-    ];
-
-    return { labels, data, colors };
-  }
-
-  function createFactoryChart(data){
-    const ctx = document.getElementById('factoryChart').getContext('2d');
-    
-    if(factoryChartInstance){
-      factoryChartInstance.destroy();
-    }
-
-    factoryChartInstance = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: data.labels,
-        datasets: [{
-          label: '% Aprobación',
-          data: data.percentages,
-          backgroundColor: data.colors,
-          borderColor: data.colors.map(c => c.replace('0.8', '1')),
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2.2,
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context){
-                return context.parsed.y + '%';
-              }
-            }
-          },
-          datalabels: {
-            display: true,
-            anchor: 'end',
-            align: 'top',
-            font: {
-              weight: 'bold',
-              size: 13
-            },
-            color: '#333',
-            formatter: function(value) {
-              return value + '%';
-            }
-          }
-        },
-        layout: {
-          padding: {
-            top: 30
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              callback: function(value){
-                return value + '%';
-              }
-            },
-            grid: {
-              color: 'rgba(0, 0, 0, 0.05)'
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            }
-          }
-        }
-      }
-    });
-  }
-
-  function createCustomerChart(data){
-    const ctx = document.getElementById('customerChart').getContext('2d');
-    
-    if(customerChartInstance){
-      customerChartInstance.destroy();
-    }
-
-    customerChartInstance = new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: data.labels,
-        datasets: [{
-          data: data.data,
-          backgroundColor: data.colors,
-          borderColor: '#fff',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2.8,
-        layout: {
-          padding: {
-            top: 20,
-            right: 20,
-            bottom: 20,
-            left: 20
-          }
-        },
-        plugins: {
-          legend: {
-            position: 'right',
-            labels: {
-              boxWidth: 12,
-              padding: 8,
-              font: {
-                size: 10
-              }
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context){
-                const label = context.label || '';
-                const value = context.parsed || 0;
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const percentage = ((value / total) * 100).toFixed(1);
-                return `${label}: ${value} (${percentage}%)`;
-              }
-            }
-          },
-          datalabels: {
-            display: false
-          }
-        }
-      },
-      plugins: [ChartDataLabels, {
-        id: 'customLabels',
-        afterDatasetsDraw: function(chart) {
-          const ctx = chart.ctx;
-          const meta = chart.getDatasetMeta(0);
-          const dataset = chart.data.datasets[0];
-          const total = dataset.data.reduce((a, b) => a + b, 0);
-          
-          meta.data.forEach((arc, index) => {
-            const value = dataset.data[index];
-            const percentage = ((value / total) * 100).toFixed(1);
-            const label = `${value} (${percentage}%)`;
-            
-            // Posición del centro del arco
-            const centerAngle = (arc.startAngle + arc.endAngle) / 2;
-            const radius = arc.outerRadius;
-            
-            // Punto en el borde del arco
-            const x1 = arc.x + Math.cos(centerAngle) * radius;
-            const y1 = arc.y + Math.sin(centerAngle) * radius;
-            
-            // Punto intermedio de la línea guía
-            const lineLength = 25;
-            const x2 = arc.x + Math.cos(centerAngle) * (radius + lineLength);
-            const y2 = arc.y + Math.sin(centerAngle) * (radius + lineLength);
-            
-            // Línea horizontal
-            const horizontalLength = 30;
-            const x3 = x2 + (Math.cos(centerAngle) > 0 ? horizontalLength : -horizontalLength);
-            const y3 = y2;
-            
-            // Dibujar línea guía
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.lineTo(x3, y3);
-            ctx.strokeStyle = '#666';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            
-            // Dibujar texto
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 11px Arial';
-            ctx.textAlign = Math.cos(centerAngle) > 0 ? 'left' : 'right';
-            ctx.textBaseline = 'middle';
-            const textX = x3 + (Math.cos(centerAngle) > 0 ? 5 : -5);
-            ctx.fillText(label, textX, y3);
-          });
-        }
-      }]
-    });
-  }
+  // Charts removed per request
 
   function escapeHtml(s){
     return String(s ?? "")
@@ -1289,12 +1241,125 @@
 
   function onWeekChange(){
     const w = weekSelect.value;
+    const periodType = getPeriodType();
+    
     if(!w){
       renderSummary([]);
       return;
     }
-    const rows = buildSummary(w);
+    
+    let rows;
+    if (periodType === "mes") {
+      // Filtrar por mes: buscar todos los datos que correspondan al mes seleccionado
+      rows = buildSummaryByMonth(parseInt(w, 10));
+    } else {
+      // Filtrar por semana (comportamiento original)
+      rows = buildSummary(w);
+    }
     renderSummary(rows);
+  }
+
+  function buildSummaryByMonth(selectedMonth) {
+    // Para filtrar por mes, mapeamos las semanas (1-52) a meses (1-12)
+    // Distribución realista: 52 semanas / 12 meses ≈ 4.33 semanas por mes
+    // Fórmula: estimatedMonth = Math.ceil((weekNum * 12) / 52)
+    
+    const groups = new Map();
+    const activeFactories = getActiveFactories();
+    const activeCustomers = getActiveCustomers();
+
+    for(const r of grid){
+      // Convertir Week a mes con mapeo más realista
+      const weekNum = parseInt(asWeek(r.Week), 10);
+      if(isNaN(weekNum)) continue;
+      
+      // Mapeo proporcional: distribuir 52 semanas en 12 meses
+      const estimatedMonth = Math.ceil((weekNum * 12) / 52);
+      if(estimatedMonth !== selectedMonth) continue;
+
+      const factory = r.FactoryCode || "Sin código";
+      
+      // Aplicar filtro de factory
+      if(!matchesFactory(factory, activeFactories)) continue;
+      const customer = r.Customer || "Sin cliente";
+      
+      // Aplicar filtro de customer
+      if(!matchesCustomer(customer, activeCustomers)) continue;
+      const key = factory + "|||" + customer;
+
+      if(!groups.has(key)){
+        groups.set(key, {
+          FactoryCode: factory,
+          Customer: customer,
+          Reports: new Set(),
+          LotBoxes: new Set(),
+          TotalCajas: 0,
+          CantidadIncorrecta: 0,
+          AviosIncorrectos: 0,
+          RotuloIncorrecto: 0,
+          TallaEquivocada: 0,
+          SinStickerBolsa: 0,
+          PesoExcedido: 0,
+          ObjetosExtranos: 0,
+          A1: 0, A2: 0, A3: 0, A4: 0
+        });
+      }
+      const g = groups.get(key);
+
+      if(r.Report) g.Reports.add(r.Report);
+      if(r.LotBox) g.LotBoxes.add(r.LotBox);
+      
+      g.TotalCajas += r.TotalCajas;
+      g.CantidadIncorrecta += r.CantidadIncorrecta;
+      g.AviosIncorrectos += r.AviosIncorrectos;
+      g.RotuloIncorrecto += r.RotuloIncorrecto;
+      g.TallaEquivocada += r.TallaEquivocada;
+      g.SinStickerBolsa += r.SinStickerBolsa;
+      g.PesoExcedido += r.PesoExcedido;
+      g.ObjetosExtranos += r.ObjetosExtranos;
+
+      const att = parseAttempt(r.Intento);
+      if(att === 1) g.A1++;
+      else if(att === 2) g.A2++;
+      else if(att === 3) g.A3++;
+      else if(att === 4) g.A4++;
+    }
+
+    // pasar a array
+    const out = Array.from(groups.values()).map(g=>{
+      const totalReports = g.Reports.size;
+      const TT = g.A1 + g.A2 + g.A3 + g.A4;
+      const lotBoxCount = g.LotBoxes.size;
+      const TotDef = g.CantidadIncorrecta + g.AviosIncorrectos + g.RotuloIncorrecto + g.TallaEquivocada + g.SinStickerBolsa + g.PesoExcedido + g.ObjetosExtranos;
+      const PctDef = g.TotalCajas > 0 ? Math.round((TotDef / g.TotalCajas) * 100) : 0;
+      return {
+        FactoryCode: g.FactoryCode,
+        Customer: g.Customer,
+        LotBox: lotBoxCount,
+        TotalCajas: g.TotalCajas,
+        CantidadIncorrecta: g.CantidadIncorrecta,
+        AviosIncorrectos: g.AviosIncorrectos,
+        RotuloIncorrecto: g.RotuloIncorrecto,
+        TallaEquivocada: g.TallaEquivocada,
+        SinStickerBolsa: g.SinStickerBolsa,
+        PesoExcedido: g.PesoExcedido,
+        ObjetosExtranos: g.ObjetosExtranos,
+        TotDef: TotDef,
+        PctDef: PctDef,
+        TotalReports: totalReports,
+        A1: g.A1, A2: g.A2, A3: g.A3, A4: g.A4,
+        TT
+      };
+    });
+
+    // ordenar como Excel: Factory -> Customer
+    out.sort((a,b)=>{
+      const fa = a.FactoryCode.localeCompare(b.FactoryCode);
+      if(fa !== 0) return fa;
+      return a.Customer.localeCompare(b.Customer);
+    });
+
+    return out;
   }
 
   // =========================================================
@@ -1390,6 +1455,12 @@
         return a.localeCompare(b);
       });
 
+      // Inicializar los nuevos filtros
+      populateYearSelect();
+      populatePeriodSelect();
+      updateSwitchLabel();
+      populateWeekSelectByPeriod();
+
       fillWeekSelect(weeks);
 
       // default: última week disponible
@@ -1414,19 +1485,56 @@
     }
   }
 
-  // Last Week switch handler
+  // Last Week/Month switch handler
   lastWeekSwitch.addEventListener("change", function(){
+    const periodType = getPeriodType();
+    const weeks = Array.from(weekSelect.options).map(o => o.value).filter(Boolean);
+    
     if(this.checked){
-      const weeks = Array.from(weekSelect.options).map(o => o.value).filter(Boolean);
-      if(weeks.length > 1){
-        weekSelect.value = weeks[weeks.length - 2]; // penúltima semana
+      if (periodType === "mes") {
+        // Seleccionar mes anterior
+        const currentMonth = parseInt(weekSelect.value, 10);
+        const prevMonth = currentMonth > 1 ? currentMonth - 1 : 12;
+        weekSelect.value = prevMonth;
+      } else {
+        // Seleccionar semana anterior
+        if(weeks.length > 1){
+          weekSelect.value = weeks[weeks.length - 2];
+        }
       }
     } else {
-      const weeks = Array.from(weekSelect.options).map(o => o.value).filter(Boolean);
-      if(weeks.length){
-        weekSelect.value = weeks[weeks.length - 1]; // última semana
+      if (periodType === "mes") {
+        // Seleccionar mes actual
+        const currentMonth = getCurrentMonth();
+        weekSelect.value = currentMonth;
+      } else {
+        // Seleccionar semana actual
+        if(weeks.length){
+          weekSelect.value = weeks[weeks.length - 1];
+        }
       }
     }
+    populateCustomerFilter();
+    onWeekChange();
+  });
+
+  // Year y Period Select handlers
+  yearSelect.addEventListener("change", function(){
+    populateWeekSelectByPeriod();
+    updateSwitchLabel();
+    populateCustomerFilter();
+    onWeekChange();
+  });
+
+  periodSelect.addEventListener("change", function(){
+    populateWeekSelectByPeriod();
+    updateSwitchLabel();
+    populateCustomerFilter();
+    onWeekChange();
+  });
+
+  weekSelect.addEventListener("change", function(){
+    lastWeekSwitch.checked = false; // reset switch al cambiar manual
     populateCustomerFilter();
     onWeekChange();
   });
@@ -1453,45 +1561,53 @@
   function populateCustomerFilter(){
     const selectedWeek = weekSelect.value;
     const activeFactories = getActiveFactories();
-    
+    const periodType = getPeriodType();
+
     // Filtrar solo los customers que están en los datos visibles
     const visibleCustomers = new Set();
     for(const r of grid){
-      if(selectedWeek && r.Week !== selectedWeek) continue;
+      // Si hay un filtro de semana/mes seleccionado, aplicarlo correctamente
+      if(selectedWeek){
+        if(periodType === 'mes'){
+          const weekNum = parseInt(asWeek(r.Week), 10);
+          if(isNaN(weekNum)) continue;
+          const estimatedMonth = Math.ceil((weekNum * 12) / 52);
+          if(estimatedMonth !== parseInt(selectedWeek, 10)) continue;
+        } else {
+          // periodo por semana (comportamiento original)
+          if(r.Week !== selectedWeek) continue;
+        }
+      }
+
       if(!matchesFactory(r.FactoryCode, activeFactories)) continue;
       if(r.Customer) visibleCustomers.add(r.Customer);
     }
-    
+
     const customers = Array.from(visibleCustomers);
     customers.sort();
-    
-    // Mantener solo los customers que aún están visibles
+
+    // Mantener solo los customers que aún están visibles (seleccionar por defecto los nuevos)
     const newSelectedCustomers = new Set();
     customers.forEach(c => {
-      if(selectedCustomers.has(c)){
-        newSelectedCustomers.add(c);
-      } else {
-        // Si es un customer nuevo (no estaba antes), seleccionarlo por defecto
-        newSelectedCustomers.add(c);
-      }
+      newSelectedCustomers.add(c);
     });
     selectedCustomers = newSelectedCustomers;
-    
+
     customerDropdown.innerHTML = '';
     customers.forEach(customer => {
       const option = document.createElement('div');
       option.className = 'customer-option';
-      
+
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.id = `customer_${customer.replace(/\s+/g, '_')}`;
       checkbox.checked = selectedCustomers.has(customer);
       checkbox.dataset.customer = customer;
-      
+
       const label = document.createElement('label');
       label.textContent = customer;
       label.htmlFor = checkbox.id;
-      
+
       checkbox.addEventListener('change', function(){
         if(this.checked){
           selectedCustomers.add(customer);
@@ -1501,12 +1617,12 @@
         updateCustomerFilterLabel();
         onWeekChange();
       });
-      
+
       option.appendChild(checkbox);
       option.appendChild(label);
       customerDropdown.appendChild(option);
     });
-    
+
     updateCustomerFilterLabel();
   }
 

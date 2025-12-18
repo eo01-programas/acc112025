@@ -305,11 +305,15 @@
     /* Asegurar que la tabla del modal no herede el min-width global y respete los anchos fijos */
     .modal table { width:100%; max-width:100%; min-width: 0 !important; border-collapse: collapse; font-size: 12px; table-layout: fixed; box-sizing: border-box; }
     .modal th, .modal td { border:1px solid #e2e8f0; padding:6px; text-align:left; white-space: normal; overflow-wrap: break-word; word-break: break-word; box-sizing: border-box; }
-    /* Anchos por columna en el modal en píxeles */
-    .modal table th:nth-child(1), .modal table td:nth-child(1) { width: 35px; min-width:35px; }
-    .modal table th:nth-child(2), .modal table td:nth-child(2) { width: 60px; min-width:60px; }
-    .modal table th:nth-child(3), .modal table td:nth-child(3) { width: 35px; min-width:35px; }
-    .modal table th:nth-child(4), .modal table td:nth-child(4) { width: 50px; min-width:50px; }
+    /* Anchos por columna en el modal en píxeles (soporta hasta 5 columnas: TEMP, ESTILO, COLOR, OP, DEFECT) */
+    .modal table th:nth-child(1), .modal table td:nth-child(1) { width: 120px; min-width:100px; white-space:nowrap; }
+    .modal table th:nth-child(2), .modal table td:nth-child(2) { width: 120px; min-width:80px; }
+    .modal table th:nth-child(3), .modal table td:nth-child(3) { width: 110px; min-width:70px; }
+    .modal table th:nth-child(4), .modal table td:nth-child(4) { width: 70px; min-width:50px; }
+    .modal table th:nth-child(5), .modal table td:nth-child(5) { width: 90px; min-width:60px; }
+
+    /* Detalle modal específico: hacerlo 50% más ancho (de 50% -> 75%, y max-width 450px -> 675px) */
+    #detailModalOverlay .modal { max-width: 675px; width: 75%; }
         .modal .no-data { padding: 12px; color:#666 }
         </style>
         <!-- Ensure .modal.modal-large wins over the generic .modal rules so the charts modal is large on first open -->
@@ -1336,6 +1340,7 @@
         // detectar claves útiles
         const temporadaKey = detectKey(_originalDefectos, ['TEMPORADA', 'TEMP', 'SEASON']);
         const estiloKey = detectKey(_originalDefectos, ['ESTILO', 'STYLE']);
+        const colorKey = detectKey(_originalDefectos, ['COLOR', 'COLOUR', 'COLOR DEL PRODUCTO']);
         const opKey = detectKey(_originalDefectos, ['OP', 'ORDEN', 'ORDER']);
 
         // leer filtros actuales (Periodo/Seleccionar)
@@ -1387,6 +1392,10 @@
         const trh = document.createElement('tr');
     const h1 = document.createElement('th'); h1.textContent = 'TEMP'; trh.appendChild(h1);
         const h2 = document.createElement('th'); h2.textContent = estiloKey ? estiloKey : 'ESTILO'; trh.appendChild(h2);
+        // insertar columna COLOR si existe
+        if (colorKey) {
+            const hc = document.createElement('th'); hc.textContent = colorKey; trh.appendChild(hc);
+        }
         const h3 = document.createElement('th'); h3.textContent = opKey ? opKey : 'OP'; trh.appendChild(h3);
         const h4 = document.createElement('th'); h4.textContent = defectoNombre; trh.appendChild(h4);
         thead.appendChild(trh);
@@ -1397,6 +1406,10 @@
             const tr = document.createElement('tr');
             const td1 = document.createElement('td'); td1.textContent = temporadaKey ? (r[temporadaKey] || '') : (r['TEMPORADA'] || r['Temporada'] || ''); tr.appendChild(td1);
             const td2 = document.createElement('td'); td2.textContent = estiloKey ? (r[estiloKey] || '') : (r['ESTILO'] || r['Estilo'] || ''); tr.appendChild(td2);
+            // columna COLOR si existe
+            if (colorKey) {
+                const tdColor = document.createElement('td'); tdColor.textContent = r[colorKey] || r['COLOR'] || ''; tr.appendChild(tdColor);
+            }
             const td3 = document.createElement('td');
             const rawOp = opKey ? (r[opKey] || '') : (r['OP'] || '');
             td3.textContent = normalizeOp(rawOp);

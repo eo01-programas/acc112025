@@ -3696,37 +3696,145 @@
             });
 
             // Crear workbook y descargar
+            // Crear worksheet principal
             const ws = XLSX.utils.aoa_to_sheet(aoa);
-            // Aplicar formato de porcentaje a la columna %DEPURADO (buscar índice)
+
+            // Calcular totales por columna de defectos y totales generales
+            const defectTotals = {};
+            (lastResumenDefects || []).forEach(col => defectTotals[col] = 0);
+            let totalPdsCorte = 0;
+            let totalPdsDep = 0;
+            let grandTotalDefects = 0;
+            lastResumenRows.forEach(r => {
+                totalPdsCorte += toNum(r.PDS_CORTE || r.PDS_CORTE || 0);
+                totalPdsDep += toNum(r.PDS_DEPURADAS || r.PDS_DEP || 0);
+                (lastResumenDefects || []).forEach(col => {
+                    const v = toNum(r[col]) || toNum((r.DEFECTS && r.DEFECTS[col]) || 0);
+                    defectTotals[col] = (defectTotals[col] || 0) + v;
+                    grandTotalDefects += v;
+                });
+            });
+
+            const overallPct = totalPdsCorte > 0 ? (totalPdsDep / totalPdsCorte) * 100 : 0;
+
+            // Añadir fila de TOTALES al final
+            const totalsRow = [];
+            // Layout: CLIENTE, OP, COLOR, OP_TELA-PTDA, PDS CORTE, PDS DEPURADAS, %DEPURADO, ...defects..., TOTAL PZAS
+            totalsRow.push(''); // CLIENTE
+            totalsRow.push(''); // OP
+            totalsRow.push(''); // COLOR
+            totalsRow.push('TOTALES');
+            totalsRow.push(totalPdsCorte);
+            totalsRow.push(totalPdsDep);
+            totalsRow.push(overallPct / 100); // como fracción para formato %
+            (lastResumenDefects || []).forEach(col => totalsRow.push(defectTotals[col] || 0));
+            totalsRow.push(grandTotalDefects);
+            aoa.push(totalsRow);
+
+            // Añadir fila % de PARTICIPACION (por cada defecto: total defect / total defectos)
+            if (grandTotalDefects > 0) {
+                const participRow = [];
+                participRow.push(''); participRow.push(''); participRow.push(''); participRow.push('%Participacion');
+                participRow.push(''); participRow.push(''); participRow.push('');
+                (lastResumenDefects || []).forEach(col => participRow.push(defectTotals[col] / grandTotalDefects));
+                participRow.push('');
+                aoa.push(participRow);
+
+                // Añadir fila % del defecto = %Participacion * %DEPURADO general
+                const pctDefRow = [];
+                pctDefRow.push(''); pctDefRow.push(''); pctDefRow.push(''); pctDefRow.push('%Del Defecto');
+                pctDefRow.push(''); pctDefRow.push(''); pctDefRow.push('');
+                (lastResumenDefects || []).forEach(col => {
+                    const part = defectTotals[col] / grandTotalDefects;
+                    pctDefRow.push(part * (overallPct / 100));
+                });
+                pctDefRow.push('');
+                aoa.push(pctDefRow);
+            }
+
+            // Volver a generar worksheet con filas adicionales
+            const ws2 = XLSX.utils.aoa_to_sheet(aoa);
+
+            // Estilos en encabezado (primera fila)
+            try {
+                const headerRowIndex = 0;
+                for (let c = 0; c < headers.length; c++) {
+                    function colLetter(col) { let s = ''; let n = col; while (n >= 0) { s = String.fromCharCode((n % 26) + 65) + s; n = Math.floor(n / 26) - 1; } return s; }
+                    const addr = colLetter(c) + (headerRowIndex + 1);
+                    const cell = ws2[addr];
+                    if (cell) {
+                        cell.s = cell.s || {};
+                        cell.s.font = Object.assign({}, cell.s.font || {}, { name: 'Calibri', sz: 12, bold: true });
+                        cell.s.fill = { fgColor: { rgb: '9BC2E6' } };
+                        cell.s.alignment = { horizontal: 'center' };
+                    }
+                }
+            } catch (e) {
+                console.warn('No se pudieron aplicar estilos al encabezado (estilos en SheetJS pueden no estar soportados en esta build):', e);
+            }
+
+            // Aplicar formato porcentaje a la columna %DEPURADO y a las filas de %participacion/%del defecto
             const pctColIndex = headers.indexOf('%DEPURADO');
             if (pctColIndex >= 0) {
-                // función para convertir índice 0->A, 1->B, ...
-                function colLetter(col) {
-                    let s = '';
-                    let n = col;
-                    while (n >= 0) {
-                        s = String.fromCharCode((n % 26) + 65) + s;
-                        n = Math.floor(n / 26) - 1;
-                    }
-                    return s;
-                }
+                function colLetter(col) { let s = ''; let n = col; while (n >= 0) { s = String.fromCharCode((n % 26) + 65) + s; n = Math.floor(n / 26) - 1; } return s; }
                 const col = colLetter(pctColIndex);
                 for (let r = 2; r <= aoa.length; r++) {
-                    const addr = col + r; // e.g., G2
-                    if (ws[addr]) {
-                        // asegurar tipo numérico y formato porcentaje con 2 decimales
-                        ws[addr].t = 'n';
-                        // ws[addr].v is already numeric (fraction)
-                        ws[addr].z = '0.00%';
-                    }
+                    const addr = col + r;
+                    if (ws2[addr]) { ws2[addr].t = 'n'; ws2[addr].z = '0.00%'; }
                 }
             }
+
+            // Aplicar formato porcentaje a las filas de participacion y %del defecto (si existen)
+            if (grandTotalDefects > 0) {
+                const firstPercentRow = aoa.length - 2; // participRow index (1-based)
+                const secondPercentRow = aoa.length - 1; // pctDefRow index (1-based)
+                (lastResumenDefects || []).forEach((colName, ci) => {
+                    const defectColIndex = headers.indexOf(colName);
+                    if (defectColIndex >= 0) {
+                        const colL = (function(col) { let s = ''; let n = col; while (n >= 0) { s = String.fromCharCode((n % 26) + 65) + s; n = Math.floor(n / 26) - 1; } return s; })(defectColIndex);
+                        const addr1 = colL + (firstPercentRow + 1);
+                        const addr2 = colL + (secondPercentRow + 1);
+                        if (ws2[addr1]) { ws2[addr1].t = 'n'; ws2[addr1].z = '0.00%'; }
+                        if (ws2[addr2]) { ws2[addr2].t = 'n'; ws2[addr2].z = '0.00%'; }
+                    }
+                });
+            }
+
+            // Ajustar anchos de columna razonables
+            const colsConfig = headers.map(h => ({ wpx: (h.length > 12 ? 150 : 90) }));
+            ws2['!cols'] = colsConfig;
+
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Resumen_OP');
+            XLSX.utils.book_append_sheet(wb, ws2, 'Resumen_OP');
+
+            // Generar hoja Pareto basada en defectTotals
+            if ((lastResumenDefects || []).length > 0) {
+                const paretoArr = Object.keys(defectTotals).map(k => ({ defect: k, total: defectTotals[k] || 0 }));
+                paretoArr.sort((a, b) => b.total - a.total);
+                const paretoAoa = [['DEFECTO','TOTAL_PZAS','%PARTICIPACION','%DEL_DEFECTO','ACUMULADO%']];
+                let cum = 0;
+                paretoArr.forEach(p => {
+                    cum += p.total;
+                    const pctPart = grandTotalDefects > 0 ? (p.total / grandTotalDefects) : 0;
+                    const pctDel = pctPart * (overallPct / 100);
+                    paretoAoa.push([p.defect, p.total, pctPart, pctDel, (cum / grandTotalDefects) || 0]);
+                });
+                const wsP = XLSX.utils.aoa_to_sheet(paretoAoa);
+                // Formatear % columnas
+                for (let r = 2; r <= paretoAoa.length; r++) {
+                    if (wsP['C' + r]) { wsP['C' + r].t = 'n'; wsP['C' + r].z = '0.00%'; }
+                    if (wsP['D' + r]) { wsP['D' + r].t = 'n'; wsP['D' + r].z = '0.00%'; }
+                    if (wsP['E' + r]) { wsP['E' + r].t = 'n'; wsP['E' + r].z = '0.00%'; }
+                }
+                wsP['!cols'] = [{ wpx: 220 }, { wpx: 110 }, { wpx: 110 }, { wpx: 110 }, { wpx: 110 }];
+                XLSX.utils.book_append_sheet(wb, wsP, 'Pareto');
+            }
+
+            // Nombre de archivo similar al ejemplo
             const opVal = document.getElementById('opSearchInput') ? document.getElementById('opSearchInput').value.trim() : '';
             const colorVal = document.getElementById('colorSelect') ? document.getElementById('colorSelect').value : '';
             const stamp = (new Date()).toISOString().slice(0,19).replace(/[:T]/g,'-');
-            const fname = `Resumen_OP_${opVal || 'ALL'}_${colorVal || 'ALL'}_${stamp}.xlsx`;
+            const fname = `Depurado_Corte_OP_${opVal || 'ALL'}_${colorVal || 'LISTADO'}_${stamp}.xlsx`;
             XLSX.writeFile(wb, fname);
         }
 

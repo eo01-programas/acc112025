@@ -66,44 +66,34 @@
       gap: 10px;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 14px;
-    }
-
-    .left-controls{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-
-    label{
-      font-weight: 700;
+      grand.LotBox += sub.LotBox;
+      grand.TotalCajas += sub.TotalCajas;
+      // sumar dinámicamente todas las columnas de defectos desde el subtotal
+      defKeysGlobal.forEach(k => { grand[k] = (grand[k] || 0) + (sub[k] || 0); });
+      grand.TotDef += sub.TotDef;
+      grand.A1 += sub.A1; grand.A2 += sub.A2; grand.A3 += sub.A3; grand.A4 += sub.A4;
+      grand.TT += sub.TT;
       font-size: 13px;
     }
 
     select, button{
       font-family: Calibri, Arial, sans-serif;
       font-size: 13px;
-      padding: 6px 10px;
-      border: 1px solid #cfcfcf;
-      border-radius: 8px;
-      background: #fff;
-    }
-
-    button{
-      cursor: pointer;
-      font-weight: 700;
-    }
-    button:disabled{
-      cursor:not-allowed;
-      opacity:.55;
-    }
-
-    .badge{
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
+    // construir fila grand total dinámicamente
+    const grandCols = [];
+    grandCols.push('<td class="left">Total general</td>');
+    grandCols.push('<td></td>');
+    grandCols.push(`<td>${grand.LotBox}</td>`);
+    grandCols.push(`<td>${grand.TotalCajas}</td>`);
+    defKeysGlobal.forEach(k => { grandCols.push(`<td>${grand[k] || 0}</td>`); });
+    grandCols.push(`<td>${grand.TotDef}</td>`);
+    grandCols.push(`<td>${grandPctDef}%</td>`);
+    grandCols.push(`<td>${grand.A1}</td>`);
+    grandCols.push(`<td>${grand.A2}</td>`);
+    grandCols.push(`<td>${grand.A3}</td>`);
+    grandCols.push(`<td>${grand.A4}</td>`);
+    grandCols.push(`<td>${grand.TT}</td>`);
+    trG.innerHTML = grandCols.join('\n');
       border: 1px solid transparent;
       white-space: nowrap;
     }
@@ -113,23 +103,22 @@
       color:#856404;
     }
     .badge.success{
-      background:#e6ffef;
-      border-color:#c3e6cb;
-      color:#155724;
-    }
-    .badge.error{
-      background:#fff0f0;
-      border-color:#f5c6cb;
-      color:#721c24;
-    }
-
-    .wrap{
-      border: 1px solid #f0f0f0;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,.06);
-      overflow: hidden;
-      width: 85%; /* aumentado ~10% respecto al valor previo (77%) */
-      max-width: 85%;
+      // construir fila de porcentajes por cada columna de defecto detectada
+      const defPctCols = [];
+      defPctCols.push('<td class="left" colspan="4">DEFECTUOSO</td>');
+      defKeysGlobal.forEach(k => { defPctCols.push(`<td>${pct(grand[k] || 0)}%</td>`); });
+      defPctCols2.push(`<td>${pct(grand.TotDef)}</td>`);
+      defPctCols2.push('<td>BAP</td>');
+      // porcentaje de A1 relativo a TT (1 decimal)
+      const pctA1Val = (grand.TT && Number.isFinite(grand.TT) && grand.TT > 0)
+        ? ((Math.round(((grand.A1 || 0) / grand.TT) * 1000) / 10).toFixed(1) + '%')
+        : '0.0%';
+      defPctCols2.push(`<td>${pctA1Val}</td>`);
+      defPctCols2.push('<td></td>');
+      defPctCols2.push('<td></td>');
+      defPctCols2.push('<td></td>');
+      defPctCols2.push('<td></td>');
+      max-width: 100%;
     }
 
     .table-scroll{
@@ -611,6 +600,40 @@
     return !isNaN(d.getTime()) ? d : null;
   }
 
+  // Normalize display labels for defect columns
+  function normalizeKeyForMatch(s){
+    if(!s) return '';
+    // remove accents, convert to lower, collapse spaces
+    try{
+      return String(s).normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().replace(/\s+/g,' ').trim();
+    }catch(e){
+      return String(s).toLowerCase().replace(/\s+/g,' ').trim();
+    }
+  }
+
+  function displayLabelForHeader(orig){
+    const key = normalizeKeyForMatch(orig);
+    const map = {
+      'sin htag': 'S/htg',
+      'sin htag ': 'S/htg',
+      'sin sticker de bolsa': 's/sticker bolsa',
+      'sin sticker de la bolsa': 's/sticker bolsa',
+      'talla equivocada': 'xTalla',
+      'mismatch htg-estilo': 'xHtg-estilo',
+      'mismatch htg estilo': 'xHtg-estilo',
+      'rotulo incorrecto': 'xRotulo',
+      'rotulo roto': 'xRotulo',
+      'cubicaje incorrecto': 'xCubicaje',
+      'caja deteriorada': 'xCaja',
+      'peso excedido': 'Peso exc.',
+      'objetos extranos': 'Objetos extraños',
+      'objetos extraños': 'Objetos extraños',
+      'cantidad incorrecta': 'Ctd incorrecta',
+      'avios incorrectos': 'xAvios'
+    };
+    return map[key] || orig;
+  }
+
   function getWeekNumber(d) {
     const first = new Date(d.getFullYear(), 0, 1);
     const passed = d - first;
@@ -991,21 +1014,18 @@
       const key = factory + "|||" + customer;
 
       if(!groups.has(key)){
-        groups.set(key, {
+        const base = {
           FactoryCode: factory,
           Customer: customer,
           Reports: new Set(),
           LotBoxes: new Set(),
           TotalCajas: 0,
-          CantidadIncorrecta: 0,
-          AviosIncorrectos: 0,
-          RotuloIncorrecto: 0,
-          TallaEquivocada: 0,
-          SinStickerBolsa: 0,
-          PesoExcedido: 0,
-          ObjetosExtranos: 0,
           A1: 0, A2: 0, A3: 0, A4: 0
-        });
+        };
+        // inicializar dinámicamente columnas de defectos si existen
+        const defKeys = (window.__DEFECT_KEYS || []);
+        defKeys.forEach(k => { base[k] = 0; });
+        groups.set(key, base);
       }
       const g = groups.get(key);
 
@@ -1013,13 +1033,9 @@
       if(r.LotBox) g.LotBoxes.add(r.LotBox);
       
       g.TotalCajas += r.TotalCajas;
-      g.CantidadIncorrecta += r.CantidadIncorrecta;
-      g.AviosIncorrectos += r.AviosIncorrectos;
-      g.RotuloIncorrecto += r.RotuloIncorrecto;
-      g.TallaEquivocada += r.TallaEquivocada;
-      g.SinStickerBolsa += r.SinStickerBolsa;
-      g.PesoExcedido += r.PesoExcedido;
-      g.ObjetosExtranos += r.ObjetosExtranos;
+      // agregar dinámicamente los defectos
+      const defKeys2 = (window.__DEFECT_KEYS || []);
+      defKeys2.forEach(k => { g[k] = (g[k] || 0) + (r[k] || 0); });
 
       const att = parseAttempt(r.Intento);
       if(att === 1) g.A1++;
@@ -1033,26 +1049,25 @@
       const totalReports = g.Reports.size;     // Cuenta de Nº Report (únicos)
       const TT = g.A1 + g.A2 + g.A3 + g.A4;    // total intentos
       const lotBoxCount = g.LotBoxes.size;
-      const TotDef = g.CantidadIncorrecta + g.AviosIncorrectos + g.RotuloIncorrecto + g.TallaEquivocada + g.SinStickerBolsa + g.PesoExcedido + g.ObjetosExtranos;
+      // TotDef = suma de todas las columnas de defectos detectadas
+      const defKeys3 = (window.__DEFECT_KEYS || []);
+      const TotDef = defKeys3.reduce((acc,k)=> acc + (g[k] || 0), 0);
       const PctDef = g.TotalCajas > 0 ? Math.round((TotDef / g.TotalCajas) * 100) : 0;
-      return {
+      const baseOut = {
         FactoryCode: g.FactoryCode,
         Customer: g.Customer,
         LotBox: lotBoxCount,
         TotalCajas: g.TotalCajas,
-        CantidadIncorrecta: g.CantidadIncorrecta,
-        AviosIncorrectos: g.AviosIncorrectos,
-        RotuloIncorrecto: g.RotuloIncorrecto,
-        TallaEquivocada: g.TallaEquivocada,
-        SinStickerBolsa: g.SinStickerBolsa,
-        PesoExcedido: g.PesoExcedido,
-        ObjetosExtranos: g.ObjetosExtranos,
         TotDef: TotDef,
         PctDef: PctDef,
         TotalReports: totalReports,
         A1: g.A1, A2: g.A2, A3: g.A3, A4: g.A4,
         TT
       };
+      // agregar dinámicamente las columnas de defectos al objeto de salida
+      const defKeysOut = (window.__DEFECT_KEYS || []);
+      defKeysOut.forEach(k => { baseOut[k] = g[k] || 0; });
+      return baseOut;
     });
 
     // ordenar como Excel: Factory -> Customer
@@ -1066,6 +1081,32 @@
   }
 
   function renderSummary(rows){
+    // reconstruir encabezado dinámico según columnas detectadas
+    const defColsForHeader = (window.__DEFECT_COLUMNS || ["Avios incorrectos","Rotulo incorrecto","Talla equivocada","Sin sticker de bolsa","Peso excedido","Objetos extraños"]);
+    const theadEl = document.querySelector('#summaryTable thead');
+    if(theadEl){
+      // construir una sola fila de encabezado que incluirá todas las columnas
+      const headCols = [];
+      headCols.push('<tr>');
+      headCols.push('<th style="width:12%">Factory Code</th>');
+      headCols.push('<th style="width:10%">Customer</th>');
+      headCols.push('<th style="width:5%">Lot Box</th>');
+      headCols.push('<th style="width:5%">Total Cajas</th>');
+      defColsForHeader.forEach(orig => {
+        const label = displayLabelForHeader(orig);
+        headCols.push('<th style="width:6%">' + String(label).replace(/</g,'&lt;') + '</th>');
+      });
+      headCols.push('<th style="width:5%">Tot. Def.</th>');
+      headCols.push('<th style="width:5.5%">%Def.</th>');
+      headCols.push('<th style="width:2.5%">A1</th>');
+      headCols.push('<th style="width:2.5%">A2</th>');
+      headCols.push('<th style="width:2.5%">A3</th>');
+      headCols.push('<th style="width:2.5%">A4</th>');
+      headCols.push('<th style="width:2.5%">TT</th>');
+      headCols.push('</tr>');
+      theadEl.innerHTML = headCols.join('\n');
+    }
+
     tbody.innerHTML = "";
     currentRowsForExport = rows.slice();
 
@@ -1086,48 +1127,45 @@
       factories.get(r.FactoryCode).push(r);
     });
 
-    let grand = { LotBox:0, TotalCajas:0, CantidadIncorrecta:0, AviosIncorrectos:0, RotuloIncorrecto:0, TallaEquivocada:0, SinStickerBolsa:0, PesoExcedido:0, ObjetosExtranos:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
+    // crear objeto de totales que incluya dinámicamente defectos
+    let grand = { LotBox:0, TotalCajas:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
+    const defKeysGlobal = (window.__DEFECT_KEYS || []);
+    defKeysGlobal.forEach(k => { grand[k] = 0; });
 
     // Ordenar factories según orden personalizado
     const sortedFactories = sortFactories(factories);
 
     for(const [factory, list] of sortedFactories){
-      let sub = { LotBox:0, TotalCajas:0, CantidadIncorrecta:0, AviosIncorrectos:0, RotuloIncorrecto:0, TallaEquivocada:0, SinStickerBolsa:0, PesoExcedido:0, ObjetosExtranos:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
+      // crear subtotal con campos dinámicos
+      let sub = { LotBox:0, TotalCajas:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
+      defKeysGlobal.forEach(k => { sub[k] = 0; });
 
       list.forEach(r=>{
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="left">${escapeHtml(r.FactoryCode)}</td>
-          <td class="left">${escapeHtml(r.Customer)}</td>
-          <td>${formatCellNumber(r.LotBox)}</td>
-          <td>${formatCellNumber(r.TotalCajas)}</td>
-          <td>${formatCellNumber(r.CantidadIncorrecta)}</td>
-          <td>${formatCellNumber(r.AviosIncorrectos)}</td>
-          <td>${formatCellNumber(r.RotuloIncorrecto)}</td>
-          <td>${formatCellNumber(r.TallaEquivocada)}</td>
-          <td>${formatCellNumber(r.SinStickerBolsa)}</td>
-          <td>${formatCellNumber(r.PesoExcedido)}</td>
-          <td>${formatCellNumber(r.ObjetosExtranos)}</td>
-          <td>${formatCellNumber(r.TotDef)}</td>
-          <td>${r.PctDef}%</td>
-          <td>${formatCellNumber(r.A1)}</td>
-          <td>${formatCellNumber(r.A2)}</td>
-          <td>${formatCellNumber(r.A3)}</td>
-          <td>${formatCellNumber(r.A4)}</td>
-          <td>${r.TT}</td>
-        `;
+        // construir columnas dinámicamente: fijas primero
+        let cols = [];
+        cols.push(`<td class="left">${escapeHtml(r.FactoryCode)}</td>`);
+        cols.push(`<td class="left">${escapeHtml(r.Customer)}</td>`);
+        cols.push(`<td>${formatCellNumber(r.LotBox)}</td>`);
+        cols.push(`<td>${formatCellNumber(r.TotalCajas)}</td>`);
+        // insertar todas las columnas de defectos detectadas
+        defKeysGlobal.forEach(k => {
+          cols.push(`<td>${formatCellNumber(r[k])}</td>`);
+        });
+        cols.push(`<td>${formatCellNumber(r.TotDef)}</td>`);
+        cols.push(`<td>${r.PctDef}%</td>`);
+        cols.push(`<td>${formatCellNumber(r.A1)}</td>`);
+        cols.push(`<td>${formatCellNumber(r.A2)}</td>`);
+        cols.push(`<td>${formatCellNumber(r.A3)}</td>`);
+        cols.push(`<td>${formatCellNumber(r.A4)}</td>`);
+        cols.push(`<td>${r.TT}</td>`);
+        tr.innerHTML = cols.join('\n');
         tbody.appendChild(tr);
 
         sub.LotBox += r.LotBox;
         sub.TotalCajas += r.TotalCajas;
-        sub.CantidadIncorrecta += r.CantidadIncorrecta;
-        sub.AviosIncorrectos += r.AviosIncorrectos;
-        sub.RotuloIncorrecto += r.RotuloIncorrecto;
-        sub.TallaEquivocada += r.TallaEquivocada;
-        sub.SinStickerBolsa += r.SinStickerBolsa;
-        sub.PesoExcedido += r.PesoExcedido;
-        sub.ObjetosExtranos += r.ObjetosExtranos;
-        sub.TotDef += r.TotDef;
+        // sumar dinámicamente defectos (acumular solo en el subtotal aquí)
+        defKeysGlobal.forEach(k => { sub[k] += (r[k] || 0); sub.TotDef += (r[k] || 0); });
         sub.A1 += r.A1; sub.A2 += r.A2; sub.A3 += r.A3; sub.A4 += r.A4;
         sub.TT += r.TT;
       });
@@ -1136,37 +1174,27 @@
       const trSub = document.createElement("tr");
       trSub.className = "subtotal";
       const subPctDef = sub.TotalCajas > 0 ? Math.round((sub.TotDef / sub.TotalCajas) * 100) : 0;
-      trSub.innerHTML = `
-        <td class="left">Total ${escapeHtml(factory)}</td>
-        <td></td>
-        <td>${sub.LotBox}</td>
-        <td>${sub.TotalCajas}</td>
-        <td>${sub.CantidadIncorrecta}</td>
-        <td>${sub.AviosIncorrectos}</td>
-        <td>${sub.RotuloIncorrecto}</td>
-        <td>${sub.TallaEquivocada}</td>
-        <td>${sub.SinStickerBolsa}</td>
-        <td>${sub.PesoExcedido}</td>
-        <td>${sub.ObjetosExtranos}</td>
-        <td>${sub.TotDef}</td>
-        <td>${subPctDef}%</td>
-        <td>${sub.A1}</td>
-        <td>${sub.A2}</td>
-        <td>${sub.A3}</td>
-        <td>${sub.A4}</td>
-        <td>${sub.TT}</td>
-      `;
+      // construir fila subtotal dinamicamente
+      let subCols = [];
+      subCols.push(`<td class="left">Total ${escapeHtml(factory)}</td>`);
+      subCols.push(`<td></td>`);
+      subCols.push(`<td>${sub.LotBox}</td>`);
+      subCols.push(`<td>${sub.TotalCajas}</td>`);
+      defKeysGlobal.forEach(k => { subCols.push(`<td>${sub[k]}</td>`); });
+      subCols.push(`<td>${sub.TotDef}</td>`);
+      subCols.push(`<td>${subPctDef}%</td>`);
+      subCols.push(`<td>${sub.A1}</td>`);
+      subCols.push(`<td>${sub.A2}</td>`);
+      subCols.push(`<td>${sub.A3}</td>`);
+      subCols.push(`<td>${sub.A4}</td>`);
+      subCols.push(`<td>${sub.TT}</td>`);
+      trSub.innerHTML = subCols.join('\n');
       tbody.appendChild(trSub);
 
       grand.LotBox += sub.LotBox;
       grand.TotalCajas += sub.TotalCajas;
-      grand.CantidadIncorrecta += sub.CantidadIncorrecta;
-      grand.AviosIncorrectos += sub.AviosIncorrectos;
-      grand.RotuloIncorrecto += sub.RotuloIncorrecto;
-      grand.TallaEquivocada += sub.TallaEquivocada;
-      grand.SinStickerBolsa += sub.SinStickerBolsa;
-      grand.PesoExcedido += sub.PesoExcedido;
-      grand.ObjetosExtranos += sub.ObjetosExtranos;
+      // sumar dinámicamente todas las columnas de defectos desde el subtotal
+      defKeysGlobal.forEach(k => { grand[k] = (grand[k] || 0) + (sub[k] || 0); });
       grand.TotDef += sub.TotDef;
       grand.A1 += sub.A1; grand.A2 += sub.A2; grand.A3 += sub.A3; grand.A4 += sub.A4;
       grand.TT += sub.TT;
@@ -1176,52 +1204,50 @@
     const trG = document.createElement("tr");
     trG.className = "grandtotal";
     const grandPctDef = grand.TotalCajas > 0 ? Math.round((grand.TotDef / grand.TotalCajas) * 100) : 0;
-    trG.innerHTML = `
-      <td class="left">Total general</td>
-      <td></td>
-      <td>${grand.LotBox}</td>
-      <td>${grand.TotalCajas}</td>
-      <td>${grand.CantidadIncorrecta}</td>
-      <td>${grand.AviosIncorrectos}</td>
-      <td>${grand.RotuloIncorrecto}</td>
-      <td>${grand.TallaEquivocada}</td>
-      <td>${grand.SinStickerBolsa}</td>
-      <td>${grand.PesoExcedido}</td>
-      <td>${grand.ObjetosExtranos}</td>
-      <td>${grand.TotDef}</td>
-      <td>${grandPctDef}%</td>
-      <td>${grand.A1}</td>
-      <td>${grand.A2}</td>
-      <td>${grand.A3}</td>
-      <td>${grand.A4}</td>
-      <td>${grand.TT}</td>
-    `;
+    // construir fila grand total dinámicamente
+    const grandCols = [];
+    grandCols.push('<td class="left">Total general</td>');
+    grandCols.push('<td></td>');
+    grandCols.push(`<td>${grand.LotBox}</td>`);
+    grandCols.push(`<td>${grand.TotalCajas}</td>`);
+    defKeysGlobal.forEach(k => { grandCols.push(`<td>${grand[k] || 0}</td>`); });
+    grandCols.push(`<td>${grand.TotDef}</td>`);
+    grandCols.push(`<td>${grandPctDef}%</td>`);
+    grandCols.push(`<td>${grand.A1}</td>`);
+    grandCols.push(`<td>${grand.A2}</td>`);
+    grandCols.push(`<td>${grand.A3}</td>`);
+    grandCols.push(`<td>${grand.A4}</td>`);
+    grandCols.push(`<td>${grand.TT}</td>`);
+    trG.innerHTML = grandCols.join('\n');
     tbody.appendChild(trG);
 
     // fila DEFECTUOSO: combinar primeras 4 celdas y mostrar porcentajes relativos a Lot Box (0 decimales)
     (function(){
-      const denom = grand.LotBox || 0;
-      const pct = (n)=> denom > 0 ? Math.round((n / denom) * 100) : 0;
+      const denom = grand.TotDef || 0;
+      const pct = (n)=> {
+        if(!denom) return '0.0%';
+        const val = (Number(n || 0) / denom) * 100;
+        if(!Number.isFinite(val)) return '0.0%';
+        return (Math.round(val * 10) / 10).toFixed(1) + '%';
+      };
 
       const trDef = document.createElement('tr');
       trDef.className = 'defectRow';
-      trDef.innerHTML = `
-        <td class="left" colspan="4">DEFECTUOSO</td>
-        <td>${pct(grand.CantidadIncorrecta)}%</td>
-        <td>${pct(grand.AviosIncorrectos)}%</td>
-        <td>${pct(grand.RotuloIncorrecto)}%</td>
-        <td>${pct(grand.TallaEquivocada)}%</td>
-        <td>${pct(grand.SinStickerBolsa)}%</td>
-        <td>${pct(grand.PesoExcedido)}%</td>
-        <td>${pct(grand.ObjetosExtranos)}%</td>
-        <td>${pct(grand.TotDef)}%</td>
-        <td>${pct(grand.TotDef)}%</td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-      `;
+      // construir fila de porcentajes por cada columna de defecto detectada (relative a TotDef)
+      const defPctCols2 = [];
+      defPctCols2.push('<td class="left" colspan="4">DEFECTUOSO</td>');
+      defKeysGlobal.forEach(k => { defPctCols2.push(`<td>${pct(grand[k] || 0)}</td>`); });
+      defPctCols2.push(`<td>${pct(grand.TotDef)}</td>`);
+      defPctCols2.push('<td>BAP</td>');
+      // porcentaje de A1 relativo a TT (1 decimal)
+      const pctA1Val = (grand.TT && Number.isFinite(grand.TT) && grand.TT > 0)
+        ? ((Math.round(((grand.A1 || 0) / grand.TT) * 1000) / 10).toFixed(1) + '%')
+        : '0.0%';
+      defPctCols2.push(`<td>${pctA1Val}</td>`);
+      defPctCols2.push('<td></td>');
+      defPctCols2.push('<td></td>');
+      defPctCols2.push('<td></td>');
+      trDef.innerHTML = defPctCols2.join('\n');
       tbody.appendChild(trDef);
     })();
 
@@ -1288,21 +1314,17 @@
       const key = factory + "|||" + customer;
 
       if(!groups.has(key)){
-        groups.set(key, {
+        const base = {
           FactoryCode: factory,
           Customer: customer,
           Reports: new Set(),
           LotBoxes: new Set(),
           TotalCajas: 0,
-          CantidadIncorrecta: 0,
-          AviosIncorrectos: 0,
-          RotuloIncorrecto: 0,
-          TallaEquivocada: 0,
-          SinStickerBolsa: 0,
-          PesoExcedido: 0,
-          ObjetosExtranos: 0,
           A1: 0, A2: 0, A3: 0, A4: 0
-        });
+        };
+        const defKeysLocal = (window.__DEFECT_KEYS || []);
+        defKeysLocal.forEach(k => { base[k] = 0; });
+        groups.set(key, base);
       }
       const g = groups.get(key);
 
@@ -1310,13 +1332,8 @@
       if(r.LotBox) g.LotBoxes.add(r.LotBox);
       
       g.TotalCajas += r.TotalCajas;
-      g.CantidadIncorrecta += r.CantidadIncorrecta;
-      g.AviosIncorrectos += r.AviosIncorrectos;
-      g.RotuloIncorrecto += r.RotuloIncorrecto;
-      g.TallaEquivocada += r.TallaEquivocada;
-      g.SinStickerBolsa += r.SinStickerBolsa;
-      g.PesoExcedido += r.PesoExcedido;
-      g.ObjetosExtranos += r.ObjetosExtranos;
+      const defKeysLocal2 = (window.__DEFECT_KEYS || []);
+      defKeysLocal2.forEach(k => { g[k] = (g[k] || 0) + (r[k] || 0); });
 
       const att = parseAttempt(r.Intento);
       if(att === 1) g.A1++;
@@ -1330,26 +1347,22 @@
       const totalReports = g.Reports.size;
       const TT = g.A1 + g.A2 + g.A3 + g.A4;
       const lotBoxCount = g.LotBoxes.size;
-      const TotDef = g.CantidadIncorrecta + g.AviosIncorrectos + g.RotuloIncorrecto + g.TallaEquivocada + g.SinStickerBolsa + g.PesoExcedido + g.ObjetosExtranos;
+      const defKeysLocal3 = (window.__DEFECT_KEYS || []);
+      const TotDef = defKeysLocal3.reduce((acc,k)=> acc + (g[k] || 0), 0);
       const PctDef = g.TotalCajas > 0 ? Math.round((TotDef / g.TotalCajas) * 100) : 0;
-      return {
+      const baseOut = {
         FactoryCode: g.FactoryCode,
         Customer: g.Customer,
         LotBox: lotBoxCount,
         TotalCajas: g.TotalCajas,
-        CantidadIncorrecta: g.CantidadIncorrecta,
-        AviosIncorrectos: g.AviosIncorrectos,
-        RotuloIncorrecto: g.RotuloIncorrecto,
-        TallaEquivocada: g.TallaEquivocada,
-        SinStickerBolsa: g.SinStickerBolsa,
-        PesoExcedido: g.PesoExcedido,
-        ObjetosExtranos: g.ObjetosExtranos,
         TotDef: TotDef,
         PctDef: PctDef,
         TotalReports: totalReports,
         A1: g.A1, A2: g.A2, A3: g.A3, A4: g.A4,
         TT
       };
+      defKeysLocal3.forEach(k=> { baseOut[k] = g[k] || 0; });
+      return baseOut;
     });
 
     // ordenar como Excel: Factory -> Customer
@@ -1369,10 +1382,14 @@
     if(!currentRowsForExport || currentRowsForExport.length === 0) return;
 
     const w = weekSelect.value || "NA";
+    // construir encabezado dinámico incluyendo defect columns si están detectadas
+    const defColsExp = (window.__DEFECT_COLUMNS || ["Avios incorrectos","Rotulo incorrecto","Talla equivocada","Sin sticker de bolsa","Peso excedido","Objetos extraños"]);
+    // usar etiquetas normalizadas para el encabezado del Excel también
+    const defColsExpLabels = defColsExp.map(c => displayLabelForHeader(c));
     const aoa = [
       ["Week", w],
       [],
-      ["Factory Code","Customer","Lot Box","Total Cajas","Ctd Incorrecta","xAvios","xRotulo","xTalla","s/sticker bolsa","Peso exc.","Objetos extraños","Tot. Def.","%Def.","A1","A2","A3","A4","TT"],
+      ["Factory Code","Customer","Lot Box","Total Cajas", ...defColsExpLabels, "Tot. Def.","%Def.","A1","A2","A3","A4","TT"],
     ];
 
     // reconstruir con subtotales + total general
@@ -1383,34 +1400,50 @@
       factories.get(r.FactoryCode).push(r);
     });
 
-    let grand = { LotBox:0, TotalCajas:0, CantidadIncorrecta:0, AviosIncorrectos:0, RotuloIncorrecto:0, TallaEquivocada:0, SinStickerBolsa:0, PesoExcedido:0, ObjetosExtranos:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
+    // grand totals dinámicos (incluye columnas de defectos detectadas)
+    let grand = { LotBox:0, TotalCajas:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
+    const defKeysExpInit = (window.__DEFECT_KEYS || []);
+    defKeysExpInit.forEach(k=> { grand[k] = 0; });
 
     for(const [factory, list] of factories.entries()){
-      let sub = { LotBox:0, TotalCajas:0, CantidadIncorrecta:0, AviosIncorrectos:0, RotuloIncorrecto:0, TallaEquivocada:0, SinStickerBolsa:0, PesoExcedido:0, ObjetosExtranos:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
+      let sub = { LotBox:0, TotalCajas:0, TotDef:0, A1:0, A2:0, A3:0, A4:0, TT:0 };
+      defKeysExpInit.forEach(k => { sub[k] = 0; });
 
       list.forEach(r=>{
-        aoa.push([r.FactoryCode, r.Customer, r.LotBox, r.TotalCajas, r.CantidadIncorrecta, r.AviosIncorrectos, r.RotuloIncorrecto, r.TallaEquivocada, r.SinStickerBolsa, r.PesoExcedido, r.ObjetosExtranos, r.TotDef, r.PctDef+"%", r.A1, r.A2, r.A3, r.A4, r.TT]);
-        sub.LotBox+=r.LotBox; sub.TotalCajas+=r.TotalCajas; sub.CantidadIncorrecta+=r.CantidadIncorrecta; sub.AviosIncorrectos+=r.AviosIncorrectos; sub.RotuloIncorrecto+=r.RotuloIncorrecto; sub.TallaEquivocada+=r.TallaEquivocada; sub.SinStickerBolsa+=r.SinStickerBolsa; sub.PesoExcedido+=r.PesoExcedido; sub.ObjetosExtranos+=r.ObjetosExtranos; sub.TotDef+=r.TotDef;
+        // construir fila con defect columns dinámicos
+        const defKeysExp = (window.__DEFECT_KEYS || []);
+        const defValues = defKeysExp.map(k => r[k] || 0);
+        aoa.push([r.FactoryCode, r.Customer, r.LotBox, r.TotalCajas, ...defValues, r.TotDef, r.PctDef+"%", r.A1, r.A2, r.A3, r.A4, r.TT]);
+        sub.LotBox+=r.LotBox; sub.TotalCajas+=r.TotalCajas; sub.TotDef+=r.TotDef;
+        defKeysExp.forEach(k => { sub[k] += (r[k] || 0); });
         sub.A1+=r.A1; sub.A2+=r.A2; sub.A3+=r.A3; sub.A4+=r.A4;
         sub.TT+=r.TT;
       });
       const subPctDef = sub.TotalCajas > 0 ? Math.round((sub.TotDef / sub.TotalCajas) * 100) : 0;
-      aoa.push([`Total ${factory}`,"", sub.LotBox, sub.TotalCajas, sub.CantidadIncorrecta, sub.AviosIncorrectos, sub.RotuloIncorrecto, sub.TallaEquivocada, sub.SinStickerBolsa, sub.PesoExcedido, sub.ObjetosExtranos, sub.TotDef, subPctDef+"%", sub.A1, sub.A2, sub.A3, sub.A4, sub.TT]);
+      const defKeysExp2 = (window.__DEFECT_KEYS || []);
+      const defRowValues = defKeysExp2.map(k => sub[k] || 0);
+      aoa.push([`Total ${factory}`,"", sub.LotBox, sub.TotalCajas, ...defRowValues, sub.TotDef, subPctDef+"%", sub.A1, sub.A2, sub.A3, sub.A4, sub.TT]);
 
-      grand.LotBox+=sub.LotBox; grand.TotalCajas+=sub.TotalCajas; grand.CantidadIncorrecta+=sub.CantidadIncorrecta; grand.AviosIncorrectos+=sub.AviosIncorrectos; grand.RotuloIncorrecto+=sub.RotuloIncorrecto; grand.TallaEquivocada+=sub.TallaEquivocada; grand.SinStickerBolsa+=sub.SinStickerBolsa; grand.PesoExcedido+=sub.PesoExcedido; grand.ObjetosExtranos+=sub.ObjetosExtranos; grand.TotDef+=sub.TotDef;
+      grand.LotBox+=sub.LotBox; grand.TotalCajas+=sub.TotalCajas; grand.TotDef+=sub.TotDef;
+      defKeysExpInit.forEach(k => { grand[k] += (sub[k] || 0); });
       grand.A1+=sub.A1; grand.A2+=sub.A2; grand.A3+=sub.A3; grand.A4+=sub.A4;
       grand.TT+=sub.TT;
     }
     const grandPctDef = grand.TotalCajas > 0 ? Math.round((grand.TotDef / grand.TotalCajas) * 100) : 0;
-    aoa.push(["Total general","", grand.LotBox, grand.TotalCajas, grand.CantidadIncorrecta, grand.AviosIncorrectos, grand.RotuloIncorrecto, grand.TallaEquivocada, grand.SinStickerBolsa, grand.PesoExcedido, grand.ObjetosExtranos, grand.TotDef, grandPctDef+"%", grand.A1, grand.A2, grand.A3, grand.A4, grand.TT]);
+    const defKeysExp3 = (window.__DEFECT_KEYS || []);
+    const grandDefVals = defKeysExp3.map(k => grand[k] || 0);
+    aoa.push(["Total general","", grand.LotBox, grand.TotalCajas, ...grandDefVals, grand.TotDef, grandPctDef+"%", grand.A1, grand.A2, grand.A3, grand.A4, grand.TT]);
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     // anchos (parecido a tu formato)
-    ws["!cols"] = [
-      {wch:16},{wch:22},{wch:12},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6}
-    ];
+    // ajustar ancho de columnas para incluir dinámicamente columnas de defectos
+    const defCount = (window.__DEFECT_COLUMNS || []).length;
+    const baseCols = [ {wch:16},{wch:22},{wch:12},{wch:6} ];
+    for(let i=0;i<defCount;i++) baseCols.push({wch:8});
+    baseCols.push({wch:8},{wch:6},{wch:3},{wch:3},{wch:3},{wch:3},{wch:3});
+    ws["!cols"] = baseCols;
 
     XLSX.utils.book_append_sheet(wb, ws, "tabla resultado");
     XLSX.writeFile(wb, `Cuadro_resumen_week_${w}.xlsx`);
@@ -1428,7 +1461,33 @@
     try{
       const raw = await loadSheetJSONP(SHEET_ID, SHEET_NAME);
 
-      // Mapear SOLO lo necesario, como en tu ejemplo :contentReference[oaicite:6]{index=6}
+      // Detectar dinámicamente columnas de defectos entre "Total Cajas" y "Tot. Def." en la hoja
+      const headers = raw && raw.length ? Object.keys(raw[0]) : [];
+      const idxTotalCajas = headers.findIndex(h => /total\s*cajas|totalboxes|total boxes/i.test(String(h)));
+      const idxTotDef = headers.findIndex(h => /tot\.?\s*def|totdef|total\s*defect/i.test(String(h)));
+      let defectColumns = [];
+      if (idxTotalCajas >= 0 && idxTotDef > idxTotalCajas) {
+        defectColumns = headers.slice(idxTotalCajas + 1, idxTotDef).map(h => String(h).trim()).filter(Boolean);
+        // Excluir columnas que no son defectos reales: encabezados que empiezan con '%' (ej. %Auditoria)
+        // y columnas relacionadas con muestreo/cajas muestreadas.
+        defectColumns = defectColumns.filter(h => {
+          if (!h) return false;
+          const s = String(h).trim().toLowerCase();
+          // excluir cualquier columna que empiece con '%' (p. ej. '%Auditoria')
+          if (s.startsWith('%')) return false;
+          // excluir columnas que indiquen 'muestra'/'muestreo' relacionadas con caja
+          if ((s.includes('muestr') || s.includes('muest')) && (s.includes('caja') || s.includes('cja'))) return false;
+          return true;
+        });
+      } else {
+        // fallback a las columnas más comunes si no se detecta el rango
+        defectColumns = ["Avios incorrectos","Rotulo incorrecto","Talla equivocada","Sin sticker de bolsa","Peso excedido","Objetos extraños"];
+      }
+
+      // normalizar nombres a propiedades seguras
+      const defectKeys = defectColumns.map(h => h.replace(/\s+/g,'_').replace(/[^\w]/g,''));
+
+      // Mapear fila y agregar dinámicamente columnas de defectos
       grid = raw.map(row=>{
         const Week = asWeek(getField(row, ["Week","WEEK","Semana"]));
         const FactoryCode = asText(getField(row, ["Factory Code","FactoryCode","Factory"]));
@@ -1438,15 +1497,21 @@
         const Report = asText(getField(row, ["Nº Report","N° Report","No Report","Report","Report No","N Report"]));
         const LotBox = asText(getField(row, ["Lot Box","LotBox","Lote"]));
         const TotalCajas = parseFloat(getField(row, ["Total Cajas","TotalCajas","Total Boxes"])) || 0;
-        const CantidadIncorrecta = parseFloat(getField(row, ["Cantidad Incorrecta","CantidadIncorrecta","Incorrect Quantity"])) || 0;
-        const AviosIncorrectos = parseFloat(getField(row, ["Avios incorrectos","AviosIncorrectos","Incorrect Trims"])) || 0;
-        const RotuloIncorrecto = parseFloat(getField(row, ["Rotulo incorrecto","RotuloIncorrecto","Incorrect Label"])) || 0;
-        const TallaEquivocada = parseFloat(getField(row, ["Talla equivocada","TallaEquivocada","Wrong Size"])) || 0;
-        const SinStickerBolsa = parseFloat(getField(row, ["Sin sticker de bolsa","SinStickerBolsa","No Bag Sticker"])) || 0;
-        const PesoExcedido = parseFloat(getField(row, ["Peso excedido","PesoExcedido","Overweight"])) || 0;
-        const ObjetosExtranos = parseFloat(getField(row, ["Objetos extraños","ObjetosExtranos","Foreign Objects"])) || 0;
-        return { Week, FactoryCode, Customer, Result, Intento, Report, LotBox, TotalCajas, CantidadIncorrecta, AviosIncorrectos, RotuloIncorrecto, TallaEquivocada, SinStickerBolsa, PesoExcedido, ObjetosExtranos };
+
+        const out = { Week, FactoryCode, Customer, Result, Intento, Report, LotBox, TotalCajas };
+
+        // extraer dinámicamente cada columna de defecto
+        defectColumns.forEach((colName, i) => {
+          const key = defectKeys[i] || colName.replace(/\s+/g,'_').replace(/[^\w]/g,'');
+          out[key] = parseFloat(getField(row, [colName])) || 0;
+        });
+
+        return out;
       });
+
+      // Guardar en scope global para usar al renderizar
+      window.__DEFECT_COLUMNS = defectColumns;
+      window.__DEFECT_KEYS = defectKeys;
 
       const weeks = Array.from(new Set(grid.map(r=>r.Week).filter(Boolean)));
       weeks.sort((a,b)=>{

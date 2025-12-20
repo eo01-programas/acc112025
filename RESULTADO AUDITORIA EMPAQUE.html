@@ -12,6 +12,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 
+  <!-- jQuery + Select2 (para multi-select estilo referencia) -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
   <style>
     :root{
       --header-bg: #e3f2fd;
@@ -329,12 +334,12 @@
       min-width: 180px;
       max-height: 200px;
       overflow-y: auto;
-      z-index: 1000;
+      z-index: 2000;
       padding: 8px 0;
     }
 
     .customer-dropdown.show{
-      display: block;
+      display: block !important;
     }
 
     .customer-option{
@@ -450,6 +455,105 @@
         max-width: 100%;
       }
     }
+    /* Modal styles (simple, similar to reference) */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 20px;
+      border: none;
+      border-radius: 8px;
+      width: 95%;
+      max-width: 1000px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close:hover,
+    .close:focus { color: #000; }
+
+    .chart-container { position: relative; height: 360px; margin-top: 12px; }
+    /* Modal filter box styled like reference image */
+    .modal-filters {
+      width: 95%;
+      margin: 6px auto 0 auto;
+      background: #ecf9ee;
+      border: 2px solid #bfe6c6;
+      border-radius: 12px;
+      padding: 8px 12px;
+      display: flex;
+      gap: 2px; /* reduced per request */
+      align-items: center;
+      justify-content: flex-start;
+      box-sizing: border-box;
+    }
+
+    .modal-filters .filter-item{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+    .modal-filters label{ font-weight:700; color:#2b6b3a; font-size:14px; }
+    .modal-filters .short-select{ padding:8px 10px; border-radius:6px; border:1px solid #cfded0; background:#fff; }
+    .modal-filters .customer-input{ padding:10px 12px; min-width:260px; border-radius:8px; border:1px solid #cfded0; }
+
+    /* Row layout for specific filter items (label left of control) */
+    .modal-filters .filter-item.row{ flex-direction:row; align-items:center; gap:2px !important; }
+    .modal-filters .filter-item.row label{
+      margin-right:2px !important;
+      min-width:60px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:4px 6px !important;
+      height:34px;
+      box-sizing:border-box;
+    }
+    /* ensure selects sit directly after label with minimal gap */
+    .modal-filters .filter-item.row .short-select,
+    .modal-filters .filter-item.row .customer-input,
+    .modal-filters .filter-item.row .select2-container--default,
+    .modal-filters .filter-item.row .select2-selection--single,
+    .modal-filters .filter-item.row .select2-selection--multiple {
+      margin-left: 0 !important;
+    }
+    /* make customer select half the previous width (~160px) */
+    .modal-filters .filter-item.row .customer-input{ width: 140px !important; padding:6px 8px; }
+    /* tighten default short-select width for factory/weeks */
+    .modal-filters .filter-item.row .short-select{ min-width:100px; padding:6px 8px; }
+    /* Force Select2 rendered container width when Select2 is active */
+    .modal-filters .filter-item.row .select2-container--default { width: 160px !important; }
+    .modal-filters .filter-item.row .select2-selection--single,
+    .modal-filters .filter-item.row .select2-selection--multiple { width: 160px !important; min-width: 160px !important; }
+
+    /* Select2 tweaks to match reference modal look */
+    .select2-container--default .select2-selection--multiple,
+    .select2-container--default .select2-selection--single {
+      border-radius: 12px;
+      min-height: 34px;
+      padding: 4px 6px;
+      border: 2px solid #ececec;
+      background: #fff;
+      box-shadow: none;
+    }
+    .select2-selection__rendered { font-family: Calibri, Arial, sans-serif; font-size: 12px; font-weight:700; }
+    .select2-results__option .s2-label { font-family: Calibri, Arial, sans-serif; font-size: 12px; font-weight:700; }
+    .s2-checkbox { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #cfd8dd; background: #fff; accent-color: #1e88e5; margin-right:8px; }
   </style>
 </head>
 <body>
@@ -542,7 +646,8 @@
 
     <div class="right-controls">
       <button id="btnExport" disabled>Descargar Excel</button>
-      <span id="status" class="badge loading">Cargando datos desde Google Sheets…</span>
+      <button id="btnChart" class="btn-chart" disabled style="margin-left:8px">📊 Gráficos</button>
+      <span id="status" class="badge loading" style="margin-left:12px">Cargando datos desde Google Sheets…</span>
     </div>
   </div>
 
@@ -580,6 +685,57 @@
     </div>
 
     <!-- Charts removed per request -->
+    <!-- Modal para Gráficos -->
+    <div id="chartModal" class="modal" aria-hidden="true">
+      <div class="modal-content">
+        <span class="close" id="closeChartModal">&times;</span>
+        <h2 style="text-align:center; margin-top:0;">Performance Auditorias Empaque</h2>
+        <div class="modal-filters" role="region" aria-label="Filtros del gráfico">
+            <div class="filter-item row" style="min-width:200px;">
+              <label for="chartCustomerBtn">Customer:</label>
+              <div class="customer-filter-wrapper">
+                <button class="customer-filter-button" id="chartCustomerBtn" type="button">
+                  <span id="chartCustomerLabel">Todos</span>
+                  <span>▼</span>
+                </button>
+                <div class="customer-dropdown" id="chartCustomerDropdown"></div>
+              </div>
+            </div>
+
+          <div class="filter-item row" style="min-width:140px;">
+            <label for="chartFactoryFilter">Factory Code:</label>
+            <select id="chartFactoryFilter" class="short-select"><option value="all">Todos los Factory Codes</option></select>
+          </div>
+
+          <div class="filter-item row" style="min-width:120px;">
+            <label for="weekFromFilter">Desde:</label>
+            <select id="weekFromFilter" class="short-select">
+              <option value="46">SEM46</option>
+              <option value="47">SEM47</option>
+              <option value="48">SEM48</option>
+              <option value="49">SEM49</option>
+              <option value="50">SEM50</option>
+              <option value="51" selected>SEM51</option>
+            </select>
+          </div>
+
+          <div class="filter-item row" style="min-width:120px;">
+            <label for="weekToFilter">Hasta:</label>
+            <select id="weekToFilter" class="short-select">
+              <option value="46">SEM46</option>
+              <option value="47">SEM47</option>
+              <option value="48">SEM48</option>
+              <option value="49">SEM49</option>
+              <option value="50">SEM50</option>
+              <option value="51" selected>SEM51</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="trendsChart"></canvas>
+        </div>
+      </div>
+    </div>
   </div>
 
   
@@ -924,6 +1080,15 @@
   const btnExport   = document.getElementById("btnExport");
   const statusEl    = document.getElementById("status");
   const tbody       = document.getElementById("tbody");
+  const btnChart    = document.getElementById("btnChart");
+  const chartModal  = document.getElementById('chartModal');
+  const closeChartModal = document.getElementById('closeChartModal');
+  const chartFactoryFilter = document.getElementById('chartFactoryFilter');
+  // modal customer dropdown elements (custom dropdown, mirror main page)
+  const chartCustomerBtn = document.getElementById('chartCustomerBtn');
+  const chartCustomerDropdown = document.getElementById('chartCustomerDropdown');
+  const chartCustomerLabel = document.getElementById('chartCustomerLabel');
+  let modalSelectedCustomers = new Set();
 
   const yearSelect = document.getElementById("yearSelect");
   const periodSelect = document.getElementById("periodSelect");
@@ -1450,6 +1615,321 @@
   }
 
   // =========================================================
+  // Chart modal: funciones simples para mostrar tendencias
+  // =========================================================
+  let trendsChartRef = null;
+
+  function getLastWeeksTotals(limit = 6, factory = 'all', selectedCustomers = [], weeksList = null){
+    // Determine weeks to use: if weeksList provided use it, otherwise derive last `limit` weeks from `grid` data
+    let weeksToUse = [];
+    if(Array.isArray(weeksList) && weeksList.length){
+      weeksToUse = weeksList.slice();
+    } else {
+      const weeks = Array.from(new Set((grid || []).map(r => asWeek(r.Week)).filter(Boolean)));
+      weeks.sort((a,b)=>{ const na=parseInt(a,10), nb=parseInt(b,10); if(!Number.isNaN(na) && !Number.isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
+      if(weeks.length === 0){
+        // fallback static if no data
+        weeksToUse = ['46','47','48','49','50','51'].slice(-limit);
+      } else {
+        weeksToUse = weeks.slice(Math.max(0, weeks.length - limit));
+      }
+    }
+
+    const defectKeys = window.__DEFECT_KEYS || [];
+    const out = [];
+
+    weeksToUse.forEach(weekNum => {
+      let totDef = 0;
+      let totalCajas = 0;
+      let intentoOnes = 0;
+      let intentoAny = 0;
+
+      for(const r of grid){
+        const w = asWeek(r.Week);
+        if(String(w) !== String(weekNum)) continue;
+        // aplicar factory filter
+        if(factory && factory !== 'all'){
+          if(!String(r.FactoryCode || '').toLowerCase().includes(String(factory).toLowerCase())) continue;
+        }
+        // aplicar customer filter si hay seleccionado
+        if(Array.isArray(selectedCustomers) && selectedCustomers.length){
+          if(!selectedCustomers.includes(String(r.Customer || ''))) continue;
+        }
+
+        defectKeys.forEach(k => { totDef += Number(r[k] || 0); });
+        totalCajas += Number(r.TotalCajas || 0);
+
+        const att = parseAttempt(r.Intento);
+        if(att !== null && att !== undefined){ intentoAny++; }
+        if(att === 1) intentoOnes++;
+      }
+
+      const bap = intentoAny > 0 ? Math.round((intentoOnes / intentoAny) * 100) : 0; // entero
+      const pctDef = totalCajas > 0 ? Math.round((totDef / totalCajas) * 10000) / 100 : 0; // 2 decimales
+
+      out.push({ week: weekNum, bap: bap, pctDef: pctDef, totDef, totalCajas });
+    });
+
+    return out;
+  }
+
+  function createTrendsChart(data){
+    const ctx = document.getElementById('trendsChart').getContext('2d');
+    if(trendsChartRef){ try{ trendsChartRef.destroy(); }catch(e){} }
+
+    // Preparar arrays
+    const labels = data.map(d => 'SEM' + d.week);
+    const bapValues = data.map(d => d.bap);
+    const defectValues = data.map(d => d.pctDef);
+
+    // Calcular máximo para eje de defectos (izquierdo)
+    const maxDefectValue = defectValues.length ? Math.max(...defectValues) : 0;
+    const yAxisMax = Math.ceil(maxDefectValue * 1.2);
+
+    // Registrar plugin de datalabels si está disponible
+    try{ if(window.Chart && window.ChartDataLabels){ Chart.register(ChartDataLabels); } }catch(e){}
+
+    trendsChartRef = new Chart(ctx, {
+      type: 'bar',
+      plugins: (window.Chart && window.ChartDataLabels) ? [ChartDataLabels] : [],
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: '% Defectuosos',
+            data: defectValues,
+            borderColor: '#FF6B6B',
+            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+            borderWidth: 3,
+            fill: false,
+            tension: 0.1,
+            pointBackgroundColor: '#FF6B6B',
+            pointBorderColor: '#FF6B6B',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            type: 'line',
+            yAxisID: 'y',
+            order: 1
+          },
+          {
+            label: 'BAP (%)',
+            data: bapValues,
+            backgroundColor: 'rgba(74, 144, 226, 0.8)',
+            borderColor: '#4A90E2',
+            borderWidth: 2,
+            type: 'bar',
+            yAxisID: 'y1',
+            order: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'bottom' },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: function(context){
+                if(context.datasetIndex === 0){
+                  return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
+                } else {
+                  return `${context.dataset.label}: ${context.parsed.y}%`;
+                }
+              }
+            }
+          },
+          datalabels: {
+            display: true,
+            color: function(context){ return context.datasetIndex === 0 ? '#000000' : '#003d82'; },
+            font: { family: 'Calibri', size: 16, weight: 'bold' },
+            formatter: function(value, context){
+              if(context.datasetIndex === 0) return value.toFixed(2) + '%';
+              return value + '%';
+            },
+            anchor: function(context){ return 'end'; },
+            align: function(context){ return context.datasetIndex === 0 ? 'bottom' : 'top'; },
+            offset: 8
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Semanas', font: { size: 14, weight: 'bold' } },
+            grid: { display: true, color: 'rgba(0,0,0,0.1)' }
+          },
+          y: {
+            type: 'linear', display: true, position: 'left',
+            title: { display: true, text: '% Defectuosos', font: { size: 14, weight: 'bold' } },
+            beginAtZero: true, max: yAxisMax,
+            grid: { display: true, color: 'rgba(0,0,0,0.1)' },
+            ticks: { callback: function(value){ return value.toFixed(2) + '%'; } }
+          },
+          y1: {
+            type: 'linear', display: true, position: 'right',
+            title: { display: true, text: 'BAP (%)', font: { size: 14, weight: 'bold' } },
+            beginAtZero: true, max: 110,
+            grid: { drawOnChartArea: false },
+            ticks: { callback: function(value){ return value + '%'; } }
+          }
+        },
+        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+        elements: { point: { hoverRadius: 10 } }
+      }
+    });
+  }
+
+  function populateChartFilters(){
+    // poblar factory select con factories únicos
+    const factories = Array.from(new Set(grid.map(r=> r.FactoryCode).filter(Boolean))).sort();
+    chartFactoryFilter.innerHTML = '<option value="all">Todos</option>' + factories.map(f=> `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+    // poblar customers en modal usando el mismo estilo del dropdown principal
+    const customers = Array.from(new Set(grid.map(r=> r.Customer).filter(Boolean))).sort();
+    modalSelectedCustomers = new Set(customers); // seleccionar todos por defecto
+    if(chartCustomerDropdown){
+      chartCustomerDropdown.innerHTML = '';
+      customers.forEach(customer => {
+        const option = document.createElement('div');
+        option.className = 'customer-option';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `chart_customer_${customer.replace(/\s+/g, '_')}`;
+        checkbox.checked = true;
+        checkbox.dataset.customer = customer;
+
+        const label = document.createElement('label');
+        label.textContent = customer;
+        label.htmlFor = checkbox.id;
+
+        checkbox.addEventListener('change', function(){
+          if(this.checked) modalSelectedCustomers.add(customer);
+          else modalSelectedCustomers.delete(customer);
+          updateChartCustomerLabel();
+          updateChartFromModal();
+        });
+
+        option.appendChild(checkbox);
+        option.appendChild(label);
+        chartCustomerDropdown.appendChild(option);
+      });
+    }
+
+    // populate modal week selects (Desde/Hasta)
+    try{ populateModalWeekFilters(); }catch(e){}
+    // update modal customer label and wire button
+    try{ updateChartCustomerLabel(); }catch(e){}
+    if(chartCustomerBtn){
+      chartCustomerBtn.addEventListener('click', function(ev){ ev.stopPropagation(); chartCustomerDropdown.classList.toggle('show'); });
+    }
+    // click outside to close modal dropdown
+    document.addEventListener('click', function(e){ if(chartCustomerDropdown && !chartCustomerBtn.contains(e.target) && !chartCustomerDropdown.contains(e.target)) chartCustomerDropdown.classList.remove('show'); });
+  }
+
+  function updateChartCustomerLabel(){
+    if(!chartCustomerDropdown || !chartCustomerLabel) return;
+    const total = chartCustomerDropdown.querySelectorAll('input[type="checkbox"]').length;
+    const selected = modalSelectedCustomers.size;
+    if(selected === 0) chartCustomerLabel.textContent = 'Ninguno seleccionado';
+    else if(selected === total) chartCustomerLabel.textContent = 'Todos los Customers';
+    else chartCustomerLabel.textContent = `${selected} de ${total} Customers`;
+  }
+
+  function populateModalWeekFilters(){
+    const weeks = Array.from(new Set((grid || []).map(r=> asWeek(r.Week)).filter(Boolean)));
+    weeks.sort((a,b)=>{ const na=parseInt(a,10), nb=parseInt(b,10); if(!Number.isNaN(na) && !Number.isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
+
+    const fromSel = document.getElementById('weekFromFilter');
+    const toSel = document.getElementById('weekToFilter');
+    if(!fromSel || !toSel) return;
+
+    fromSel.innerHTML = '';
+    toSel.innerHTML = '';
+
+    weeks.forEach(w => {
+      const opt1 = document.createElement('option'); opt1.value = w; opt1.textContent = 'SEM' + w; fromSel.appendChild(opt1);
+      const opt2 = document.createElement('option'); opt2.value = w; opt2.textContent = 'SEM' + w; toSel.appendChild(opt2);
+    });
+
+    // Default: last `limit` weeks (5 previous + current = 6)
+    const limit = 6;
+    if(weeks.length){
+      const lastIdx = weeks.length - 1;
+      const fromIdx = Math.max(0, weeks.length - limit);
+      fromSel.value = weeks[fromIdx];
+      toSel.value = weeks[lastIdx];
+    }
+
+    // wire change handlers to update chart
+    fromSel.addEventListener('change', updateChartFromModal);
+    toSel.addEventListener('change', updateChartFromModal);
+  }
+
+  function showChartModal(){
+    populateChartFilters();
+    // Determine initial weeks from modal controls if present
+    const fromEl = document.getElementById('weekFromFilter');
+    const toEl = document.getElementById('weekToFilter');
+    let weeksList = null;
+    if(fromEl && toEl && fromEl.value && toEl.value){
+      const opts = Array.from(fromEl.parentElement.querySelectorAll('#' + fromEl.id + ' option')).map(o=>o.value);
+      const si = opts.indexOf(fromEl.value), ei = opts.indexOf(toEl.value);
+      if(si >= 0 && ei >= 0){ const s = Math.min(si, ei), e = Math.max(si, ei); weeksList = opts.slice(s, e+1); }
+    }
+    const selectedCustomersList = Array.from(modalSelectedCustomers || []);
+    const data = getLastWeeksTotals(6, 'all', selectedCustomersList, weeksList);
+    if(!data || data.length === 0){
+      // mostrar mensaje simple si no hay datos
+      const ctx = document.getElementById('trendsChart').getContext('2d');
+      if(trendsChartRef){ try{ trendsChartRef.destroy(); }catch(e){} }
+      ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+      chartModal.style.display = 'block';
+      return;
+    }
+    createTrendsChart(data);
+    chartModal.style.display = 'block';
+  }
+
+  function hideChartModal(){
+    chartModal.style.display = 'none';
+  }
+
+  if(btnChart){
+    btnChart.addEventListener('click', function(){ showChartModal(); });
+  }
+  if(closeChartModal){ closeChartModal.addEventListener('click', hideChartModal); }
+  // click fuera del modal para cerrar
+  window.addEventListener('click', function(e){ if(e.target === chartModal) hideChartModal(); });
+
+  // actualizar gráfica cuando cambian filtros dentro del modal
+  function updateChartFromModal(){
+    const factory = chartFactoryFilter ? chartFactoryFilter.value || 'all' : 'all';
+    const selectedCustomers = Array.from(modalSelectedCustomers || []);
+    // Respect Desde/Hasta in modal if present
+    const fromEl = document.getElementById('weekFromFilter');
+    const toEl = document.getElementById('weekToFilter');
+    let weeksList = null;
+    if(fromEl && toEl && fromEl.value && toEl.value){
+      // build inclusive list from 'from' to 'to' based on available options order
+      const options = Array.from(fromEl.parentElement.querySelectorAll('#' + fromEl.id + ' option')).map(o=>o.value);
+      const start = options.indexOf(fromEl.value);
+      const end = options.indexOf(toEl.value);
+      if(start >= 0 && end >= 0){
+        const s = Math.min(start, end), e = Math.max(start, end);
+        weeksList = options.slice(s, e+1);
+      }
+    }
+
+    const limit = 6;
+    const data = getLastWeeksTotals(limit, factory, selectedCustomers, weeksList);
+    createTrendsChart(data);
+  }
+
+  if(chartFactoryFilter) chartFactoryFilter.addEventListener('change', updateChartFromModal);
+
+  // =========================================================
   // INIT: cargar datos
   // =========================================================
   async function init(){
@@ -1540,6 +2020,10 @@
 
       setStatus("Datos ✓", "success");
       if(btnRefresh) btnRefresh.disabled = false;
+      if(btnChart) {
+        btnChart.disabled = false;
+        try{ populateChartFilters(); }catch(e){}
+      }
 
     }catch(err){
       console.error(err);
@@ -1704,10 +2188,20 @@
     }
   }
 
-  customerFilterBtn.addEventListener('click', function(e){
-    e.stopPropagation();
-    customerDropdown.classList.toggle('show');
-  });
+  if(customerFilterBtn){
+    customerFilterBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      customerDropdown.classList.toggle('show');
+    });
+  }
+
+  // Backup handler: ensure chart modal customer button also has a safe click toggle
+  if(typeof chartCustomerBtn !== 'undefined' && chartCustomerBtn){
+    chartCustomerBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(chartCustomerDropdown) chartCustomerDropdown.classList.toggle('show');
+    });
+  }
 
   // Cerrar dropdown al hacer click fuera
   document.addEventListener('click', function(e){

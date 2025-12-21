@@ -124,7 +124,7 @@
             border-collapse: collapse;
             width: 100%;
             min-width: 1040px; /* aumentado 5% adicional sobre 990 -> 1039.5, redondeado a 1040 (~+15% total) */
-            font-size: 10.4pt; /* aumentado ~5% adicional sobre 9.9pt -> ~10.395pt */
+            font-size: 12pt; /* aumentado a 12pt por solicitud */
             font-family: Calibri, Arial, sans-serif;
         }
 
@@ -230,6 +230,25 @@
             color: #991b1b;
             border: 1px solid #fecaca;
         }
+
+        /* Ensure back button and status badge stay on one line */
+        .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+        .back-btn, #statusBadge { white-space: nowrap; display: inline-flex; align-items: center; }
+    </style>
+    <style>
+        /* Resaltar bloque TERCERA: encabezado y columnas de clientes en rojo (transparente) */
+        thead th.group-ter {
+            background: rgba(220,53,69,0.14) !important;
+            color: #60151a !important;
+        }
+        thead tr:nth-child(2) th.col-ter {
+            background: rgba(220,53,69,0.06) !important;
+            color: #60151a !important;
+        }
+        /* Celdas de datos bajo TERCERA: muy sutil */
+        tbody td.col-ter {
+            background: rgba(220,53,69,0.02);
+        }
     </style>
     <style>
         .btn-graficos {
@@ -306,15 +325,77 @@
     .modal table { width:100%; max-width:100%; min-width: 0 !important; border-collapse: collapse; font-size: 12px; table-layout: fixed; box-sizing: border-box; }
     .modal th, .modal td { border:1px solid #e2e8f0; padding:6px; text-align:left; white-space: normal; overflow-wrap: break-word; word-break: break-word; box-sizing: border-box; }
     /* Anchos por columna en el modal en píxeles (soporta hasta 5 columnas: TEMP, ESTILO, COLOR, OP, DEFECT) */
-    .modal table th:nth-child(1), .modal table td:nth-child(1) { width: 120px; min-width:100px; white-space:nowrap; }
-    .modal table th:nth-child(2), .modal table td:nth-child(2) { width: 120px; min-width:80px; }
-    .modal table th:nth-child(3), .modal table td:nth-child(3) { width: 110px; min-width:70px; }
+    /* Ajustes: reducir ancho de CLIENTE, OP y COLOR para el modal */
+    .modal table th:nth-child(1), .modal table td:nth-child(1) { width: 90px; min-width:80px; white-space:nowrap; }
+    .modal table th:nth-child(2), .modal table td:nth-child(2) { width: 70px; min-width:60px; }
+    .modal table th:nth-child(3), .modal table td:nth-child(3) { width: 90px; min-width:70px; }
     .modal table th:nth-child(4), .modal table td:nth-child(4) { width: 70px; min-width:50px; }
     .modal table th:nth-child(5), .modal table td:nth-child(5) { width: 90px; min-width:60px; }
+
+    /* Asegurar ancho fijo para la columna TOTAL (última columna) */
+    .modal table th:last-child, .modal table td:last-child { width: 100px; min-width:80px; text-align:center; }
+
+    /* Hacer que todas las columnas de defectos (desde la 4 hasta la penúltima) tengan el mismo ancho */
+    .modal table th:nth-child(n+4):not(:last-child),
+    .modal table td:nth-child(n+4):not(:last-child) {
+        width: 80px;
+        min-width: 60px;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 
     /* Detalle modal específico: hacerlo 50% más ancho (de 50% -> 75%, y max-width 450px -> 675px) */
     #detailModalOverlay .modal { max-width: 675px; width: 75%; }
         .modal .no-data { padding: 12px; color:#666 }
+        </style>
+        <!-- OP modal custom styles -->
+        <style>
+        /* OP modal custom styling to match requested design */
+        #opModalOverlay .modal {
+            /* increased by ~30%: 820px * 1.3 = 1066px, width clamped for viewport */
+            max-width: 1066px;
+            width: 95%;
+            border-radius: 8px;
+            font-family: Calibri, Arial, sans-serif;
+            box-shadow: 0 12px 28px rgba(2,6,23,0.45);
+        }
+        #opModalOverlay .modal header {
+            background: linear-gradient(180deg,#2b6db3,#275a98);
+            color: #fff;
+            padding: 14px 16px;
+            border-radius: 6px 6px 0 0;
+            box-shadow: inset 0 -1px 0 rgba(255,255,255,0.06);
+        }
+        #opModalOverlay .modal h3 { margin:0; font-size:16px; font-weight:700; }
+        #opModalOverlay .modal .close-btn {
+            background: #fff;
+            color: #1f2937;
+            border: 1px solid rgba(0,0,0,0.08);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight:700;
+            box-shadow: 0 2px 6px rgba(15,23,42,0.12);
+        }
+        #opModalBody { padding: 14px 18px; }
+        #opModalBody label { display:block; font-size:13px; color:#1f2937; font-weight:600; margin-bottom:6px; }
+        #opModalBody .controls-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+        #opModalBody input[type="text"], #opModalBody select {
+            height:34px; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; font-size:13px; color:#0f172a;
+        }
+        #opModalBody select { appearance:auto; -webkit-appearance:auto; }
+        #opModalBody .btn-primary {
+            background: linear-gradient(180deg,#163f7a,#0f2c57); color:#fff; border:none; padding:8px 12px; border-radius:6px; font-weight:700; box-shadow:0 6px 18px rgba(16,24,40,0.18);
+        }
+        #opModalBody .btn-outline {
+            background:#fff; color:#0f172a; border:1px solid #cbd5e1; padding:8px 12px; border-radius:6px; font-weight:700;
+        }
+        #opResumenTableContainer { margin-top:12px; }
+        #opModalBody .no-data { padding:12px; color:#475569; background:#f8fafc; border-radius:6px; }
+        /* Estilo fila TOTAL en modal OP: fondo gris, datos en negrita y centrados */
+        #opModalOverlay .modal table tr.row-total { background: #e6e9ec; }
+        #opModalOverlay .modal table tr.row-total td { font-weight: 700; color:#0b1220; text-align: center; }
         </style>
         <!-- Ensure .modal.modal-large wins over the generic .modal rules so the charts modal is large on first open -->
         <style>
@@ -329,11 +410,11 @@
 
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 16px;">
         <div style="display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <h1 style="text-align: left; margin: 0; font-size: 26px; letter-spacing: 0.03em;">SEGUNDAS Y TERCERAS</h1>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap:nowrap;">
+                <h1 style="text-align: left; margin: 0; font-size: 26px; letter-spacing: 0.03em; white-space:nowrap;">SEGUNDAS Y TERCERAS</h1>
 
                 <!-- Controles de filtro: Periodo y Selección (semana/mes) -->
-                <div id="filters" style="display: flex; align-items: center; gap: 8px; margin-left: 12px;">
+                <div id="filters" style="display: flex; align-items: center; gap: 8px; margin-left: 12px; flex-wrap: nowrap;">
                     <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; color: #333;">Periodo
                         <select id="filterGroupBy" class="small-select" style="margin-left:4px; font-family: Calibri, Arial, sans-serif; font-size:9pt; padding:2px 6px;">
                             <option value="SEMANA">Semana</option>
@@ -366,7 +447,7 @@
 
             <span id="subtitle" style="font-family: Calibri, Arial, sans-serif; font-size: 7pt; color: #666; font-weight: 500;">Distribución de defectos por cliente y tipo</span>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div class="top-actions" style="display:flex; align-items:center; gap:10px;">
             <button id="paretoBtn" class="btn-graficos" title="Pareto" style="background: linear-gradient(180deg,#f59e0b,#f97316);">
                 <span class="ico" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="3" height="18" rx="1" fill="#fff"/><rect x="9" y="7" width="3" height="14" rx="1" fill="#fff"/><rect x="15" y="13" width="3" height="8" rx="1" fill="#fff"/></svg>
@@ -380,6 +461,7 @@
                 </span>
                 Gráficos
             </button>
+            <button id="opBtn" class="btn-graficos" title="Buscar OP" style="background: linear-gradient(180deg,#2b6cb0,#1f4e8a); padding:6px 10px;">OP</button>
             <a href="index.html" class="back-btn" style="font-family:Calibri, Arial, sans-serif; font-size:10px; margin-left:4px; padding:6px 10px; background:#001a54; color:#fff; border-radius:6px; text-decoration:none; font-weight:700; display:inline-block;">← Volver</a>
             <span id="statusBadge" class="badge badge-loading">Cargando datos desde Google Sheets…</span>
         </div>
@@ -390,7 +472,9 @@
     <!-- status-bar eliminado por solicitud -->
 
     <!-- RESUMEN GLOBAL MOVIDO AQUÍ (debajo del estado y fuente) -->
-    <div id="resumenGlobal" class="footer-summary hidden"></div>
+    <div id="resumenGlobal" class="footer-summary hidden">
+        <div id="resumenGlobalLeft" style="display:flex;gap:8px;align-items:center;"></div>
+    </div>
 
     <div id="tableContainer" class="table-wrapper hidden">
         <table id="tablaReporte"></table>
@@ -514,10 +598,37 @@
     </div>
 </div>
 
+        <!-- Modal para BUSCADOR OP -->
+        <div id="opModalOverlay" class="modal-overlay" aria-hidden="true">
+            <div class="modal" role="dialog" aria-modal="true">
+                <header>
+                    <h3 id="opModalTitle">Resumen por OP</h3>
+                    <button id="opModalClose" class="close-btn">Cerrar</button>
+                </header>
+                <div id="opModalBody">
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                        <label style="display:flex;align-items:center;gap:6px;">OP (buscar)
+                            <input id="opSearchInput" type="text" style="margin-left:6px;padding:6px;border:1px solid #d1d5db;border-radius:4px;">
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;">COLOR (filtrar)
+                            <select id="opColorSelect" style="margin-left:6px;padding:6px;border:1px solid #d1d5db;border-radius:4px;min-width:160px;">
+                                <option value="(todos)">(todos)</option>
+                            </select>
+                        </label>
+                        <button id="opResumenBtn" style="padding:6px 10px;border-radius:6px;background:#1f4e8a;color:#fff;border:none;">Resumen</button>
+                        <button id="opExcelBtn" style="padding:6px 10px;border-radius:6px;background:#fff;border:1px solid #d1d5db;color:#111;">Excel</button>
+                    </div>
+                    <div id="opResumenTableContainer" style="max-height:60vh;overflow:auto;border-top:1px solid #e2e8f0;padding-top:8px;"></div>
+                </div>
+            </div>
+        </div>
+
 <!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- Chart.js DataLabels plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<!-- SheetJS (XLSX) for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
     /*************************************************************
@@ -541,7 +652,7 @@
         { area: "TEJEDURIA",    defecto: "FALLA DE AGUJA",                             codigo: "06", col: "FALLA DE AGUJA" },
 
         { area: "TINTORERIA",   defecto: "MALA IGUALACION",                            codigo: "07", col: "MALA IGUALACION" },
-        { area: "TINTORERIA",   defecto: "MANCHAS DE COLORANTES O AUXILIARES",         codigo: "08", col: "MANCHAS DE COLORANTES O AUXILIARES" },
+        { area: "TINTORERIA",   defecto: "MANCHAS COLORNTS O AUX",         codigo: "08", col: "MANCHAS DE COLORANTES O AUXILIARES" },
         { area: "TINTORERIA",   defecto: "QUEBRADURAS",                                codigo: "09", col: "QUEBRADURAS" },
         { area: "TINTORERIA",   defecto: "TRANSPARENCIA",                              codigo: "10", col: "TRANSPARENCIA" },
 
@@ -894,7 +1005,7 @@
         tr2.appendChild(thDefLote);
 
         const thDistrib = document.createElement("th");
-        thDistrib.textContent = "Distribución de defectos";
+        thDistrib.textContent = "Dist Def.";
         tr2.appendChild(thDistrib);
 
         thead.appendChild(tr1);
@@ -1130,6 +1241,283 @@
     resumenGlobal.appendChild(spanIng);
     resumenGlobal.appendChild(spanRate);
     }
+
+    /* ------------------ LÓGICA MODAL OP / RESUMEN POR OP ------------------ */
+    // Abrir / cerrar modal OP
+    const opBtn = document.getElementById('opBtn');
+    const opModalOverlay = document.getElementById('opModalOverlay');
+    const opModalClose = document.getElementById('opModalClose');
+    const opSearchInput = document.getElementById('opSearchInput');
+    const opColorSelect = document.getElementById('opColorSelect');
+    const opResumenBtn = document.getElementById('opResumenBtn');
+    const opExcelBtn = document.getElementById('opExcelBtn');
+    const opResumenTableContainer = document.getElementById('opResumenTableContainer');
+
+    function openOpModal() {
+        if (!opModalOverlay) return;
+        opModalOverlay.classList.add('open');
+        opModalOverlay.setAttribute('aria-hidden', 'false');
+        setTimeout(() => { if (opSearchInput) opSearchInput.focus(); }, 50);
+    }
+
+    function closeOpModal() {
+        if (!opModalOverlay) return;
+        opModalOverlay.classList.remove('open');
+        opModalOverlay.setAttribute('aria-hidden', 'true');
+        // limpiar contenido
+        // opResumenTableContainer.innerHTML = '';
+    }
+
+    if (opBtn) opBtn.addEventListener('click', openOpModal);
+    if (opModalClose) opModalClose.addEventListener('click', closeOpModal);
+    // cerrar con overlay click
+    if (opModalOverlay) opModalOverlay.addEventListener('click', (ev) => { if (ev.target === opModalOverlay) closeOpModal(); });
+
+    // Normaliza cadena a solo dígitos
+    function normalizeDigits(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/\D/g, '');
+    }
+
+    // Llena el select de colores para la OP indicada. El usuario ingresará los 5 dígitos finales,
+    // por lo que comparamos los últimos 5 dígitos de la OP en la hoja.
+    function populateOPColors(opValue) {
+        opColorSelect.innerHTML = '';
+        const optAll = document.createElement('option');
+        optAll.value = '(todos)';
+        optAll.textContent = '(todos)';
+        opColorSelect.appendChild(optAll);
+
+        if (!opValue) return;
+        const searchDigitsRaw = normalizeDigits(opValue);
+        const searchDigits = searchDigitsRaw.length > 5 ? searchDigitsRaw.slice(-5) : searchDigitsRaw;
+        if (!searchDigits) return;
+
+        const set = new Set();
+        _originalDefectos.forEach(r => {
+            const rop = r['OP'] !== undefined ? String(r['OP']).trim() : '';
+            const ropDigits = normalizeDigits(rop);
+            if (ropDigits.endsWith(searchDigits)) {
+                const color = r['COLOR'] !== undefined ? String(r['COLOR']).trim() : '';
+                if (color) set.add(color);
+            }
+        });
+        Array.from(set).sort().forEach(c => {
+            const o = document.createElement('option');
+            o.value = c; o.textContent = c;
+            opColorSelect.appendChild(o);
+        });
+    }
+
+    // Genera el resumen por OP y lo muestra en el modal
+    function generarResumenOP() {
+        const opVal = opSearchInput ? String(opSearchInput.value).trim() : '';
+        const colorVal = opColorSelect ? String(opColorSelect.value) : '(todos)';
+        if (!opVal) {
+            opResumenTableContainer.innerHTML = '<div class="no-data">Ingrese una OP válida.</div>';
+            return;
+        }
+
+        // columnas de defectos (usar DEFECT_DEFS para corresponder a H..AC)
+        const defectCols = DEFECT_DEFS.map(d => d.col);
+
+        // filtrar filas por OP (comparando últimos 5 dígitos) y color
+        const searchDigitsRaw = normalizeDigits(opVal);
+        const searchDigits = searchDigitsRaw.length > 5 ? searchDigitsRaw.slice(-5) : searchDigitsRaw;
+
+        const rows = _originalDefectos.filter(r => {
+            const rop = r['OP'] !== undefined ? String(r['OP']).trim() : '';
+            const ropDigits = normalizeDigits(rop);
+            if (!ropDigits.endsWith(searchDigits)) return false;
+            if (colorVal && colorVal !== '(todos)') {
+                const rcol = r['COLOR'] !== undefined ? String(r['COLOR']).trim() : '';
+                return rcol === colorVal;
+            }
+            return true;
+        }).map(r => {
+            // calcular total de defectos en la fila
+            let total = 0;
+            const defects = {};
+            defectCols.forEach(c => {
+                const v = toNumber(r[c]);
+                defects[c] = v;
+                total += v;
+            });
+            return { raw: r, defects, total };
+        }).filter(x => x.total > 0); // mostrar solo filas con al menos un defecto
+
+        if (!rows.length) {
+            opResumenTableContainer.innerHTML = '<div class="no-data">No se encontraron registros con defectos para la OP/Color indicados.</div>';
+            return;
+        }
+
+        // determinar qué columnas de defecto tienen datos (sum > 0)
+        const defectSums = {};
+        defectCols.forEach(c => defectSums[c] = 0);
+        rows.forEach(r => {
+            defectCols.forEach(c => defectSums[c] += (r.defects[c] || 0));
+        });
+        const visibleDefCols = defectCols.filter(c => defectSums[c] > 0);
+
+        // construir tabla
+        const tbl = document.createElement('table');
+        tbl.className = 'modal-table';
+        const thead = document.createElement('thead');
+        const thr = document.createElement('tr');
+        ['CLIENTE','OP','COLOR'].forEach(h => { const th = document.createElement('th'); th.textContent = h; thr.appendChild(th); });
+        visibleDefCols.forEach(c => { const th = document.createElement('th'); th.textContent = c; thr.appendChild(th); });
+        const thTotal = document.createElement('th'); thTotal.textContent = 'TOTAL'; thr.appendChild(thTotal);
+        thead.appendChild(thr);
+
+        const tbody = document.createElement('tbody');
+        rows.forEach(r => {
+            const tr = document.createElement('tr');
+            const cliente = r.raw['CLIENTE'] !== undefined ? String(r.raw['CLIENTE']).trim() : '';
+            const opRaw = r.raw['OP'] !== undefined ? String(r.raw['OP']).trim() : '';
+            const opDigits = normalizeDigits(opRaw);
+            const opDisplayDigits = opDigits.length > 5 ? opDigits.slice(-5) : opDigits;
+            // mostrar como número (sin separadores)
+            const opDisplay = opDisplayDigits ? String(parseInt(opDisplayDigits, 10)) : '';
+            const color = r.raw['COLOR'] !== undefined ? String(r.raw['COLOR']).trim() : '';
+            [cliente, opDisplay, color].forEach(v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+            visibleDefCols.forEach(c => { const td = document.createElement('td'); td.textContent = r.defects[c] ? formatNumber(r.defects[c]) : ''; tr.appendChild(td); });
+            const tdTot = document.createElement('td'); tdTot.textContent = formatNumber(r.total); tr.appendChild(tdTot);
+            tbody.appendChild(tr);
+        });
+
+        // fila TOTAL: sumar columnas visibles de defectos y el TOTAL
+        const trSum = document.createElement('tr');
+        trSum.classList.add('row-total');
+        const tdLabel = document.createElement('td');
+        tdLabel.textContent = 'TOTAL';
+        tdLabel.colSpan = 3; // CLIENTE, OP, COLOR
+        trSum.appendChild(tdLabel);
+
+        // usar defectSums calculado arriba (suma por columna)
+        let grandTotal = 0;
+        visibleDefCols.forEach(c => {
+            const s = defectSums[c] || 0;
+            grandTotal += s;
+            const td = document.createElement('td');
+            td.textContent = s ? formatNumber(s) : '';
+            trSum.appendChild(td);
+        });
+        const tdGrand = document.createElement('td');
+        tdGrand.textContent = grandTotal ? formatNumber(grandTotal) : '';
+        trSum.appendChild(tdGrand);
+        tbody.appendChild(trSum);
+
+        tbl.appendChild(thead);
+        tbl.appendChild(tbody);
+        opResumenTableContainer.innerHTML = '';
+        opResumenTableContainer.appendChild(tbl);
+
+        // attach export function to Excel button (use .xlsx)
+        opExcelBtn.onclick = function() {
+            const fname = `resumen_OP_${opVal}${colorVal && colorVal!=='(todos)'?('_'+colorVal):''}.xlsx`;
+            exportTableToExcel(fname, tbl);
+        };
+    }
+
+    // export simple CSV from table element
+    function exportTableToCSV(filename, tableEl) {
+        const rows = Array.from(tableEl.querySelectorAll('tr'));
+        const csv = rows.map(r => {
+            const cols = Array.from(r.querySelectorAll('th,td')).map(c => '"' + (c.textContent || '').replace(/"/g, '""') + '"');
+            return cols.join(',');
+        }).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    // Export table DOM to real Excel (.xlsx) using SheetJS. Falls back to CSV if SheetJS missing.
+    function exportTableToExcel(filename, tableEl) {
+        if (typeof XLSX !== 'undefined') {
+            try {
+                // Convert DOM table to workbook
+                const wb = XLSX.utils.table_to_book(tableEl, { sheet: 'Resumen' });
+                const wsName = wb.SheetNames[0];
+                const ws = wb.Sheets[wsName];
+
+                // If worksheet has a range, style header row and total row
+                if (ws && ws['!ref']) {
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    const startRow = range.s.r; // usually 0
+                    const endRow = range.e.r;   // last row index
+                    const startCol = range.s.c;
+                    const endCol = range.e.c;
+
+                    // Header: row = startRow
+                    for (let c = startCol; c <= endCol; c++) {
+                        const addr = XLSX.utils.encode_cell({ c: c, r: startRow });
+                        if (!ws[addr]) continue;
+                        ws[addr].s = ws[addr].s || {};
+                        // Header background RGB(54,96,146) => FF366092 (ARGB)
+                        ws[addr].s.fill = { patternType: 'solid', fgColor: { rgb: 'FF366092' } };
+                        ws[addr].s.font = ws[addr].s.font || {};
+                        ws[addr].s.font.bold = true;
+                        ws[addr].s.font.color = { rgb: 'FFFFFFFF' };
+                        // defect headers font size 9: defects start at col index startCol+3
+                        if (c >= startCol + 3 && c < endCol) {
+                            ws[addr].s.font.sz = 9;
+                        }
+                        ws[addr].s.alignment = { horizontal: 'center', vertical: 'center' };
+                    }
+
+                    // TOTAL row: assume we added it as the last row (endRow)
+                    for (let c = startCol; c <= endCol; c++) {
+                        const addr = XLSX.utils.encode_cell({ c: c, r: endRow });
+                        if (!ws[addr]) continue;
+                        ws[addr].s = ws[addr].s || {};
+                        // TOTAL background RGB(191,191,191) => FFBFBFBF (ARGB)
+                        ws[addr].s.fill = { patternType: 'solid', fgColor: { rgb: 'FFBFBFBF' } };
+                        ws[addr].s.font = ws[addr].s.font || {};
+                        ws[addr].s.font.bold = true;
+                        ws[addr].s.font.color = { rgb: 'FF000000' };
+                        ws[addr].s.alignment = { horizontal: 'center', vertical: 'center' };
+                    }
+
+                    // Optionally set column widths similar to modal (approx characters)
+                    const cols = [];
+                    // CLIENTE, OP, COLOR
+                    cols[startCol] = { wch: 15 };
+                    cols[startCol + 1] = { wch: 8 };
+                    cols[startCol + 2] = { wch: 18 };
+                    // defect columns (from startCol+3 to endCol-1)
+                    for (let c = startCol + 3; c < endCol; c++) cols[c] = { wch: 9 };
+                    // TOTAL column
+                    cols[endCol] = { wch: 12 };
+                    ws['!cols'] = cols;
+                }
+
+                // Write file with cellStyles enabled
+                XLSX.writeFile(wb, filename, { bookType: 'xlsx', cellStyles: true });
+                return;
+            } catch (e) {
+                console.error('Error creating XLSX:', e);
+            }
+        }
+        // fallback: CSV
+        const csvName = filename.replace(/\.xlsx$/i, '.csv');
+        exportTableToCSV(csvName, tableEl);
+    }
+
+    // eventos
+    if (opSearchInput) {
+        opSearchInput.addEventListener('input', () => populateOPColors(opSearchInput.value));
+        opSearchInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') generarResumenOP(); });
+    }
+    if (opResumenBtn) opResumenBtn.addEventListener('click', generarResumenOP);
+
+    /* ------------------ FILTRADO POR AÑO / SEMANA ------------------ */
 
     /* ------------------ FILTRADO POR AÑO / SEMANA ------------------ */
     let _originalDefectos = [];
@@ -1668,7 +2056,7 @@
 
             const arr = DEFECT_DEFS.map(def => {
                 let label = def.defecto;
-                if (toUpperTrim(def.defecto) === 'MANCHAS DE COLORANTES O AUXILIARES') label = 'MANCHAS TINTO';
+                if (toUpperTrim(def.col) === 'MANCHAS DE COLORANTES O AUXILIARES') label = 'MANCHAS TINTO';
                 return { codigo: def.codigo, label: label, col: def.col, value: counts[def.col] || 0 };
             });
             const total = arr.reduce((s,a)=>s + (a.value||0), 0);

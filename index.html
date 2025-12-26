@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8" />
     <title>Aseguramiento Calidad Confecciones</title>
@@ -48,6 +49,54 @@
             display: flex;
             flex-direction: column;
             gap: 14px;
+        }
+
+        /* Floating summary button (top-right) */
+        .floating-summary {
+            position: fixed;
+            right: 18px;
+            top: 18px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #001a54;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1200;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+            text-decoration: none;
+        }
+
+        .floating-summary .icon { font-size: 20px; }
+
+        /* Panel that appears to the left of the circle on hover */
+        .floating-summary .panel {
+            position: absolute;
+            right: calc(100% + 12px);
+            top: 50%;
+            transform: translateY(-50%) translateX(-6px);
+            background: #001a54;
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            min-width: 260px;
+            max-width: 360px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s ease, transform .18s ease;
+        }
+
+        .floating-summary .panel .p-title{ font-weight:800; font-size:13px; text-transform:uppercase; margin-bottom:6px; }
+        .floating-summary .panel .p-sub{ font-size:12px; color: #e6eef8 }
+
+        .floating-summary:hover .panel{ opacity:1; pointer-events:auto; transform: translateY(-50%) translateX(0); }
+
+        @media (max-width: 700px) {
+            .floating-summary{ right: 12px; top: 12px; width:50px; height:50px }
+            .floating-summary .panel{ display:none } /* hide panel on very small screens */
         }
 
         /* Cada botón del menú es un enlace completo */
@@ -136,6 +185,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="card-wrapper">
         <div class="card-header">
@@ -143,11 +193,10 @@
         </div>
 
         <div class="menu-list">
+            <!-- NOTE: The RESUMEN EJECUTIVO GERENCIA menu item is moved to a floating button -->
+
             <!-- BOTÓN 1: REPORTE DEPURADO EN CORTE -->
-            <a
-                class="menu-item"
-                href="Depurado_piezas.html"
-            >
+            <a class="menu-item" href="Depurado_piezas.html">
                 <div class="icon-circle">
                     <span>✔</span>
                 </div>
@@ -162,10 +211,7 @@
             </a>
 
             <!-- BOTÓN 2: RESUMEN DE AUDITORÍA POR FACTORY CODE -->
-            <a
-                class="menu-item"
-                href="RESUMEN DE AUDITORÍA POR FACTORY CODE.html"
-            >
+            <a class="menu-item" href="RESUMEN DE AUDITORÍA POR FACTORY CODE.html">
                 <div class="icon-circle">
                     <span>✔</span>
                 </div>
@@ -193,10 +239,7 @@
             </a>
 
             <!-- BOTÓN 4: RESULTADO DE AUDITORIAS DE PRODUCTO TERMINADO -->
-            <a
-                class="menu-item"
-                href="RESULTADO DE AUDITORIAS DE PRODUCTO TERMINADO.html"
-            >
+            <a class="menu-item" href="RESULTADO DE AUDITORIAS DE PRODUCTO TERMINADO.html">
                 <div class="icon-circle">
                     <span>✔</span>
                 </div>
@@ -211,10 +254,7 @@
             </a>
 
             <!-- BOTÓN 5: RESULTADO AUDITORIA EMPAQUE -->
-            <a
-                class="menu-item"
-                href="RESULTADO AUDITORIA EMPAQUE.html"
-            >
+            <a class="menu-item" href="RESULTADO AUDITORIA EMPAQUE.html">
                 <div class="icon-circle">
                     <span>✔</span>
                 </div>
@@ -227,9 +267,31 @@
                     </div>
                 </div>
             </a>
+
+            <!-- BOTÓN 6: AUDITORIA LOTES DE PRODUCCION -->
+            <a class="menu-item" href="AUDITORIA LOTES DE PRODUCCION.html">
+                <div class="icon-circle">
+                    <span>🧾</span>
+                </div>
+                <div class="menu-texts">
+                    <div class="menu-title">
+                        AUDITORIA LOTES DE PRODUCCION
+                    </div>
+                    <div class="menu-subtitle">
+                        Auditoría por lotes y equipos (costura / acabados)
+                    </div>
+                </div>
+            </a>
         </div>
     </div>
+    <!-- Floating summary button: RESUMEN EJECUTIVO GERENCIA -->
+    <a class="floating-summary" href="Resumen_Gerencia.html" title="RESUMEN EJECUTIVO GERENCIA">
+        <div class="icon">📊</div>
+        <div class="panel" aria-hidden>
+            <div class="p-title">RESUMEN EJECUTIVO GERENCIA</div>
+            <div class="p-sub">Dashboard con KPIs y métricas clave</div>
+        </div>
+    </a>
 </body>
+
 </html>
-
-

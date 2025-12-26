@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AUDITORIA LOTES DE PRODUCCION</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:18px;background:#f7f9fc}
+        .card{max-width:900px;margin:18px auto;background:#fff;padding:18px;border-radius:8px;box-shadow:0 6px 20px rgba(10,20,40,0.08)}
+        h1{font-size:20px;margin-bottom:6px}
+        table{width:100%;border-collapse:collapse;margin-top:12px}
+        th,td{padding:4px 6px;border:1px solid #e6eef8;text-align:center}
+        th{background:#eaf4ff;font-weight:700}
+        .note{font-size:13px;color:#444;margin-top:8px}
+        .badge{display:inline-block;background:#dff5e6;color:#1a7f3a;padding:6px 12px;border-radius:999px;font-weight:700;border:1px solid #b8e6c7}
+        .badge.small{padding:6px 10px;font-size:16px;line-height:1}
+        /* Small back button placed left of the check */
+        .back-btn{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-width:34px;
+            height:34px;
+            padding:0 8px;
+            border-radius:8px;
+            background:#ffffff;
+            color:#007acc;
+            border:1px solid #d0d7e3;
+            text-decoration:none;
+            font-weight:700;
+            box-shadow:0 6px 14px rgba(10,20,40,0.06);
+            margin-right:6px;
+        }
+        .back-btn:hover{ background:#f1f7ff }
+        /* Charts area */
+        .charts-wrapper{margin-top:18px;background:#fff;border-radius:8px;padding:18px;box-shadow:0 3px 12px rgba(10,20,40,0.04)}
+        .charts{display:flex;gap:24px;justify-content:space-between;align-items:flex-start}
+        .group-charts{flex:1;text-align:center}
+        .group-charts h3{margin:0 0 8px 0;text-align:left;font-size:14px}
+        .donut-row{display:flex;gap:20px;justify-content:center;align-items:center}
+        .donut{position:relative;width:160px;height:160px}
+        .donut svg{width:100%;height:100%;transform:rotate(-90deg)}
+        .donut .center{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:24px}
+        .donut .center .sublabel{font-size:12px;color:#666;margin-top:6px}
+        .donut .small-label{position:absolute;font-size:12px;color:#333}
+        .donut .small-label .tag{font-weight:600;margin-right:6px;color:#333;font-size:12px}
+        .donut .label-left{left:-4px;top:6px;color:#007acc}
+        .donut .label-left .tag{color:#007acc;font-weight:700}
+        .donut .label-right{right:-36px;top:6px}
+        .donut .label-bottom{left:10%;bottom:12px;top:auto;transform:translateX(-50%);color:#007acc}
+        .donut .label-bottom .tag{color:#007acc;font-weight:700}
+        .tag-aud{color:#155724;font-weight:700;margin-left:2px}
+        .tag-a1{color:#155724;font-weight:700;margin-left:2px}
+        .num-a1,.num-taud{color:#155724;font-weight:700}
+        /* Small donut (half size) used for COSTURA 1-19 and 20-29 */
+        .donut.small{width:80px;height:80px}
+        .donut.small svg{width:100%;height:100%;transform:rotate(-90deg)}
+        .donut.small .center{font-size:14px}
+        .donut.small .center .sublabel{font-size:10px;margin-top:4px}
+        .sub-donuts{display:flex;gap:10px;justify-content:center;margin-top:8px}
+        .mini-tooltip{position:fixed;display:none;z-index:9999;background:#fff;border:1px solid rgba(0,0,0,0.08);padding:8px 10px;border-radius:6px;box-shadow:0 6px 18px rgba(10,20,40,0.12);font-size:13px;color:#112}
+        .mini-tooltip b{color:#155724}
+        .sub-row{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;padding:8px 12px;margin-top:6px}
+        .sub-row .sub-left,.sub-row .sub-right{flex:1;display:flex;justify-content:center}
+        /* Modal for defect table */
+        .modal-overlay{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:10000}
+        .modal{background:#fff;border-radius:8px;max-width:none;width:95vw;box-sizing:border-box;max-height:86vh;overflow:auto;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.25)}
+        .modal h2{margin:0 0 12px 0;font-size:16px}
+        .modal .close-btn{float:right;background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer}
+        .modal table{width:100%;border-collapse:collapse;margin-top:8px}
+        .modal th, .modal td{padding:4px 6px;border:1px solid #e6eef8;text-align:center;font-size:13px;vertical-align:middle}
+        .modal th{background:#f1f7ff;font-weight:700}
+    </style>
+</head>
+<body>
+    <div class="page-header" style="max-width:900px;margin:0 auto 12px;padding:6px 12px;border-radius:4px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div style="color:#007acc;font-weight:700;font-size:16px">AUDITORIA LOTES DE PRODUCCION</div>
+            <div style="display:flex;gap:12px;align-items:center">
+                <label style="font-weight:600">Año:</label>
+                <select id="yearSelect" style="padding:6px;border:1px solid #ccd;border-radius:6px"></select>
+                <label style="font-weight:600">Periodo:</label>
+                <select id="periodType" style="padding:6px;border:1px solid #ccd;border-radius:6px">
+                    <option value="Sem">Sem</option>
+                    <option value="Mes">Mes</option>
+                </select>
+                <select id="periodSelect" style="padding:6px;border:1px solid #ccd;border-radius:6px"></select>
+                <button id="applyFilterBtn" style="padding:8px 12px;background:#007acc;color:#fff;border:none;border-radius:6px;cursor:pointer">Aplicar</button>
+                <a href="index.html" class="back-btn" title="Volver al índice" aria-label="Volver al índice">←</a>
+                <button id="filterLabel" class="badge small" title="Check Datos" aria-label="Check Datos">✓</button>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div style="display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap">
+            <h1 style="margin:0">COFACO</h1>
+        </div>
+
+        <div id="result">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Grupo</th>
+                        <th>Cant Muestra</th>
+                        <th>Total Defectos</th>
+                        <th>%Def.</th>
+                        <th>Total</th>
+                        <th>A 1</th>
+                        <th>%BAP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="costura-row"><td>COSTURA (Eq 1-29)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                    <tr id="costura-1-19-row"><td>COSTURA (Eq 1-19)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                    <tr id="costura-20-29-row"><td>COSTURA (Eq 20-29)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                    <tr id="acabados-row"><td>ACABADOS (Eq 30-40)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="chartsWrapper" class="charts-wrapper" style="display:none;margin-top:14px">
+            <div id="chartsContainer"></div>
+        </div>
+
+        <!-- Status and debug output removed -->
+    </div>
+
+    <script>
+        // Config
+        const SHEET_ID = '1Xu3bN-RVzPYuIqcVyb0ZxvlFTUjl2_MWHnDJik6lZ4s';
+        const GID = '0'; // primer sheet; ajusta si tu sheet tiene otro gid
+        let TARGET_WEEK = 50;
+        let FILTER_YEAR = (new Date()).getFullYear();
+        let PERIOD_TYPE = 'Sem'; // 'Sem' or 'Mes'
+        let PERIOD_VALUE = null; // week number or month index (1-12)
+
+        // Util: calcula semana ISO (1-53)
+        function getISOWeek(d) {
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+            return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+        }
+
+        function toNum(val){
+            if(val==null||val==='') return 0;
+            if(typeof val === 'number') return val;
+            let s = String(val).trim();
+            if(s==='') return 0;
+            // remove non-breaking spaces
+            s = s.replace(/\u00A0/g,'');
+            // remove surrounding quotes
+            s = s.replace(/^"|"$/g,'');
+            // normalize spaces
+            s = s.replace(/\s+/g,'');
+            // If contains both dot and comma, decide which is decimal separator
+            if(s.indexOf('.')>-1 && s.indexOf(',')>-1){
+                const lastDot = s.lastIndexOf('.');
+                const lastComma = s.lastIndexOf(',');
+                if(lastDot < lastComma){
+                    // dot as thousands, comma as decimal: remove dots, replace comma with dot
+                    s = s.replace(/\./g,'').replace(/,/g,'.');
+                }else{
+                    // comma as thousands, dot as decimal: remove commas
+                    s = s.replace(/,/g,'');
+                }
+            }else if(s.indexOf(',')>-1){
+                // only comma present — assume comma is decimal separator
+                s = s.replace(/,/g,'.');
+            }
+            // remove any remaining non-numeric (keep minus and dot)
+            s = s.replace(/[^0-9\-\.]/g,'');
+            const n = Number(s);
+            return isNaN(n)?0:n;
+        }
+
+        // Normaliza y parsea distintos formatos recibidos desde Google Sheets
+        function parseFechaValue(raw){
+            if(raw === null || raw === undefined || raw === '') return null;
+            // Si ya es Date
+            if(raw instanceof Date) return raw;
+            // Si es un objeto (gviz a veces devuelve objetos complejos)
+            if(typeof raw === 'object'){
+                // si es wrapper con .v
+                if('v' in raw) return parseFechaValue(raw.v);
+                // si contiene propiedades de fecha explícitas
+                if(('year' in raw) && ('month' in raw) && ('day' in raw)){
+                    const y = Number(raw.year);
+                    let m = Number(raw.month);
+                    const d = Number(raw.day || raw.date || raw.dayOfMonth || raw.dayOfMonth);
+                    if(m>11) m = m-1;
+                    return new Date(y, m, d);
+                }
+                // fallback: stringify
+                try{ raw = String(raw); }catch(e){ return null; }
+            }
+
+            // Si es número -> serial Excel
+            if(typeof raw === 'number' || (/^[0-9]+$/.test(String(raw).trim()) && String(raw).length < 8)){
+                const sNum = Number(raw);
+                if(!isNaN(sNum)){
+                    const dt = new Date(Date.UTC(1899,11,30));
+                    dt.setUTCDate(dt.getUTCDate() + Math.floor(sNum));
+                    return dt;
+                }
+            }
+
+            // Normalizar cadenas: eliminar BOM, NBSP, ZWSP, y caracteres de control
+            let s = String(raw || '').replace(/^\uFEFF/, '').replace(/\u00A0/g,' ').replace(/\u200B/g,'').replace(/\u202F/g,' ').trim();
+            s = s.replace(/[\u0000-\u001F\u007F-\u009F]/g,'').trim();
+            // Quitar caracteres raros manteniendo dígitos, letras, '/', '-', ':' , comas y paréntesis
+            s = s.replace(/[^0-9A-Za-zÁÉÍÓÚáéíóúÑñ\/\-\s:\.,()]/g,'').trim();
+
+            // Formato GViz como string: Date(2025,11,13)
+            const gvizMatch = s.match(/Date\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)/i);
+            if(gvizMatch){
+                const y = Number(gvizMatch[1]);
+                const m = Number(gvizMatch[2]);
+                const d = Number(gvizMatch[3]);
+                return new Date(y, m, d);
+            }
+
+            // Intentar Date.parse (maneja ISO y otros)
+            const d1 = new Date(s);
+            if(!isNaN(d1)) return d1;
+
+            // Intentar mm/dd/yyyy
+            if(s.indexOf('/') !== -1){
+                const parts = s.split('/').map(x=>x.trim());
+                if(parts.length===3){
+                    const mm = parseInt(parts[0],10)-1;
+                    const dd = parseInt(parts[1],10);
+                    const yy = parseInt(parts[2],10);
+                    const yyyy = yy < 1000 ? (yy < 50 ? 2000+yy : 1900+yy) : yy;
+                    const dt2 = new Date(yyyy, mm, dd);
+                    if(!isNaN(dt2)) return dt2;
+                }
+            }
+
+            // Intentar yyyy-mm-dd
+            if(s.indexOf('-') !== -1){
+                const parts = s.split('-').map(x=>x.trim());
+                if(parts.length===3){
+                    const yyyy = parseInt(parts[0],10);
+                    const mm = parseInt(parts[1],10)-1;
+                    const dd = parseInt(parts[2],10);
+                    const dt3 = new Date(yyyy, mm, dd);
+                    if(!isNaN(dt3)) return dt3;
+                }
+            }
+
+            return null;
+        }
+
+        // Normalizar nombre de header para mapear columnas
+        function norm(h){return (h||'').toString().trim().toLowerCase().replace(/\s+/g,' ')}
+
+        // Formatea fecha a 'D/mesAbrev/AAAA' en español (ej. 11/dic/2025)
+        function formatFecha(d){
+            if(!d || !(d instanceof Date) || isNaN(d)) return '';
+            const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+            return d.getDate() + '/' + meses[d.getMonth()] + '/' + d.getFullYear();
+        }
+
+                // --- Donut chart helpers ---
+                function makeDonutSVG(percentage, size=160, strokeWidth=18, color='#1e88e5', bgColor='#e6eef8'){
+                        const r = (size/2) - (strokeWidth/2);
+                        const c = 2 * Math.PI * r;
+                        const filled = Math.max(0, Math.min(100, percentage)) / 100 * c;
+                        const empty = c - filled;
+                        return `
+                                <svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${bgColor}" stroke-width="${strokeWidth}" />
+                                    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-dasharray="${filled} ${empty}" stroke-linecap="round" />
+                                </svg>`;
+                }
+
+                function renderCharts(sums){
+                        try{
+                                const container = document.getElementById('chartsContainer');
+                                if(!container) return;
+                                const nfPct = new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2});
+                                const nfBap = new Intl.NumberFormat('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1});
+                                const nfNum = new Intl.NumberFormat('en-US', {maximumFractionDigits:0});
+
+                                function groupHtml(title, data){
+                                        const pctDef = (data.cant && data.cant>0) ? (data.defectos / data.cant * 100) : 0;
+                                        const pctBap = (data.total && data.total>0) ? (data.a1 / data.total * 100) : 0;
+                                        const leftSVG = makeDonutSVG(pctDef,160,18,'#2b6cb0','#e6eef8');
+                                        const rightSVG = makeDonutSVG(pctBap,160,18,'#48bb78','#e6eef8');
+
+                                        // If group is COSTURA, render two extra small donuts (half size) under both the %Def and %BAP donuts
+                                        let subDonutsHtmlLeft = '';
+                                        let subDonutsHtmlRight = '';
+                                        if(title && title.toUpperCase().includes('COSTURA')){
+                                            const s1 = sums.costura_1_19 || {cant:0,defectos:0,total:0,a1:0};
+                                            const s2 = sums.costura_20_29 || {cant:0,defectos:0,total:0,a1:0};
+                                            // %Def for subgroups
+                                            const pct1_def = (s1.cant && s1.cant>0) ? (s1.defectos / s1.cant * 100) : 0;
+                                            const pct2_def = (s2.cant && s2.cant>0) ? (s2.defectos / s2.cant * 100) : 0;
+                                            const svg1_def = makeDonutSVG(pct1_def,80,12,'#2b6cb0','#e6eef8');
+                                            const svg2_def = makeDonutSVG(pct2_def,80,12,'#2b6cb0','#e6eef8');
+                                            subDonutsHtmlLeft = `
+                                                <div class="sub-donuts" aria-hidden>
+                                                    <div class="donut small">
+                                                        ${svg1_def}
+                                                        <div class="center click-center" data-def="${s1.defectos}" data-cant="${s1.cant}" data-title="Equipos 1-19"><div class="mainPct">${nfPct.format(pct1_def)}%</div><div class="sublabel">Dia</div></div>
+                                                    </div>
+                                                    <div class="donut small">
+                                                        ${svg2_def}
+                                                        <div class="center click-center" data-def="${s2.defectos}" data-cant="${s2.cant}" data-title="Equipos 20-29"><div class="mainPct">${nfPct.format(pct2_def)}%</div><div class="sublabel">Noche</div></div>
+                                                    </div>
+                                                </div>`;
+
+                                            // %BAP for subgroups (a1/total)
+                                            const pct1_bap = (s1.total && s1.total>0) ? (s1.a1 / s1.total * 100) : 0;
+                                            const pct2_bap = (s2.total && s2.total>0) ? (s2.a1 / s2.total * 100) : 0;
+                                            const svg1_bap = makeDonutSVG(pct1_bap,80,12,'#48bb78','#e6eef8');
+                                            const svg2_bap = makeDonutSVG(pct2_bap,80,12,'#48bb78','#e6eef8');
+                                            // For BAP mini-donuts store total/a1 (T.Aud / A1)
+                                            subDonutsHtmlRight = `
+                                                <div class="sub-donuts" aria-hidden>
+                                                    <div class="donut small">
+                                                        ${svg1_bap}
+                                                        <div class="center click-center" data-taud="${s1.total}" data-a1="${s1.a1}" data-title="Equipos 1-19"><div class="mainPct">${nfBap.format(pct1_bap)}%</div><div class="sublabel">Dia</div></div>
+                                                    </div>
+                                                    <div class="donut small">
+                                                        ${svg2_bap}
+                                                        <div class="center click-center" data-taud="${s2.total}" data-a1="${s2.a1}" data-title="Equipos 20-29"><div class="mainPct">${nfBap.format(pct2_bap)}%</div><div class="sublabel">Noche</div></div>
+                                                    </div>
+                                                </div>`;
+                                        }
+
+                                        return `
+                                                <div class="group-charts">
+                                                    <h3>${title}</h3>
+                                                    <div class="donut-row">
+                                                        <div class="donut" aria-hidden>
+                                                            ${leftSVG}
+                                                            <div class="center"><div class="mainPct">${nfPct.format(pctDef)}%</div><div class="sublabel">%Def.</div></div>
+                                                            <div class="small-label label-left"><span class="tag">T.Def:</span>${nfNum.format(data.defectos)}</div>
+                                                            <div class="small-label label-bottom"><span class="tag">Cant.Muestra:</span>${nfNum.format(data.cant)}</div>
+                                                        </div>
+                                                        <div class="donut" aria-hidden>
+                                                            ${rightSVG}
+                                                            <div class="center"><div class="mainPct">${nfBap.format(pctBap)}%</div><div class="sublabel">%BAP</div></div>
+                                                            <div class="small-label label-left"><span class="num-a1">${nfNum.format(data.a1)}</span> <span class="tag-a1">:A1</span></div>
+                                                            <div class="small-label label-right"><span class="num-taud">${nfNum.format(data.total)}</span> <span class="tag-aud">:T.Aud</span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="sub-row">
+                                                        <div class="sub-left">${subDonutsHtmlLeft}</div>
+                                                        <div class="sub-right">${subDonutsHtmlRight}</div>
+                                                    </div>
+                                                </div>`;
+                                }
+
+                                const html = `<div class="charts">${groupHtml('COSTURA (Equipos 1-29)', sums.costura)}${groupHtml('ACABADOS (Equipos 30-40)', sums.acabados)}</div>`;
+                                container.innerHTML = html;
+
+                                // expose clickable main COSTURA %Def. to open modal with per-equipo details
+                                try{
+                                    // costura is the first .group-charts generated
+                                    const costuraGroup = container.querySelector('.group-charts');
+                                    if(costuraGroup){
+                                        const leftCenter = costuraGroup.querySelector('.donut-row .donut:first-child .center');
+                                        if(leftCenter){
+                                            leftCenter.style.cursor = 'pointer';
+                                            leftCenter.setAttribute('title','Ver detalle por equipo');
+                                            leftCenter.addEventListener('click', function(ev){
+                                                ev.stopPropagation();
+                                                if(window.latestFilteredData && window.latestFilteredData.perEquipo){
+                                                    showModalDefects(window.latestFilteredData.perEquipo);
+                                                } else {
+                                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                                }
+                                            });
+                                        }
+                                    }
+                                }catch(e){console.warn('attach costura click err', e)}
+
+                                // Tooltip creation and click handler for mini-donut centers
+                                let tt = document.getElementById('miniTooltip');
+                                if(!tt){
+                                    tt = document.createElement('div');
+                                    tt.id = 'miniTooltip';
+                                    tt.className = 'mini-tooltip';
+                                    document.body.appendChild(tt);
+                                }
+
+                                // helper to show tooltip near element
+                                function showMiniTooltipForElement(el){
+                                    const nf = new Intl.NumberFormat('en-US', {maximumFractionDigits:0});
+                                    const ds = el.dataset || {};
+                                    let content = '';
+                                    const title = ds.title || '';
+                                    // If contains taud/a1 show T.Aud and A1, otherwise show T.Def and Cant.Muestra
+                                    if(ds.taud !== undefined || ds.a1 !== undefined){
+                                        const taud = Number(ds.taud||0);
+                                        const a1 = Number(ds.a1||0);
+                                        content = `<div style="font-weight:700;margin-bottom:6px">${title}</div><div>T.Aud: <b>${nf.format(taud)}</b></div><div>A1: <b>${nf.format(a1)}</b></div>`;
+                                    } else {
+                                        const def = Number(ds.def||0);
+                                        const cant = Number(ds.cant||0);
+                                        content = `<div style="font-weight:700;margin-bottom:6px">${title}</div><div>T.Def: <b>${nf.format(def)}</b></div><div>Cant.Muestra: <b>${nf.format(cant)}</b></div>`;
+                                    }
+                                    tt.innerHTML = content;
+                                    tt.style.display = 'block';
+                                    // position centered above element
+                                    const r = el.getBoundingClientRect();
+                                    const ttR = tt.getBoundingClientRect();
+                                    let left = r.left + (r.width/2) - (ttR.width/2);
+                                    let top = r.top - ttR.height - 8;
+                                    // if off-screen on top, place below
+                                    if(top < 8) top = r.bottom + 8;
+                                    if(left < 8) left = 8;
+                                    if(left + ttR.width > window.innerWidth - 8) left = window.innerWidth - ttR.width - 8;
+                                    tt.style.left = left + 'px';
+                                    tt.style.top = top + 'px';
+
+                                    // attach one-time outside click to hide
+                                    function hideOnDocClick(ev){
+                                        if(!tt.contains(ev.target) && !el.contains(ev.target)){
+                                            tt.style.display = 'none';
+                                            document.removeEventListener('click', hideOnDocClick);
+                                        }
+                                    }
+                                    setTimeout(()=>document.addEventListener('click', hideOnDocClick), 0);
+                                }
+
+                                // delegate clicks on centers
+                                container.querySelectorAll('.click-center').forEach(cc => {
+                                    cc.style.cursor = 'pointer';
+                                    cc.addEventListener('click', function(ev){ ev.stopPropagation(); showMiniTooltipForElement(this); });
+                                });
+                                
+                                // helper: show modal with per-equipo aggregated table
+                                function showModalDefects(perEquipo){
+                                    // ensure we only show equipos 1..29 and include filter info
+                                    const meta = window.latestFilteredData || {};
+                                    const year = meta.filteredYear || FILTER_YEAR;
+                                    const pType = meta.filteredPeriodType || PERIOD_TYPE;
+                                    const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
+                                    // create overlay if not exists
+                                    let ol = document.getElementById('modalOverlayDef');
+                                    if(!ol){
+                                        ol = document.createElement('div'); ol.id = 'modalOverlayDef'; ol.className = 'modal-overlay';
+                                        const modal = document.createElement('div'); modal.className = 'modal'; modal.id = 'modalDefects';
+                                        ol.appendChild(modal);
+                                        document.body.appendChild(ol);
+                                    }
+                                    const modal = document.getElementById('modalDefects');
+                                    // build table HTML
+                                    const cols = [
+                                        'Eqp.','C.Aud','C.Ms','Tela','Huecos','Punt Salt','Punt Cort.','Hilos','Cot Def','Oper Falta','Mnch Aceite','Mnch Sucie','Mnch Tinto','Acab','Med','Jalad','T.Def','%Def','A1','A2','A3','A4','Lot No Aprob','Total','Nivel Acep','C.Pds Rech.'
+                                    ];
+                                    let title = 'Detalle % Defectuoso — COSTURA (por equipo)';
+                                    title += ' — ' + year + ' / ' + (pType === 'Sem' ? ('Semana ' + pVal) : ('Mes ' + pVal));
+                                    let html = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><button class="close-btn" id="closeModalDef">Cerrar</button></div>';
+                                    // Build a three-row header: top row with DEFECTOS, middle row with groups (COSTURA, MANCHAS, APROBACION), bottom row with column titles
+                                    const topGroups = [ {label:'DEFECTOS', start:'Tela', end:'Jalad'} ];
+                                    const groups = [
+                                        {label:'COSTURA', start:'Huecos', end:'Oper Falta'},
+                                        {label:'MANCHAS', start:'Mnch Aceite', end:'Mnch Tinto'},
+                                        {label:'APROBACION', start:'A1', end:'A4'}
+                                    ];
+                                    let theadHtml = '';
+                                    // compute ranges for top groups and middle groups
+                                    const topRanges = topGroups.map(tg=>{const s=cols.indexOf(tg.start);const e=cols.indexOf(tg.end);return (s>=0&&e>=s)?{s,e,label:tg.label}:null}).filter(x=>x);
+                                    const midRanges = groups.map(g=>{const s=cols.indexOf(g.start);const e=cols.indexOf(g.end);return (s>=0&&e>=s)?{s,e,label:g.label}:null}).filter(x=>x);
+                                    const skip = new Array(cols.length).fill(false);
+
+                                    // top-most grouping row (e.g., DEFECTOS)
+                                    theadHtml += '<tr>';
+                                    for(let i=0;i<cols.length;i++){
+                                        // if a top-group starts here, emit colspan
+                                        const tg = topRanges.find(r=>r.s===i);
+                                        if(tg){
+                                            const span = tg.e - tg.s + 1;
+                                            theadHtml += '<th colspan="'+span+'" style="text-align:center">'+tg.label+'</th>';
+                                            i = tg.e; continue;
+                                        }
+                                        // if this column is part of any middle group, leave a placeholder (middle row will emit the group)
+                                        const inMid = midRanges.some(r=> i>=r.s && i<=r.e);
+                                        if(inMid){ theadHtml += '<th></th>'; continue; }
+                                        // standalone column -> occupy all three rows
+                                        theadHtml += '<th rowspan="3" style="text-align:center;vertical-align:middle">'+cols[i]+'</th>';
+                                        skip[i] = true;
+                                    }
+                                    theadHtml += '</tr>';
+
+                                    // middle grouping row (COSTURA, MANCHAS, APROBACION)
+                                    theadHtml += '<tr>';
+                                    for(let i=0;i<cols.length;i++){
+                                        if(skip[i]) continue; // already rendered with rowspan in top row
+                                        const mg = midRanges.find(r=>r.s===i);
+                                        if(mg){
+                                            const span = mg.e - mg.s + 1;
+                                            theadHtml += '<th colspan="'+span+'" style="text-align:center">'+mg.label+'</th>';
+                                            i = mg.e; continue;
+                                        }
+                                        // if part of a top-group but not a middle-group (e.g., Tela, Acab, Med, Jalad), put placeholder so bottom row will render the actual column header
+                                        const inTop = topRanges.some(r=> i>=r.s && i<=r.e);
+                                        if(inTop){ theadHtml += '<th></th>'; continue; }
+                                        // otherwise (shouldn't happen) add empty
+                                        theadHtml += '<th></th>';
+                                    }
+                                    theadHtml += '</tr>';
+
+                                    // bottom row with actual column titles for columns not already rowspan'd
+                                    theadHtml += '<tr>';
+                                    for(let i=0;i<cols.length;i++){
+                                        if(skip[i]) continue; // already printed as rowspan in top row
+                                        theadHtml += '<th style="text-align:center">'+cols[i]+'</th>';
+                                    }
+                                    theadHtml += '</tr>';
+                                    html += '<table><thead>' + theadHtml + '</thead><tbody>';
+                                    const nf = new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
+                                    const nfPctDef = new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});
+                                    const nfPctNoDec = new Intl.NumberFormat('es-ES',{minimumFractionDigits:0,maximumFractionDigits:0});
+                                    // iterate equipos 1..29 and skip rows where all numeric fields are zero
+                                    let visibleCount = 0;
+                                    for(let eq=1; eq<=29; eq++){
+                                        const key = String(eq);
+                                        const row = (perEquipo && perEquipo[key]) ? perEquipo[key] : {equipo:eq,cant_auditada:0,cant_muestra:0,tela:0,huecos:0,punt_saltadas:0,punt_cortadas:0,hilos:0,cost_defectuosas:0,operac_faltantes:0,mnch_aceite:0,mnch_suciedad:0,mnch_tinto:0,acabados:0,medidas:0,jaladuras:0,total_defec:0,a1:0,a2:0,a3:0,a4:0,lote_no_aprob:0,cant_prend_rech:0};
+                                        // compute a sum of all relevant numeric fields (excluding equipo)
+                                        const sumFields = (row.cant_auditada||0) + (row.cant_muestra||0) + (row.tela||0) + (row.huecos||0) + (row.punt_saltadas||0) + (row.punt_cortadas||0) + (row.hilos||0) + (row.cost_defectuosas||0) + (row.operac_faltantes||0) + (row.mnch_aceite||0) + (row.mnch_suciedad||0) + (row.mnch_tinto||0) + (row.acabados||0) + (row.medidas||0) + (row.jaladuras||0) + (row.total_defec||0) + (row.a1||0) + (row.a2||0) + (row.a3||0) + (row.a4||0) + (row.lote_no_aprob||0) + (row.cant_prend_rech||0);
+                                        if(sumFields === 0) continue; // skip empty row
+                                        const totalDef = row.total_defec || 0;
+                                        const cantM = row.cant_muestra || 0;
+                                        const pctDef = (cantM>0)? (totalDef / cantM * 100) : 0;
+                                        const totalA = (row.a1||0)+(row.a2||0)+(row.a3||0)+(row.a4||0)+(row.lote_no_aprob||0);
+                                        const nivelAcept = (totalA>0)? ((row.a1||0)/totalA * 100) : 0;
+                                        html += '<tr>' +
+                                            '<td>'+ (row.equipo || '') +'</td>' +
+                                            '<td>'+ nf.format(row.cant_auditada||0) +'</td>' +
+                                            '<td>'+ nf.format(row.cant_muestra||0) +'</td>' +
+                                            '<td>'+ nf.format(row.tela||0) +'</td>' +
+                                            '<td>'+ nf.format(row.huecos||0) +'</td>' +
+                                            '<td>'+ nf.format(row.punt_saltadas||0) +'</td>' +
+                                            '<td>'+ nf.format(row.punt_cortadas||0) +'</td>' +
+                                            '<td>'+ nf.format(row.hilos||0) +'</td>' +
+                                            '<td>'+ nf.format(row.cost_defectuosas||0) +'</td>' +
+                                            '<td>'+ nf.format(row.operac_faltantes||0) +'</td>' +
+                                            '<td>'+ nf.format(row.mnch_aceite||0) +'</td>' +
+                                            '<td>'+ nf.format(row.mnch_suciedad||0) +'</td>' +
+                                            '<td>'+ nf.format(row.mnch_tinto||0) +'</td>' +
+                                            '<td>'+ nf.format(row.acabados||0) +'</td>' +
+                                            '<td>'+ nf.format(row.medidas||0) +'</td>' +
+                                            '<td>'+ nf.format(row.jaladuras||0) +'</td>' +
+                                            '<td>'+ nf.format(totalDef) +'</td>' +
+                                            '<td>'+ nfPctDef.format(pctDef) +'%</td>' +
+                                            '<td>'+ nf.format(row.a1||0) +'</td>' +
+                                            '<td>'+ nf.format(row.a2||0) +'</td>' +
+                                            '<td>'+ nf.format(row.a3||0) +'</td>' +
+                                            '<td>'+ nf.format(row.a4||0) +'</td>' +
+                                            '<td>'+ nf.format(row.lote_no_aprob||0) +'</td>' +
+                                            '<td>'+ nf.format(totalA) +'</td>' +
+                                            '<td>'+ nfPctNoDec.format(nivelAcept) +'%</td>' +
+                                            '<td>'+ nf.format(row.cant_prend_rech||0) +'</td>' +
+                                        '</tr>';
+                                        visibleCount++;
+                                    }
+                                    if(visibleCount === 0){
+                                        html += '<tr><td colspan="26" style="text-align:center;padding:18px;color:#666">No hay datos para equipos 1-29 con el filtro seleccionado.</td></tr>';
+                                    }
+                                    html += '</tbody></table>';
+                                    modal.innerHTML = html;
+                                    ol.style.display = 'flex';
+                                    // close handlers (use onclick to avoid duplicates)
+                                    const closeBtn = document.getElementById('closeModalDef');
+                                    if(closeBtn) closeBtn.onclick = ()=>{ ol.style.display='none'; };
+                                    ol.onclick = (ev)=>{ if(ev.target === ol) ol.style.display='none'; };
+                                }
+                        }catch(e){console.warn('renderCharts err', e)}
+                }
+
+        // Convierte respuesta GViz (JSONP) a array de objetos [{col: value}]
+        function gvizToObjects(resp) {
+            if (!resp || !resp.table) return [];
+            const cols = (resp.table.cols || []).map(c => String(c.label || c.id || '').trim());
+            return (resp.table.rows || []).map(r => {
+                const o = {};
+                cols.forEach((h, i) => {
+                    const cell = r.c && r.c[i] ? r.c[i] : null;
+                    o[h] = cell && (cell.v !== null && cell.v !== undefined) ? cell.v : '';
+                });
+                return o;
+            });
+        }
+
+        // Cargar hoja vía JSONP usando Google Visualization (evita problemas CORS)
+        function loadSheetJSONP(sheetId, sheetName) {
+            const TIMEOUT_MS = 15000;
+            return new Promise((resolve, reject) => {
+                const cbName = 'GVIZ_CB_' + Math.random().toString(36).slice(2);
+                let script = document.createElement('script');
+                let timer = null;
+
+                function cleanup() {
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
+                    }
+                    delete window[cbName];
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                        script = null;
+                    }
+                }
+
+                timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error(`Tiempo de espera agotado al cargar "${sheetName}".`));
+                }, TIMEOUT_MS);
+
+                window[cbName] = function (resp) {
+                    cleanup();
+                    try {
+                        resolve(gvizToObjects(resp));
+                    } catch (e) {
+                        reject(new Error('Error al procesar los datos: ' + e.message));
+                    }
+                };
+
+                script.onerror = (err) => {
+                    cleanup();
+                    reject(new Error(`No se pudo cargar la hoja "${sheetName}".`));
+                };
+
+                const base = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`;
+                const url = `${base}?sheet=${encodeURIComponent(sheetName)}&headers=1&tq=${encodeURIComponent('select *')}&tqx=out:json;responseHandler:${cbName}&nocache=${Date.now()}`;
+
+                script.src = url;
+                document.head.appendChild(script);
+            });
+        }
+
+        async function fetchText(url){
+            const res = await fetch(url);
+            if(!res.ok) throw new Error('HTTP '+res.status+' from '+url);
+            return await res.text();
+        }
+
+        function buildPubCsvFromPubUrl(pubUrl){
+            try{
+                const u = new URL(pubUrl);
+                // If already has output=csv
+                if(u.searchParams.get('output')=== 'csv') return pubUrl;
+                // If published URL like /pubhtml or /pub
+                if(u.pathname.includes('/pubhtml') || u.pathname.includes('/pub')){
+                    // ensure path ends with /pub and set output=csv
+                    u.pathname = u.pathname.replace(/\/pubhtml?$/,'/pub');
+                    u.searchParams.set('output','csv');
+                    // keep gid if present; otherwise add default GID
+                    if(!u.searchParams.get('gid')) u.searchParams.set('gid', String(GID));
+                    return u.toString();
+                }
+            }catch(e){
+                return null;
+            }
+            return null;
+        }
+
+        async function tryFetchVariants(pubUrl){
+            const urls = [];
+            if(pubUrl){
+                const csvPub = buildPubCsvFromPubUrl(pubUrl);
+                if(csvPub) urls.push(csvPub);
+            }
+            urls.push(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`);
+            urls.push(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`);
+            urls.push(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=data`);
+
+            let lastErr = null;
+            for(const u of urls){
+                if(!u) continue;
+                try{
+                    console.log('Intentando: '+u);
+                    const text = await fetchText(u);
+                    return {url:u, text};
+                }catch(e){
+                    lastErr = e;
+                    console.warn('fetch failed', u, e);
+                }
+            }
+            throw lastErr || new Error('No se pudo obtener hoja');
+        }
+
+        async function loadAndCompute(){
+            console.log('Descargando hoja...');
+            try{
+                // Intentar primero cargar vía JSONP (Google Visualization) desde la hoja 'data'
+                let data = null;
+                try{
+                    console.log('Cargando via GViz JSONP (sheet:data)...');
+                    const jsonObjects = await loadSheetJSONP(SHEET_ID, 'data');
+                    if(jsonObjects && jsonObjects.length>0){
+                        data = jsonObjects;
+                    }
+                }catch(jerr){
+                    console.warn('JSONP fallo:', jerr);
+                    // sigue al fallback de CSV
+                }
+
+                if(!data){
+                    const result = await tryFetchVariants();
+                    let csv = result.text;
+                    // si es gviz JSON, deberá limpiarse y extraer los rows
+                    if(result.url.includes('out:json')){
+                        // gviz returns: /*O_o*/\ngoogle.visualization.Query.setResponse(...) ;
+                        const match = csv.match(/setResponse\((.*)\);?\s*$/s);
+                        if(!match) throw new Error('Respuesta gviz inesperada');
+                        const json = JSON.parse(match[1]);
+                        // intentar convertir a CSV-like array
+                        const cols = json.table.cols.map(c=>c.label || c.id || '');
+                        const rows = json.table.rows.map(r=> r.c.map(cell => cell && cell.v !== undefined ? cell.v : ''));
+                        // construir CSV text
+                        const lines = [cols.join(',')].concat(rows.map(r=> r.map(v=> '"'+String(v).replace(/"/g,'""')+'"').join(',')));
+                        csv = lines.join('\n');
+                    }
+                    const parsed = Papa.parse(csv, {header:true, skipEmptyLines:true});
+                    data = parsed.data;
+                }
+
+                if(!data || data.length===0){ console.log('No hay datos.'); return; }
+
+                // Identificar columnas
+                const headers = Object.keys(data[0]);
+                const map = {};
+                headers.forEach(h=>{
+                    const nh = norm(h);
+                    if(nh.includes('fecha')) map.fecha = h;
+                    if(nh.includes('equipo')) map.equipo = h;
+                    if(nh.includes('defect')) map.defectos = h;
+                    // 'total' ambiguous: prefer exact 'total' that's not 'total defectos'
+                    if(nh==='total') map.total = h;
+                    if(nh.startsWith('a 1')||nh==='a 1' || nh==='a1' || nh==='a  1') map.a1 = h;
+                    // keep cant mapping for fallback, but prefer exact match later
+                    if(nh.includes('cant')||nh.includes('muestra')) map.cant = map.cant || h;
+                });
+
+                // Prefer exact header 'Cant Muestra' if present (normalized)
+                const exactCant = headers.find(h => norm(h) === 'cant muestra');
+                if(exactCant) map.cant = exactCant;
+                // Prefer exact header 'Total Defectos' if present
+                const exactDef = headers.find(h => norm(h) === 'total defectos');
+                if(exactDef) map.defectos = exactDef;
+
+                // If fecha not detected, try to auto-detect by sampling columns
+                function detectDateColumn(data, headers){
+                    const scores = {};
+                    const sampleN = Math.min(50, data.length);
+                    headers.forEach(h=> scores[h]=0);
+                    for(let i=0;i<sampleN;i++){
+                        const row = data[i];
+                        headers.forEach(h=>{
+                            const v = row[h];
+                            if(v===null||v===undefined) return;
+                            if(parseFechaValue(v)) scores[h]++;
+                        });
+                    }
+                    const sorted = Object.keys(scores).sort((a,b)=>scores[b]-scores[a]);
+                    if(scores[sorted[0]]>0) return sorted[0];
+                    return null;
+                }
+
+                if(!map.fecha){
+                    const auto = detectDateColumn(data, headers);
+                    if(auto) map.fecha = auto;
+                }
+
+                // Fallback: try to guess by partial names for total
+                if(!map.total){ headers.forEach(h=>{ if(!map.total && norm(h).includes(' total')) map.total=h; }); }
+
+                // Initialize sums and diagnostic counters
+                const sums = {
+                    costura: {cant:0,defectos:0,total:0,a1:0},
+                    costura_1_19: {cant:0,defectos:0,total:0,a1:0},
+                    costura_20_29: {cant:0,defectos:0,total:0,a1:0},
+                    acabados: {cant:0,defectos:0,total:0,a1:0}
+                };
+
+                // Build a mapping from expected defect column canonical names -> header (if present)
+                const targetCanonical = {
+                    cant_auditada: ['cant audit','cantidad audit','cant auditada'],
+                    cant_muestra: ['cant muestra','cant muestra','cantidad muestra','muestra','cantmuestra'],
+                    tela: ['tela'],
+                    huecos: ['huec','huecos'],
+                    punt_saltadas: ['punt salta','punt salt','punt saltadas','punt_saltadas','puntas saltadas'],
+                    punt_cortadas: ['punt cort','punt cortadas','punt_cortadas'],
+                    hilos: ['hilos'],
+                    cost_defectuosas: ['cost defect','cost defectuosa','cost_defectuosas','costuras defectuosas'],
+                    operac_faltantes: ['operac falt','operac faltantes','operaciones faltantes'],
+                    mnch_aceite: ['mnch aceite','manch aceite','mancha aceite','manch_aceite'],
+                    mnch_suciedad: ['mnch suciedad','manch suciedad','mancha suciedad','manch_suciedad'],
+                    mnch_tinto: ['mnch tinto','manch tinto','mancha tinto','manch_tinto','tinto'],
+                    acabados_c: ['acabados'],
+                    medidas: ['medid','medidas'],
+                    jaladuras: ['jaladur','jaladuras','jaladuras'],
+                    a1: ['a 1','a1','a_1'],
+                    a2: ['a 2','a2','a_2'],
+                    a3: ['a 3','a3','a_3'],
+                    a4: ['a 4','a4','a_4'],
+                    lote_no_aprob: ['lote no aprob','lote no aprob.','lote no aprobado','lote no aprobados'],
+                    cant_prend_rech: ['prend rech','prend. rech','prend rechaz','rechaz']
+                };
+                const colField = {};
+                headers.forEach(h=>{
+                    const nh = norm(h);
+                    Object.keys(targetCanonical).forEach(key=>{
+                        targetCanonical[key].forEach(pat=>{ if(nh.includes(pat) && !colField[key]) colField[key]=h; });
+                    });
+                });
+                // Ensure main known fields map to earlier detections
+                if(map.cant) colField.cant_muestra = map.cant;
+                if(map.defectos) colField.total_defec = map.defectos;
+                if(map.a1) colField.a1 = map.a1;
+                if(map.total) colField.total_aud = map.total;
+
+                // per-equipo aggregation container
+                const perEquipo = {};
+
+                // Preprocess: parse dates for all rows and collect available years/months/weeks
+                let totalRows = 0;
+                let parsedDates = 0;
+                let costuraRows = 0;
+                let acabadosRows = 0;
+                const sampleDates = [];
+                const yearsSet = new Set();
+                const monthsByYear = {}; // year -> Set(monthIndex 1-12)
+                const weeksByYear = {}; // year -> Set(weekNumber)
+
+                data.forEach(row=>{
+                    totalRows++;
+                    const rawFecha = map.fecha ? row[map.fecha] : undefined;
+                    if(sampleDates.length < 10){
+                        try{ const parsedSample = parseFechaValue(rawFecha); const formatted = parsedSample ? formatFecha(parsedSample) : ''; sampleDates.push({i: totalRows, type: typeof rawFecha, value: String(rawFecha).slice(0,200), parsed: parsedSample? parsedSample.toISOString() : null, formatted}); }catch(e){ sampleDates.push({i: totalRows, type: typeof rawFecha, value: String(rawFecha)}); }
+                    }
+                    const dt = parseFechaValue(rawFecha);
+                    if(!dt || isNaN(dt)) return;
+                    parsedDates++;
+                    row._parsedFecha = dt;
+                    const y = dt.getFullYear();
+                    const m = dt.getMonth() + 1; // 1-12
+                    const wk = getISOWeek(dt);
+                    yearsSet.add(y);
+                    monthsByYear[y] = monthsByYear[y] || new Set(); monthsByYear[y].add(m);
+                    weeksByYear[y] = weeksByYear[y] || new Set(); weeksByYear[y].add(wk);
+                });
+
+                // If no years found (maybe fecha detection failed), try auto-detect and re-run preprocess once
+                if(yearsSet.size === 0){
+                    const auto = detectDateColumn(data, headers);
+                    if(auto && auto !== map.fecha){
+                        map.fecha = auto;
+                        // clear and redo
+                        yearsSet.clear();
+                        Object.keys(monthsByYear).forEach(k=>delete monthsByYear[k]);
+                        Object.keys(weeksByYear).forEach(k=>delete weeksByYear[k]);
+                        totalRows = 0; parsedDates = 0;
+                        data.forEach(row=>{
+                            totalRows++;
+                            const rawFecha2 = row[map.fecha];
+                            const dt2 = parseFechaValue(rawFecha2);
+                            if(!dt2 || isNaN(dt2)) return;
+                            parsedDates++;
+                            row._parsedFecha = dt2;
+                            const y2 = dt2.getFullYear();
+                            const m2 = dt2.getMonth()+1;
+                            const wk2 = getISOWeek(dt2);
+                            yearsSet.add(y2);
+                            monthsByYear[y2] = monthsByYear[y2] || new Set(); monthsByYear[y2].add(m2);
+                            weeksByYear[y2] = weeksByYear[y2] || new Set(); weeksByYear[y2].add(wk2);
+                        });
+                    }
+                }
+
+                // Populate year/period selects based on parsed dates
+                const yearSelect = document.getElementById('yearSelect');
+                const periodTypeSel = document.getElementById('periodType');
+                const periodSelect = document.getElementById('periodSelect');
+                // clear
+                yearSelect.innerHTML = '';
+                const years = Array.from(yearsSet).sort((a,b)=>b-a);
+                years.forEach(y=>{ const opt = document.createElement('option'); opt.value = y; opt.textContent = y; yearSelect.appendChild(opt); });
+                const nowYear = (new Date()).getFullYear();
+                // Prefer current year if present in data; otherwise use most recent year available
+                FILTER_YEAR = years.includes(nowYear) ? nowYear : (years.length ? years[0] : nowYear);
+                // set selected value on the select
+                yearSelect.value = String(FILTER_YEAR);
+
+                // helper to populate periodSelect
+                function populatePeriodSelect(type, year){
+                    periodSelect.innerHTML = '';
+                    if(type === 'Mes'){
+                        const months = monthsByYear[year] ? Array.from(monthsByYear[year]).sort((a,b)=>a-b) : [];
+                        const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+                        months.forEach(m=>{ const opt = document.createElement('option'); opt.value = m; opt.textContent = meses[m-1]; periodSelect.appendChild(opt); });
+                    } else {
+                        const weeks = weeksByYear[year] ? Array.from(weeksByYear[year]).sort((a,b)=>a-b) : [];
+                        weeks.forEach(w=>{ const opt = document.createElement('option'); opt.value = w; opt.textContent = 'SEM' + w; periodSelect.appendChild(opt); });
+                    }
+                    // set default
+                    if(periodSelect.options.length>0){ periodSelect.selectedIndex = periodSelect.options.length - 1; PERIOD_VALUE = periodSelect.value; }
+                }
+
+                // initial population — default Period = 'Sem'
+                if(periodTypeSel) periodTypeSel.value = 'Sem';
+                PERIOD_TYPE = 'Sem';
+                populatePeriodSelect(PERIOD_TYPE, FILTER_YEAR);
+
+                // attach change handlers
+                yearSelect.addEventListener('change', ()=>{ FILTER_YEAR = parseInt(yearSelect.value,10); populatePeriodSelect(PERIOD_TYPE, FILTER_YEAR); });
+                periodTypeSel.addEventListener('change', ()=>{ PERIOD_TYPE = periodTypeSel.value; populatePeriodSelect(PERIOD_TYPE, FILTER_YEAR); });
+                periodSelect.addEventListener('change', ()=>{ PERIOD_VALUE = periodSelect.value; });
+
+                // Apply filter immediately using current selections (default to last available value)
+                PERIOD_VALUE = periodSelect.value;
+
+                // Keep badge as check symbol and ensure tooltip
+                const lbl = document.getElementById('filterLabel');
+                if(lbl){ lbl.innerHTML = '✓'; lbl.title = 'Check Datos'; lbl.setAttribute('aria-label','Check Datos'); }
+
+                // Now compute sums using the selected filter
+                const selectedYear = Number(FILTER_YEAR);
+                const selectedVal = Number(PERIOD_VALUE);
+                data.forEach(row=>{
+                    const dt = row._parsedFecha;
+                    if(!dt) return;
+                    if(dt.getFullYear() !== selectedYear) return;
+                    if(PERIOD_TYPE === 'Sem'){
+                        if(getISOWeek(dt) !== selectedVal) return;
+                    }else{
+                        if((dt.getMonth()+1) !== selectedVal) return;
+                    }
+
+                    // row passes filter
+                    const equipoRaw = map.equipo ? row[map.equipo] : undefined;
+                    const equipoNum = parseInt((equipoRaw||'').toString().replace(/[^0-9\-]/g,''),10);
+                    const group = (equipoNum>=1 && equipoNum<=29)?'costura':(equipoNum>=30 && equipoNum<=40)?'acabados':null;
+                    if(!group) return;
+                    if(group==='costura') costuraRows++; else if(group==='acabados') acabadosRows++;
+                    // add to overall group
+                    sums[group].cant += toNum(row[map.cant]);
+                    sums[group].defectos += toNum(row[map.defectos]);
+                    sums[group].total += toNum(row[map.total]);
+                    sums[group].a1 += toNum(row[map.a1]);
+                    // if costura, also add to the proper sub-range
+                    if(group === 'costura'){
+                        if(equipoNum >= 1 && equipoNum <= 19){
+                            sums.costura_1_19.cant += toNum(row[map.cant]);
+                            sums.costura_1_19.defectos += toNum(row[map.defectos]);
+                            sums.costura_1_19.total += toNum(row[map.total]);
+                            sums.costura_1_19.a1 += toNum(row[map.a1]);
+                        } else if(equipoNum >= 20 && equipoNum <= 29){
+                            sums.costura_20_29.cant += toNum(row[map.cant]);
+                            sums.costura_20_29.defectos += toNum(row[map.defectos]);
+                            sums.costura_20_29.total += toNum(row[map.total]);
+                            sums.costura_20_29.a1 += toNum(row[map.a1]);
+                        }
+                    }
+                    // --- per-equipo accumulation ---
+                    if(!isNaN(equipoNum)){
+                        const k = String(equipoNum);
+                        if(!perEquipo[k]){
+                            perEquipo[k] = {
+                                equipo: equipoNum,
+                                cant_auditada:0, cant_muestra:0, tela:0, huecos:0, punt_saltadas:0, punt_cortadas:0, hilos:0, cost_defectuosas:0,
+                                operac_faltantes:0, mnch_aceite:0, mnch_suciedad:0, mnch_tinto:0, acabados:0, medidas:0, jaladuras:0,
+                                total_defec:0, a1:0,a2:0,a3:0,a4:0,lote_no_aprob:0,cant_prend_rech:0
+                            };
+                        }
+                        const pe = perEquipo[k];
+                        // accumulate using discovered column headers (colField)
+                        if(colField.cant_auditada) pe.cant_auditada += toNum(row[colField.cant_auditada]);
+                        if(colField.cant_muestra) pe.cant_muestra += toNum(row[colField.cant_muestra]);
+                        if(colField.tela) pe.tela += toNum(row[colField.tela]);
+                        if(colField.huecos) pe.huecos += toNum(row[colField.huecos]);
+                        if(colField.punt_saltadas) pe.punt_saltadas += toNum(row[colField.punt_saltadas]);
+                        if(colField.punt_cortadas) pe.punt_cortadas += toNum(row[colField.punt_cortadas]);
+                        if(colField.hilos) pe.hilos += toNum(row[colField.hilos]);
+                        if(colField.cost_defectuosas) pe.cost_defectuosas += toNum(row[colField.cost_defectuosas]);
+                        if(colField.operac_faltantes) pe.operac_faltantes += toNum(row[colField.operac_faltantes]);
+                        if(colField.mnch_aceite) pe.mnch_aceite += toNum(row[colField.mnch_aceite]);
+                        if(colField.mnch_suciedad) pe.mnch_suciedad += toNum(row[colField.mnch_suciedad]);
+                        if(colField.mnch_tinto) pe.mnch_tinto += toNum(row[colField.mnch_tinto]);
+                        if(colField.acabados_c) pe.acabados += toNum(row[colField.acabados_c]);
+                        if(colField.medidas) pe.medidas += toNum(row[colField.medidas]);
+                        if(colField.jaladuras) pe.jaladuras += toNum(row[colField.jaladuras]);
+                        // total defects column (if found) otherwise try sum of known defect cols
+                        if(colField.total_defec) pe.total_defec += toNum(row[colField.total_defec]);
+                        else {
+                            // attempt to sum common defect cols
+                            pe.total_defec += toNum(row[colField.tela]) + toNum(row[colField.huecos]) + toNum(row[colField.punt_saltadas]) + toNum(row[colField.punt_cortadas]) + toNum(row[colField.hilos]) + toNum(row[colField.cost_defectuosas]) + toNum(row[colField.operac_faltantes]||0);
+                        }
+                        if(colField.a1) pe.a1 += toNum(row[colField.a1]);
+                        if(colField.a2) pe.a2 += toNum(row[colField.a2]);
+                        if(colField.a3) pe.a3 += toNum(row[colField.a3]);
+                        if(colField.a4) pe.a4 += toNum(row[colField.a4]);
+                        if(colField.lote_no_aprob) pe.lote_no_aprob += toNum(row[colField.lote_no_aprob]);
+                        if(colField.cant_prend_rech) pe.cant_prend_rech += toNum(row[colField.cant_prend_rech]);
+                    }
+                });
+
+                // Log diagnostics to console
+                try{
+                    const filterDesc = (PERIOD_TYPE === 'Sem') ? ('Semana ' + selectedVal + ' ' + selectedYear) : ('Mes ' + selectedVal + ' ' + selectedYear);
+                    const dbg = 'Headers: ' + headers.join(', ') + '\nMap: ' + JSON.stringify(map, null, 2) + '\nTotal rows: '+totalRows+' | Parsed dates: '+parsedDates+' | Rows matching '+filterDesc+': '+(costuraRows+acabadosRows)+'\nCostura rows: '+costuraRows+' | Acabados rows: '+acabadosRows + '\n\nSample Fecha Auditoria values (first '+sampleDates.length+'):\n' + sampleDates.map(s => `#${s.i} [${s.type}] ${s.value}${s.formatted?(' -> '+s.formatted):''}${s.parsed?(' (ISO:'+s.parsed+')'):''}`).join('\n');
+                    console.log(dbg);
+                }catch(e){ console.log('debug set error', e); }
+
+                // Mostrar resultados
+                const cRow = document.getElementById('costura-row');
+                const aRow = document.getElementById('acabados-row');
+                const nfPct = new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2});
+                const nfBap = new Intl.NumberFormat('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1});
+                const nfNum = new Intl.NumberFormat('en-US', {maximumFractionDigits:0}); // miles con comas
+
+                cRow.cells[1].textContent = nfNum.format(sums.costura.cant);
+                cRow.cells[2].textContent = nfNum.format(sums.costura.defectos);
+                // %Def = Total Defectos / Cant Muestra
+                const pctCostura = (sums.costura.cant && sums.costura.cant > 0) ? (sums.costura.defectos / sums.costura.cant * 100) : null;
+                cRow.cells[3].textContent = pctCostura === null ? '–' : (nfPct.format(pctCostura) + '%');
+                cRow.cells[4].textContent = nfNum.format(sums.costura.total);
+                cRow.cells[5].textContent = nfNum.format(sums.costura.a1);
+                // %BAP = A1 / Total (display as percentage with 1 decimal)
+                const bapCost = (sums.costura.total && sums.costura.total > 0) ? (sums.costura.a1 / sums.costura.total * 100) : null;
+                cRow.cells[6].textContent = bapCost === null ? '–' : (nfBap.format(bapCost) + '%');
+
+                // Fill COSTURA 1-19 row
+                const cRow1 = document.getElementById('costura-1-19-row');
+                if(cRow1){
+                    cRow1.cells[1].textContent = nfNum.format(sums.costura_1_19.cant);
+                    cRow1.cells[2].textContent = nfNum.format(sums.costura_1_19.defectos);
+                    const pctC1 = (sums.costura_1_19.cant && sums.costura_1_19.cant>0) ? (sums.costura_1_19.defectos / sums.costura_1_19.cant * 100) : null;
+                    cRow1.cells[3].textContent = pctC1 === null ? '–' : (nfPct.format(pctC1) + '%');
+                    cRow1.cells[4].textContent = nfNum.format(sums.costura_1_19.total);
+                    cRow1.cells[5].textContent = nfNum.format(sums.costura_1_19.a1);
+                    const bapC1 = (sums.costura_1_19.total && sums.costura_1_19.total>0) ? (sums.costura_1_19.a1 / sums.costura_1_19.total * 100) : null;
+                    cRow1.cells[6].textContent = bapC1 === null ? '–' : (nfBap.format(bapC1) + '%');
+                }
+
+                // Fill COSTURA 20-29 row
+                const cRow2 = document.getElementById('costura-20-29-row');
+                if(cRow2){
+                    cRow2.cells[1].textContent = nfNum.format(sums.costura_20_29.cant);
+                    cRow2.cells[2].textContent = nfNum.format(sums.costura_20_29.defectos);
+                    const pctC2 = (sums.costura_20_29.cant && sums.costura_20_29.cant>0) ? (sums.costura_20_29.defectos / sums.costura_20_29.cant * 100) : null;
+                    cRow2.cells[3].textContent = pctC2 === null ? '–' : (nfPct.format(pctC2) + '%');
+                    cRow2.cells[4].textContent = nfNum.format(sums.costura_20_29.total);
+                    cRow2.cells[5].textContent = nfNum.format(sums.costura_20_29.a1);
+                    const bapC2 = (sums.costura_20_29.total && sums.costura_20_29.total>0) ? (sums.costura_20_29.a1 / sums.costura_20_29.total * 100) : null;
+                    cRow2.cells[6].textContent = bapC2 === null ? '–' : (nfBap.format(bapC2) + '%');
+                }
+
+                aRow.cells[1].textContent = nfNum.format(sums.acabados.cant);
+                aRow.cells[2].textContent = nfNum.format(sums.acabados.defectos);
+                const pctAcab = (sums.acabados.cant && sums.acabados.cant > 0) ? (sums.acabados.defectos / sums.acabados.cant * 100) : null;
+                aRow.cells[3].textContent = pctAcab === null ? '–' : (nfPct.format(pctAcab) + '%');
+                aRow.cells[4].textContent = nfNum.format(sums.acabados.total);
+                aRow.cells[5].textContent = nfNum.format(sums.acabados.a1);
+
+                // render symmetric donut charts below the table
+                const chartsWrapper = document.getElementById('chartsWrapper');
+                if(chartsWrapper){
+                    chartsWrapper.style.display = 'block';
+                }
+                // store latest filtered per-equipo data for modal use and render charts
+                window.latestFilteredData = { perEquipo: perEquipo, filteredYear: selectedYear, filteredPeriodType: PERIOD_TYPE, filteredPeriodValue: selectedVal };
+                renderCharts(sums);
+                const bapAcab = (sums.acabados.total && sums.acabados.total > 0) ? (sums.acabados.a1 / sums.acabados.total * 100) : null;
+                aRow.cells[6].textContent = bapAcab === null ? '–' : (nfBap.format(bapAcab) + '%');
+
+                const filterDesc = (PERIOD_TYPE === 'Sem') ? ('Semana ' + selectedVal + ' ' + selectedYear) : ('Mes ' + selectedVal + ' ' + selectedYear);
+                console.log('Listo. Datos filtrados por ' + filterDesc + '.');
+            }catch(err){
+                console.error('Error: '+err.message, err);
+            }
+        }
+        // Wire Apply filter button
+        document.getElementById('applyFilterBtn').addEventListener('click', ()=>{
+            const selType = document.getElementById('periodType').value;
+            const selYear = Number(document.getElementById('yearSelect').value);
+            const selVal = Number(document.getElementById('periodSelect').value);
+            PERIOD_TYPE = selType; FILTER_YEAR = selYear; PERIOD_VALUE = selVal;
+            const lbl = document.getElementById('filterLabel');
+            if(lbl){ lbl.innerHTML = '✓'; lbl.title = 'Check Datos'; lbl.setAttribute('aria-label','Check Datos'); }
+            loadAndCompute();
+        });
+
+        // Run once on load (will try non-published endpoints first)
+        loadAndCompute();
+    </script>
+</body>
+</html>

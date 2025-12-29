@@ -372,7 +372,21 @@
                                             leftCenter.addEventListener('click', function(ev){
                                                 ev.stopPropagation();
                                                 if(window.latestFilteredData && window.latestFilteredData.perEquipo){
-                                                    showModalDefects(window.latestFilteredData.perEquipo);
+                                                    showModalDefects(window.latestFilteredData.perEquipo); // default 1-29
+                                                } else {
+                                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                                }
+                                            });
+                                        }
+                                        // attach click on right donut center (%BAP) to open BAP modal for Equipos 1-29
+                                        const rightCenter = costuraGroup.querySelector('.donut-row .donut:nth-child(2) .center');
+                                        if(rightCenter){
+                                            rightCenter.style.cursor = 'pointer';
+                                            rightCenter.setAttribute('title','Ver %BAP por equipo (1-29)');
+                                            rightCenter.addEventListener('click', function(ev){
+                                                ev.stopPropagation();
+                                                if(window.latestFilteredData && window.latestFilteredData.perEquipo){
+                                                    showBapModal(window.latestFilteredData.perEquipo, 1, 29);
                                                 } else {
                                                     alert('No hay datos detallados disponibles. Aplica el filtro primero.');
                                                 }
@@ -380,6 +394,41 @@
                                         }
                                     }
                                 }catch(e){console.warn('attach costura click err', e)}
+
+                                // attach click for ACABADOS group (second .group-charts) to open modal for equipos 30-40
+                                try{
+                                    const groups = container.querySelectorAll('.group-charts');
+                                    if(groups && groups.length > 1){
+                                        const acabadosGroup = groups[1];
+                                        const leftCenterA = acabadosGroup.querySelector('.donut-row .donut:first-child .center');
+                                        if(leftCenterA){
+                                            leftCenterA.style.cursor = 'pointer';
+                                            leftCenterA.setAttribute('title','Ver detalle por equipo (Equipos 30-40)');
+                                            leftCenterA.addEventListener('click', function(ev){
+                                                ev.stopPropagation();
+                                                if(window.latestFilteredData && window.latestFilteredData.perEquipo){
+                                                    showModalDefects(window.latestFilteredData.perEquipo, 30, 40);
+                                                } else {
+                                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                                }
+                                            });
+                                        }
+                                        // attach click on right donut center (%BAP) to open BAP modal for Equipos 30-40
+                                        const rightCenterA = acabadosGroup.querySelector('.donut-row .donut:nth-child(2) .center');
+                                        if(rightCenterA){
+                                            rightCenterA.style.cursor = 'pointer';
+                                            rightCenterA.setAttribute('title','Ver %BAP por equipo (30-40)');
+                                            rightCenterA.addEventListener('click', function(ev){
+                                                ev.stopPropagation();
+                                                if(window.latestFilteredData && window.latestFilteredData.perEquipo){
+                                                    showBapModal(window.latestFilteredData.perEquipo, 30, 40);
+                                                } else {
+                                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                                }
+                                            });
+                                        }
+                                    }
+                                }catch(e){console.warn('attach acabados click err', e)}
 
                                 // Tooltip creation and click handler for mini-donut centers
                                 let tt = document.getElementById('miniTooltip');
@@ -437,8 +486,9 @@
                                 });
                                 
                                 // helper: show modal with per-equipo aggregated table
-                                function showModalDefects(perEquipo){
-                                    // ensure we only show equipos 1..29 and include filter info
+                                // accepts optional range minEq..maxEq (default 1..29)
+                                function showModalDefects(perEquipo, minEq = 1, maxEq = 29){
+                                    // ensure we only show equipos in provided range and include filter info
                                     const meta = window.latestFilteredData || {};
                                     const year = meta.filteredYear || FILTER_YEAR;
                                     const pType = meta.filteredPeriodType || PERIOD_TYPE;
@@ -454,11 +504,13 @@
                                     const modal = document.getElementById('modalDefects');
                                     // build table HTML
                                     const cols = [
-                                        'Eqp.','C.Aud','C.Ms','Tela','Huecos','Punt Salt','Punt Cort.','Hilos','Cot Def','Oper Falta','Mnch Aceite','Mnch Sucie','Mnch Tinto','Acab','Med','Jalad','T.Def','%Def','A1','A2','A3','A4','Lot No Aprob','Total','Nivel Acep','C.Pds Rech.'
+                                        'Eqp.','Cant. Auditada','Cant. Muestra','Tela','Huecos','Punt Salt','Punt Cort.','Hilos','Cost Defc','Oper Falta','Mnch Aceite','Mnch Sucie','Mnch Tinto','Acab','Med','Jalad','T.Def','%Def','A1','A2','A3','A4','Lot No Aprob','Total','Nivel Acep','C.Pds Rech.'
                                     ];
-                                    let title = 'Detalle % Defectuoso — COSTURA (por equipo)';
+                                    let title = 'AUDITORIA LOTES DE PRODUCCION - COFACO';
                                     title += ' — ' + year + ' / ' + (pType === 'Sem' ? ('Semana ' + pVal) : ('Mes ' + pVal));
-                                    let html = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><button class="close-btn" id="closeModalDef">Cerrar</button></div>';
+                                    title += ' — Equipos ' + minEq + '-' + maxEq;
+                                    let html = '<style>#modalDefects table{font-size:5pt;border-collapse:collapse}#modalDefects th{padding:6px 8px;line-height:1.05;font-size:7pt}#modalDefects td{padding:3px 6px;line-height:1.05;font-size:7.5pt;font-weight:700}#modalDefects thead th{font-size:7pt;padding:6px 8px} .modal{padding:10px}</style>' +
+                                        '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><button class="close-btn" id="closeModalDef">Cerrar</button></div>';
                                     // Build a three-row header: top row with DEFECTOS, middle row with groups (COSTURA, MANCHAS, APROBACION), bottom row with column titles
                                     const topGroups = [ {label:'DEFECTOS', start:'Tela', end:'Jalad'} ];
                                     const groups = [
@@ -479,14 +531,14 @@
                                         const tg = topRanges.find(r=>r.s===i);
                                         if(tg){
                                             const span = tg.e - tg.s + 1;
-                                            theadHtml += '<th colspan="'+span+'" style="text-align:center">'+tg.label+'</th>';
+                                            theadHtml += '<th colspan="'+span+'" style="text-align:center;background-color: rgb(35,88,137); color:#fff">'+tg.label+'</th>';
                                             i = tg.e; continue;
                                         }
                                         // if this column is part of any middle group, leave a placeholder (middle row will emit the group)
                                         const inMid = midRanges.some(r=> i>=r.s && i<=r.e);
-                                        if(inMid){ theadHtml += '<th></th>'; continue; }
+                                        if(inMid){ theadHtml += '<th style="background-color: rgb(35,88,137); color:#fff"></th>'; continue; }
                                         // standalone column -> occupy all three rows
-                                        theadHtml += '<th rowspan="3" style="text-align:center;vertical-align:middle">'+cols[i]+'</th>';
+                                        theadHtml += '<th rowspan="3" style="text-align:center;vertical-align:middle;background-color: rgb(35,88,137); color:#fff">'+cols[i]+'</th>';
                                         skip[i] = true;
                                     }
                                     theadHtml += '</tr>';
@@ -498,14 +550,14 @@
                                         const mg = midRanges.find(r=>r.s===i);
                                         if(mg){
                                             const span = mg.e - mg.s + 1;
-                                            theadHtml += '<th colspan="'+span+'" style="text-align:center">'+mg.label+'</th>';
+                                            theadHtml += '<th colspan="'+span+'" style="text-align:center;background-color: rgb(35,88,137); color:#fff">'+mg.label+'</th>';
                                             i = mg.e; continue;
                                         }
                                         // if part of a top-group but not a middle-group (e.g., Tela, Acab, Med, Jalad), put placeholder so bottom row will render the actual column header
                                         const inTop = topRanges.some(r=> i>=r.s && i<=r.e);
-                                        if(inTop){ theadHtml += '<th></th>'; continue; }
+                                        if(inTop){ theadHtml += '<th style="background-color: rgb(35,88,137); color:#fff"></th>'; continue; }
                                         // otherwise (shouldn't happen) add empty
-                                        theadHtml += '<th></th>';
+                                        theadHtml += '<th style="background-color: rgb(35,88,137); color:#fff"></th>';
                                     }
                                     theadHtml += '</tr>';
 
@@ -513,16 +565,38 @@
                                     theadHtml += '<tr>';
                                     for(let i=0;i<cols.length;i++){
                                         if(skip[i]) continue; // already printed as rowspan in top row
-                                        theadHtml += '<th style="text-align:center">'+cols[i]+'</th>';
+                                        theadHtml += '<th style="text-align:center;background-color: rgb(35,88,137); color:#fff">'+cols[i]+'</th>';
                                     }
                                     theadHtml += '</tr>';
-                                    html += '<table><thead>' + theadHtml + '</thead><tbody>';
+                                    html += '<table style="font-size:5pt;border-collapse:collapse"><thead>' + theadHtml + '</thead><tbody>';
                                     const nf = new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
                                     const nfPctDef = new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});
                                     const nfPctNoDec = new Intl.NumberFormat('es-ES',{minimumFractionDigits:0,maximumFractionDigits:0});
-                                    // iterate equipos 1..29 and skip rows where all numeric fields are zero
+                                    // helper: devuelve estilo de celda según porcentaje de defecto
+                                    function bgForPct(p){
+                                        const pct = Number(p) || 0;
+                                        if(pct === 0) return 'background-color:#1f4e79;color:#fff';
+                                        if(pct >= 0.1 && pct <= 2.5) return 'background-color:#c7f0c6;color:#000';
+                                        if(pct >= 2.6 && pct <= 5.0) return 'background-color:#fff7b2;color:#000';
+                                        if(pct >= 5.1) return 'background-color:#ff5c33;color:#fff';
+                                        return 'background-color:#fff;color:#000';
+                                    }
+                                    function tdPct(p){ return '<td style="'+bgForPct(p)+'">'+ nfPctDef.format(p) +'%</td>'; }
+                                    // helper: Nivel Acep coloring (100, 99-85, 84-70, <=69)
+                                    function bgNivel(p){
+                                        const pct = Math.round(Number(p)) || 0;
+                                        if(pct === 100) return 'background-color:#1f4e79;color:#fff';
+                                        if(pct >= 85 && pct <= 99) return 'background-color:#c7f0c6;color:#000';
+                                        if(pct >= 70 && pct <= 84) return 'background-color:#fff7b2;color:#000';
+                                        if(pct <= 69) return 'background-color:#ff5c33;color:#fff';
+                                        return 'background-color:#fff;color:#000';
+                                    }
+                                    function tdNivel(p){ return '<td style="'+bgNivel(p)+'">'+ nfPctNoDec.format(p) +'%</td>'; }
+                                    // iterate equipos in the requested range and skip rows where all numeric fields are zero
                                     let visibleCount = 0;
-                                    for(let eq=1; eq<=29; eq++){
+                                    // acumuladores para fila de totales
+                                    const totals = { cant_auditada:0, cant_muestra:0, tela:0, huecos:0, punt_saltadas:0, punt_cortadas:0, hilos:0, cost_defectuosas:0, operac_faltantes:0, mnch_aceite:0, mnch_suciedad:0, mnch_tinto:0, acabados:0, medidas:0, jaladuras:0, total_defec:0, a1:0, a2:0, a3:0, a4:0, lote_no_aprob:0, totalA:0, cant_prend_rech:0 };
+                                    for(let eq=minEq; eq<=maxEq; eq++){
                                         const key = String(eq);
                                         const row = (perEquipo && perEquipo[key]) ? perEquipo[key] : {equipo:eq,cant_auditada:0,cant_muestra:0,tela:0,huecos:0,punt_saltadas:0,punt_cortadas:0,hilos:0,cost_defectuosas:0,operac_faltantes:0,mnch_aceite:0,mnch_suciedad:0,mnch_tinto:0,acabados:0,medidas:0,jaladuras:0,total_defec:0,a1:0,a2:0,a3:0,a4:0,lote_no_aprob:0,cant_prend_rech:0};
                                         // compute a sum of all relevant numeric fields (excluding equipo)
@@ -533,38 +607,182 @@
                                         const pctDef = (cantM>0)? (totalDef / cantM * 100) : 0;
                                         const totalA = (row.a1||0)+(row.a2||0)+(row.a3||0)+(row.a4||0)+(row.lote_no_aprob||0);
                                         const nivelAcept = (totalA>0)? ((row.a1||0)/totalA * 100) : 0;
+                                        // sumar para totales
+                                        totals.cant_auditada += (row.cant_auditada||0);
+                                        totals.cant_muestra += (row.cant_muestra||0);
+                                        totals.tela += (row.tela||0);
+                                        totals.huecos += (row.huecos||0);
+                                        totals.punt_saltadas += (row.punt_saltadas||0);
+                                        totals.punt_cortadas += (row.punt_cortadas||0);
+                                        totals.hilos += (row.hilos||0);
+                                        totals.cost_defectuosas += (row.cost_defectuosas||0);
+                                        totals.operac_faltantes += (row.operac_faltantes||0);
+                                        totals.mnch_aceite += (row.mnch_aceite||0);
+                                        totals.mnch_suciedad += (row.mnch_suciedad||0);
+                                        totals.mnch_tinto += (row.mnch_tinto||0);
+                                        totals.acabados += (row.acabados||0);
+                                        totals.medidas += (row.medidas||0);
+                                        totals.jaladuras += (row.jaladuras||0);
+                                        totals.total_defec += (totalDef||0);
+                                        totals.a1 += (row.a1||0);
+                                        totals.a2 += (row.a2||0);
+                                        totals.a3 += (row.a3||0);
+                                        totals.a4 += (row.a4||0);
+                                        totals.lote_no_aprob += (row.lote_no_aprob||0);
+                                        totals.totalA += (totalA||0);
+                                        totals.cant_prend_rech += (row.cant_prend_rech||0);
+
                                         html += '<tr>' +
                                             '<td>'+ (row.equipo || '') +'</td>' +
                                             '<td>'+ nf.format(row.cant_auditada||0) +'</td>' +
-                                            '<td>'+ nf.format(row.cant_muestra||0) +'</td>' +
+                                            '<td style="background-color: rgb(238,236,225)">'+ nf.format(row.cant_muestra||0) +'</td>' +
                                             '<td>'+ nf.format(row.tela||0) +'</td>' +
-                                            '<td>'+ nf.format(row.huecos||0) +'</td>' +
-                                            '<td>'+ nf.format(row.punt_saltadas||0) +'</td>' +
-                                            '<td>'+ nf.format(row.punt_cortadas||0) +'</td>' +
-                                            '<td>'+ nf.format(row.hilos||0) +'</td>' +
-                                            '<td>'+ nf.format(row.cost_defectuosas||0) +'</td>' +
-                                            '<td>'+ nf.format(row.operac_faltantes||0) +'</td>' +
-                                            '<td>'+ nf.format(row.mnch_aceite||0) +'</td>' +
-                                            '<td>'+ nf.format(row.mnch_suciedad||0) +'</td>' +
-                                            '<td>'+ nf.format(row.mnch_tinto||0) +'</td>' +
-                                            '<td>'+ nf.format(row.acabados||0) +'</td>' +
-                                            '<td>'+ nf.format(row.medidas||0) +'</td>' +
+                                            '<td style="background-color: rgb(216,228,188)">'+ nf.format(row.huecos||0) +'</td>' +
+                                            '<td style="background-color: rgb(216,228,188)">'+ nf.format(row.punt_saltadas||0) +'</td>' +
+                                            '<td style="background-color: rgb(216,228,188)">'+ nf.format(row.punt_cortadas||0) +'</td>' +
+                                            '<td style="background-color: rgb(216,228,188)">'+ nf.format(row.hilos||0) +'</td>' +
+                                            '<td style="background-color: rgb(216,228,188)">'+ nf.format(row.cost_defectuosas||0) +'</td>' +
+                                            '<td style="background-color: rgb(216,228,188)">'+ nf.format(row.operac_faltantes||0) +'</td>' +
+                                            '<td style="background-color: rgb(228,223,236)">'+ nf.format(row.mnch_aceite||0) +'</td>' +
+                                            '<td style="background-color: rgb(228,223,236)">'+ nf.format(row.mnch_suciedad||0) +'</td>' +
+                                            '<td style="background-color: rgb(228,223,236)">'+ nf.format(row.mnch_tinto||0) +'</td>' +
+                                            '<td style="background-color: rgb(204,255,255)">'+ nf.format(row.acabados||0) +'</td>' +
+                                            '<td style="background-color: rgb(204,255,255)">'+ nf.format(row.medidas||0) +'</td>' +
                                             '<td>'+ nf.format(row.jaladuras||0) +'</td>' +
-                                            '<td>'+ nf.format(totalDef) +'</td>' +
-                                            '<td>'+ nfPctDef.format(pctDef) +'%</td>' +
+                                            '<td style="background-color: rgb(238,236,225)">'+ nf.format(totalDef) +'</td>' +
+                                            ''+ tdPct(pctDef) +
                                             '<td>'+ nf.format(row.a1||0) +'</td>' +
                                             '<td>'+ nf.format(row.a2||0) +'</td>' +
                                             '<td>'+ nf.format(row.a3||0) +'</td>' +
                                             '<td>'+ nf.format(row.a4||0) +'</td>' +
                                             '<td>'+ nf.format(row.lote_no_aprob||0) +'</td>' +
-                                            '<td>'+ nf.format(totalA) +'</td>' +
-                                            '<td>'+ nfPctNoDec.format(nivelAcept) +'%</td>' +
+                                            '<td style="background-color: rgb(238,236,225)">'+ nf.format(totalA) +'</td>' +
+                                            ''+ tdNivel(nivelAcept) +
                                             '<td>'+ nf.format(row.cant_prend_rech||0) +'</td>' +
                                         '</tr>';
                                         visibleCount++;
+                                        if(eq === 19 && minEq <= 19 && maxEq >= 20){
+                                            // fila delgada en blanco como división entre equipo 19 y 20
+                                            html += '<tr>' +
+                                                '<td colspan="26" style="padding:0;background:#ffffff;height:6px;border:none"></td>' +
+                                            '</tr>';
+                                        }
                                     }
                                     if(visibleCount === 0){
-                                        html += '<tr><td colspan="26" style="text-align:center;padding:18px;color:#666">No hay datos para equipos 1-29 con el filtro seleccionado.</td></tr>';
+                                        html += '<tr><td colspan="26" style="text-align:center;padding:18px;color:#666">No hay datos para equipos '+minEq+'-'+maxEq+' con el filtro seleccionado.</td></tr>';
+                                    } else {
+                                        // insertar fila delgada en blanco entre la última fila de equipo visible y la fila de Totales
+                                        html += '<tr>' +
+                                            '<td colspan="26" style="padding:0;background:#ffffff;height:6px;border:none"></td>' +
+                                        '</tr>';
+                                        // fila de totales (no sumar columnas de porcentaje)
+                                        html += '<tr style="font-weight:700;background:#f5f5f5">' +
+                                            '<td>Total</td>' +
+                                            '<td>'+ nf.format(totals.cant_auditada) +'</td>' +
+                                            '<td>'+ nf.format(totals.cant_muestra) +'</td>' +
+                                            '<td>'+ nf.format(totals.tela) +'</td>' +
+                                            '<td>'+ nf.format(totals.huecos) +'</td>' +
+                                            '<td>'+ nf.format(totals.punt_saltadas) +'</td>' +
+                                            '<td>'+ nf.format(totals.punt_cortadas) +'</td>' +
+                                            '<td>'+ nf.format(totals.hilos) +'</td>' +
+                                            '<td>'+ nf.format(totals.cost_defectuosas) +'</td>' +
+                                            '<td>'+ nf.format(totals.operac_faltantes) +'</td>' +
+                                            '<td>'+ nf.format(totals.mnch_aceite) +'</td>' +
+                                            '<td>'+ nf.format(totals.mnch_suciedad) +'</td>' +
+                                            '<td>'+ nf.format(totals.mnch_tinto) +'</td>' +
+                                            '<td>'+ nf.format(totals.acabados) +'</td>' +
+                                            '<td>'+ nf.format(totals.medidas) +'</td>' +
+                                            '<td>'+ nf.format(totals.jaladuras) +'</td>' +
+                                            '<td>'+ nf.format(totals.total_defec) +'</td>' +
+                                            '<td></td>' +
+                                            '<td>'+ nf.format(totals.a1) +'</td>' +
+                                            '<td>'+ nf.format(totals.a2) +'</td>' +
+                                            '<td>'+ nf.format(totals.a3) +'</td>' +
+                                            '<td>'+ nf.format(totals.a4) +'</td>' +
+                                            '<td>'+ nf.format(totals.lote_no_aprob) +'</td>' +
+                                            '<td>'+ nf.format(totals.totalA) +'</td>' +
+                                            ''+ tdNivel((totals.totalA && totals.totalA>0) ? (totals.a1/totals.totalA*100) : 0) +
+                                            '<td>'+ nf.format(totals.cant_prend_rech) +'</td>' +
+                                        '</tr>';
+
+                                        // fila de porcentajes: para columnas de defectos calcular totalCol / C.Ms; para A1..A4 y Lot No Aprob calcular totalAx / TotalA
+                                        const denomDefs = (totals.cant_muestra && totals.cant_muestra>0) ? totals.cant_muestra : 0;
+                                        const denomA = (totals.totalA && totals.totalA>0) ? totals.totalA : 0;
+                                        const denomAudit = (totals.cant_auditada && totals.cant_auditada>0) ? totals.cant_auditada : 0;
+                                        function pct(v, denom){ return denom>0 ? nfPctDef.format( (v/denom*100) ) + '%' : nfPctDef.format(0) + '%'; }
+
+                                        html += '<tr style="font-weight:700;background:#fafafa">' +
+                                            '<td colspan="3">%defectuoso</td>' +
+                                            '<td>'+ pct(totals.tela, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.huecos, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.punt_saltadas, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.punt_cortadas, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.hilos, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.cost_defectuosas, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.operac_faltantes, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.mnch_aceite, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.mnch_suciedad, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.mnch_tinto, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.acabados, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.medidas, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.jaladuras, denomDefs) +'</td>' +
+                                            '<td>'+ pct(totals.total_defec, denomDefs) +'</td>' +
+                                            '<td></td>' +
+                                            ''+ tdNivel((denomA>0) ? (totals.a1/denomA*100) : 0) +
+                                            '<td>'+ (denomA>0 ? nfPctDef.format(totals.a2/denomA*100) + '%' : nfPctDef.format(0) + '%') +'</td>' +
+                                            '<td>'+ (denomA>0 ? nfPctDef.format(totals.a3/denomA*100) + '%' : nfPctDef.format(0) + '%') +'</td>' +
+                                            '<td>'+ (denomA>0 ? nfPctDef.format(totals.a4/denomA*100) + '%' : nfPctDef.format(0) + '%') +'</td>' +
+                                            '<td>'+ (denomA>0 ? nfPctDef.format(totals.lote_no_aprob/denomA*100) + '%' : nfPctDef.format(0) + '%') +'</td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td>'+ (denomAudit>0 ? nfPctDef.format(totals.cant_prend_rech/denomAudit*100) + '%' : nfPctDef.format(0) + '%') +'</td>' +
+                                        '</tr>';
+                                        // fila de participacion: cada defecto sobre Total T.Def
+                                        const denomPart = (totals.total_defec && totals.total_defec>0) ? totals.total_defec : 0;
+                                        function partPct(v){ return denomPart>0 ? nfPctDef.format((v/denomPart*100)) + '%' : nfPctDef.format(0) + '%'; }
+                                        html += '<tr style="font-weight:700;background:#fffef0">' +
+                                            '<td colspan="3">%Part.</td>' +
+                                            '<td>'+ partPct(totals.tela) +'</td>' +
+                                            '<td>'+ partPct(totals.huecos) +'</td>' +
+                                            '<td>'+ partPct(totals.punt_saltadas) +'</td>' +
+                                            '<td>'+ partPct(totals.punt_cortadas) +'</td>' +
+                                            '<td>'+ partPct(totals.hilos) +'</td>' +
+                                            '<td>'+ partPct(totals.cost_defectuosas) +'</td>' +
+                                            '<td>'+ partPct(totals.operac_faltantes) +'</td>' +
+                                            '<td>'+ partPct(totals.mnch_aceite) +'</td>' +
+                                            '<td>'+ partPct(totals.mnch_suciedad) +'</td>' +
+                                            '<td>'+ partPct(totals.mnch_tinto) +'</td>' +
+                                            '<td>'+ partPct(totals.acabados) +'</td>' +
+                                            '<td>'+ partPct(totals.medidas) +'</td>' +
+                                            '<td>'+ partPct(totals.jaladuras) +'</td>' +
+                                            '<td>'+ partPct(totals.total_defec) +'</td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                        '</tr>';
+                                        // fila que suma las participaciones agrupadas solicitadas
+                                        const sumaGrp1 = (totals.huecos||0) + (totals.punt_saltadas||0) + (totals.punt_cortadas||0) + (totals.hilos||0) + (totals.cost_defectuosas||0) + (totals.operac_faltantes||0);
+                                        const sumaManch = (totals.mnch_aceite||0) + (totals.mnch_suciedad||0) + (totals.mnch_tinto||0);
+                                        const sumaAcab = (totals.acabados||0) + (totals.medidas||0);
+                                        html += '<tr style="font-weight:700;background:#eef7ff">' +
+                                            '<td colspan="3">Suma %Part.</td>' +
+                                            '<td>'+ partPct(totals.tela) +'</td>' +
+                                            '<td colspan="6" style="background-color: rgb(216,228,188)">'+ partPct(sumaGrp1) +'</td>' +
+                                            '<td colspan="3" style="background-color: rgb(228,223,236)">'+ partPct(sumaManch) +'</td>' +
+                                            '<td colspan="2" style="background-color: rgb(204,255,255)">'+ partPct(sumaAcab) +'</td>' +
+                                            '<td>'+ partPct(totals.jaladuras) +'</td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                            '<td></td>' +
+                                        '</tr>';
                                     }
                                     html += '</tbody></table>';
                                     modal.innerHTML = html;
@@ -572,6 +790,144 @@
                                     // close handlers (use onclick to avoid duplicates)
                                     const closeBtn = document.getElementById('closeModalDef');
                                     if(closeBtn) closeBtn.onclick = ()=>{ ol.style.display='none'; };
+                                    ol.onclick = (ev)=>{ if(ev.target === ol) ol.style.display='none'; };
+                                }
+                                // Show modal with %BAP per equipo and per day (Lun-Dom) plus weekly summary
+                                function showBapModal(perEquipo, minEq = 1, maxEq = 29){
+                                    const days = ['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'];
+                                    function dateOfISOWeek(w,y){
+                                        const week = Number(w);
+                                        const year = Number(y);
+                                        // Algorithm: get a date in the target week, then compute Monday
+                                        const simple = new Date(year, 0, 1 + (week - 1) * 7);
+                                        const dow = simple.getDay(); // 0 Sun..6 Sat
+                                        let ISOweekStart = new Date(simple);
+                                        if(dow <= 4){ // Mon..Thu -> back to Monday
+                                            ISOweekStart.setDate(simple.getDate() - (dow === 0 ? 6 : dow - 1));
+                                        }else{ // Fri..Sat -> forward to next Monday
+                                            ISOweekStart.setDate(simple.getDate() + (8 - dow));
+                                        }
+                                        ISOweekStart.setHours(0,0,0,0);
+                                        return ISOweekStart;
+                                    }
+                                    function formatDateShort(d){
+                                        if(!d || !(d instanceof Date) || isNaN(d)) return '';
+                                        const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                                        const dd = d.getDate();
+                                        const ddStr = dd < 10 ? '0'+dd : String(dd);
+                                        return ddStr + '/' + meses[d.getMonth()];
+                                    }
+                                    let ol = document.getElementById('modalOverlayBap');
+                                    if(!ol){ ol = document.createElement('div'); ol.id='modalOverlayBap'; ol.className='modal-overlay'; const modal = document.createElement('div'); modal.className='modal'; modal.id='modalBap'; ol.appendChild(modal); document.body.appendChild(ol); }
+                                    const modal = document.getElementById('modalBap');
+                                    const meta = window.latestFilteredData || {};
+                                    const year = meta.filteredYear || FILTER_YEAR;
+                                    const pType = meta.filteredPeriodType || PERIOD_TYPE;
+                                    const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
+                                    let title = 'BIEN A LA PRIMERA - COFACO — ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal)) + ' — Equipos ' + minEq + '-' + maxEq;
+                                    // compute header labels with dates (for week -> Monday..Sunday; for month -> first 7 days)
+                                    let baseDate = new Date();
+                                    if(pType === 'Sem'){
+                                        baseDate = dateOfISOWeek(Number(pVal), Number(year));
+                                    } else {
+                                        // month: use first day of selected month
+                                        baseDate = new Date(Number(year), Number(pVal)-1, 1);
+                                    }
+                                    const dayLabels = [];
+                                    for(let i=0;i<7;i++){
+                                        const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + i);
+                                        dayLabels.push(days[i] + ' ' + formatDateShort(d));
+                                    }
+                                    let html = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><button class="close-btn" id="closeModalBap">Cerrar</button></div>';
+                                    // build table headers (with dates)
+                                    html += '<table><thead>';
+                                    html += '<tr><th rowspan="2">Equipo</th>';
+                                    dayLabels.forEach(d=>{ html += '<th colspan="3">'+d+'</th>'; });
+                                    // small separator column between last day and RES SEM
+                                    html += '<th rowspan="2" style="width:12px;background:#ffffff;border:none"></th>';
+                                    html += '<th colspan="3">RES SEM</th>';
+                                    html += '</tr>';
+                                    html += '<tr>';
+                                    for(let i=0;i<dayLabels.length;i++){ html += '<th>Aprob 1ra</th><th>Lotes Aud</th><th>%BAP</th>'; }
+                                    // RES SEM subheaders (separator has rowspan=2)
+                                    html += '<th>Aprob 1ra</th><th>Lotes Aud</th><th>%BAP</th>';
+                                    html += '</tr></thead><tbody>';
+                                    const nf = new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
+                                    const nfPct = new Intl.NumberFormat('es-ES',{minimumFractionDigits:0,maximumFractionDigits:0});
+                                    // Totals per day
+                                    const dayTotals = []; for(let d=0; d<7; d++) dayTotals[d] = {a1:0,total:0};
+                                    let weeklyTotals = {a1:0,total:0};
+                                    let visible = 0;
+                                    const totalCols = 1 + (dayLabels.length * 3) + 1 + 3; // Equipo + days*(Aprob/Lotes/%BAP) + sep + RES SEM(3)
+                                    for(let eq=minEq; eq<=maxEq; eq++){
+                                        const key = String(eq);
+                                        const row = perEquipo && perEquipo[key] ? perEquipo[key] : null;
+                                        // skip entirely empty equipos
+                                        if(!row) continue;
+                                        // check whether any day has data
+                                        const any = Object.values(row.daily || {}).some(d=> (d.a1||0) + (d.total||0) > 0 );
+                                        if(!any) continue;
+                                        visible++;
+                                        html += '<tr><td style="font-weight:700">'+eq+'</td>';
+                                        let wkA1 = 0, wkTotal = 0;
+                                        for(let d=0; d<7; d++){
+                                            const val = (row.daily && row.daily[d]) ? row.daily[d] : {a1:0,total:0};
+                                            const a1 = val.a1 || 0; const tot = val.total || 0;
+                                            const pct = tot>0 ? (a1 / tot * 100) : 0;
+                                            if(tot === 0){
+                                                html += '<td></td>';
+                                                html += '<td></td>';
+                                                html += '<td></td>';
+                                            } else {
+                                                html += '<td>'+ nf.format(a1) +'</td>';
+                                                html += '<td>'+ nf.format(tot) +'</td>';
+                                                html += '<td style="font-weight:700;background:rgb(235,241,222)">'+ nfPct.format(pct) +'%</td>';
+                                            }
+                                            dayTotals[d].a1 += a1; dayTotals[d].total += tot;
+                                            wkA1 += a1; wkTotal += tot;
+                                        }
+                                        weeklyTotals.a1 += wkA1; weeklyTotals.total += wkTotal;
+                                        const wkPct = wkTotal>0 ? (wkA1/wkTotal*100) : 0;
+                                        // small separator before RES SEM
+                                        html += '<td style="width:12px;background:#fff;border:none"></td>';
+                                        if(wkTotal === 0){
+                                            html += '<td></td>';
+                                            html += '<td></td>';
+                                            html += '<td></td>';
+                                        } else {
+                                            html += '<td style="font-weight:700">'+ nf.format(wkA1) +'</td>';
+                                            html += '<td style="font-weight:700">'+ nf.format(wkTotal) +'</td>';
+                                            html += '<td style="font-weight:700;background:rgb(235,241,222)">'+ nfPct.format(wkPct) +'%</td>';
+                                        }
+                                        html += '</tr>';
+                                    }
+                                    if(visible===0){ html += '<tr><td colspan="'+ totalCols +'" style="text-align:center;padding:18px;color:#666">No hay datos para equipos '+minEq+'-'+maxEq+' con el filtro seleccionado.</td></tr>'; }
+                                    else{
+                                        // totals row
+                                        html += '<tr style="font-weight:700;background:#f5f5f5"><td>Total</td>';
+                                        for(let d=0; d<7; d++){
+                                            const a1 = dayTotals[d].a1; const tot = dayTotals[d].total; const pct = tot>0? (a1/tot*100):0;
+                                            if(tot === 0){
+                                                html += '<td></td><td></td><td></td>';
+                                            } else {
+                                                html += '<td>'+ nf.format(a1) +'</td><td>'+ nf.format(tot) +'</td><td style="font-weight:700;background:rgb(255,255,0)">'+ nfPct.format(pct) +'%</td>';
+                                            }
+                                        }
+                                        // separator before RES SEM totals
+                                        html += '<td style="width:12px;background:#fff;border:none"></td>';
+                                        if(weeklyTotals.total === 0){
+                                            html += '<td></td><td></td><td></td>';
+                                        } else {
+                                            const totalPct = (weeklyTotals.total>0) ? (weeklyTotals.a1/weeklyTotals.total*100) : 0;
+                                            html += '<td>'+ nf.format(weeklyTotals.a1) +'</td><td>'+ nf.format(weeklyTotals.total) +'</td><td style="font-weight:700;background:rgb(255,255,0)">'+ nfPct.format(totalPct) +'%</td>';
+                                        }
+                                        html += '</tr>';
+                                    }
+                                    html += '</tbody></table>';
+                                    html += '<p style="font-style:italic;margin-top:8px">Los espacios en blanco indican que ese dia no hubo auditoria</p>';
+                                    modal.innerHTML = html;
+                                    ol.style.display = 'flex';
+                                    const closeBtn = document.getElementById('closeModalBap'); if(closeBtn) closeBtn.onclick = ()=>{ ol.style.display='none'; };
                                     ol.onclick = (ev)=>{ if(ev.target === ol) ol.style.display='none'; };
                                 }
                         }catch(e){console.warn('renderCharts err', e)}
@@ -966,11 +1322,15 @@
                     if(!isNaN(equipoNum)){
                         const k = String(equipoNum);
                         if(!perEquipo[k]){
+                            // include daily buckets for Mon-Sun (index 0..6 -> Lunes..Domingo)
+                            const daily = {};
+                            for(let di=0; di<7; di++) daily[di] = {a1:0, total:0};
                             perEquipo[k] = {
                                 equipo: equipoNum,
                                 cant_auditada:0, cant_muestra:0, tela:0, huecos:0, punt_saltadas:0, punt_cortadas:0, hilos:0, cost_defectuosas:0,
                                 operac_faltantes:0, mnch_aceite:0, mnch_suciedad:0, mnch_tinto:0, acabados:0, medidas:0, jaladuras:0,
-                                total_defec:0, a1:0,a2:0,a3:0,a4:0,lote_no_aprob:0,cant_prend_rech:0
+                                total_defec:0, a1:0,a2:0,a3:0,a4:0,lote_no_aprob:0,cant_prend_rech:0,
+                                daily: daily
                             };
                         }
                         const pe = perEquipo[k];
@@ -1002,6 +1362,18 @@
                         if(colField.a4) pe.a4 += toNum(row[colField.a4]);
                         if(colField.lote_no_aprob) pe.lote_no_aprob += toNum(row[colField.lote_no_aprob]);
                         if(colField.cant_prend_rech) pe.cant_prend_rech += toNum(row[colField.cant_prend_rech]);
+
+                        // accumulate per-day A1 and Total for %BAP table (map to Mon..Sun index 0..6)
+                        try{
+                            const jsDay = (row._parsedFecha instanceof Date) ? row._parsedFecha.getDay() : (new Date()).getDay();
+                            const dayIdx = (jsDay + 6) % 7; // convert Sun(0)->6, Mon(1)->0 ...
+                            const dayA1 = toNum(row[colField.a1 || map.a1]);
+                            const dayTotal = toNum(row[colField.total_aud || map.total]);
+                            if(pe.daily && pe.daily[dayIdx]){
+                                pe.daily[dayIdx].a1 += dayA1;
+                                pe.daily[dayIdx].total += dayTotal;
+                            }
+                        }catch(e){ }
                     }
                 });
 

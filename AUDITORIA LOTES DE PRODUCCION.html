@@ -92,7 +92,6 @@
                     <option value="Mes">Mes</option>
                 </select>
                 <select id="periodSelect" style="padding:6px;border:1px solid #ccd;border-radius:6px"></select>
-                <button id="applyFilterBtn" style="padding:8px 12px;background:#007acc;color:#fff;border:none;border-radius:6px;cursor:pointer">Aplicar</button>
                 <a href="index.html" class="back-btn" title="Volver al índice" aria-label="Volver al índice">←</a>
                 <button id="filterLabel" class="badge small" title="Check Datos" aria-label="Check Datos">✓</button>
             </div>
@@ -1496,16 +1495,21 @@
                 console.error('Error: '+err.message, err);
             }
         }
-        // Wire Apply filter button
-        document.getElementById('applyFilterBtn').addEventListener('click', ()=>{
-            const selType = document.getElementById('periodType').value;
-            const selYear = Number(document.getElementById('yearSelect').value);
-            const selVal = Number(document.getElementById('periodSelect').value);
-            PERIOD_TYPE = selType; FILTER_YEAR = selYear; PERIOD_VALUE = selVal;
-            const lbl = document.getElementById('filterLabel');
-            if(lbl){ lbl.innerHTML = '✓'; lbl.title = 'Check Datos'; lbl.setAttribute('aria-label','Check Datos'); }
-            loadAndCompute();
-        });
+        // Wire Apply filter button (safe: only attach if element exists)
+        (function(){
+            const applyBtn = document.getElementById('applyFilterBtn');
+            if(applyBtn){
+                applyBtn.addEventListener('click', ()=>{
+                    const selType = document.getElementById('periodType').value;
+                    const selYear = Number(document.getElementById('yearSelect').value);
+                    const selVal = Number(document.getElementById('periodSelect').value);
+                    PERIOD_TYPE = selType; FILTER_YEAR = selYear; PERIOD_VALUE = selVal;
+                    const lbl = document.getElementById('filterLabel');
+                    if(lbl){ lbl.innerHTML = '✓'; lbl.title = 'Check Datos'; lbl.setAttribute('aria-label','Check Datos'); }
+                    loadAndCompute();
+                });
+            }
+        })();
 
         // Run once on load (will try non-published endpoints first)
         loadAndCompute();

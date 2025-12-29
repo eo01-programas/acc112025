@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AUDITORIA LOTES DE PRODUCCION</title>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
     <style>
         body{font-family:Arial,Helvetica,sans-serif;padding:18px;background:#f7f9fc}
         .card{max-width:900px;margin:18px auto;background:#fff;padding:18px;border-radius:8px;box-shadow:0 6px 20px rgba(10,20,40,0.08)}
@@ -33,6 +34,11 @@
             margin-right:6px;
         }
         .back-btn:hover{ background:#f1f7ff }
+        /* Circular performance button placed left of the back button */
+        .perf-btn{
+            display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#0b69c7;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 14px rgba(10,20,40,0.12);margin-right:6px;padding:0;
+        }
+        .perf-btn svg{width:18px;height:18px;display:block}
         /* Charts area */
         .charts-wrapper{margin-top:18px;background:#fff;border-radius:8px;padding:18px;box-shadow:0 3px 12px rgba(10,20,40,0.04)}
         .charts{display:flex;gap:24px;justify-content:space-between;align-items:flex-start}
@@ -66,6 +72,8 @@
         /* Modal for defect table */
         .modal-overlay{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:10000}
         .modal{background:#fff;border-radius:8px;max-width:none;width:95vw;box-sizing:border-box;max-height:86vh;overflow:auto;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.25)}
+        /* Modal específico para el gráfico: 70% del ancho anterior (95vw * 0.7 = 66.5vw) */
+        #perfModal{width:66.5vw}
         .modal h2{margin:0 0 12px 0;font-size:16px}
         .modal .close-btn{float:right;background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer}
         .modal table{width:100%;border-collapse:collapse;margin-top:8px}
@@ -77,6 +85,9 @@
         #modalDefects th, #modalDefects td, #modalBap th, #modalBap td{padding:4px 6px;font-size:10px}
         #modalDefects thead th, #modalBap thead th{position:sticky;top:0;background:#f1f7ff}
         #modalDefects td, #modalBap td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        /* Info button left of title */
+        .info-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 8px;border-radius:50%;background:#eef3ff;color:#0b69c7;border:1px solid #d0d7e3;font-weight:700;cursor:pointer;margin-right:8px}
+        .info-btn:hover{background:#e1ecff}
     </style>
 </head>
 <body>
@@ -92,6 +103,13 @@
                     <option value="Mes">Mes</option>
                 </select>
                 <select id="periodSelect" style="padding:6px;border:1px solid #ccd;border-radius:6px"></select>
+                <button id="perfBtn" class="perf-btn" title="Performance Auditorias" aria-label="Performance Auditorias" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                        <rect x="3" y="11" width="4" height="8" rx="1" fill="white"/>
+                        <rect x="9" y="7" width="4" height="12" rx="1" fill="white"/>
+                        <rect x="15" y="3" width="4" height="16" rx="1" fill="white"/>
+                    </svg>
+                </button>
                 <a href="index.html" class="back-btn" title="Volver al índice" aria-label="Volver al índice">←</a>
                 <button id="filterLabel" class="badge small" title="Check Datos" aria-label="Check Datos">✓</button>
             </div>
@@ -99,6 +117,7 @@
     </div>
     <div class="card">
         <div style="display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap">
+            <button id="infoBtn" class="info-btn" title="Top 5 peores líneas" aria-label="Top 5 peores líneas">i</button>
             <h1 style="margin:0">COFACO</h1>
         </div>
 
@@ -147,6 +166,17 @@
             date.setUTCDate(date.getUTCDate() + 4 - dayNum);
             const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
             return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+        }
+
+        // Devuelve objeto con año-ISO y número de semana {year, week}
+        function getISOWeekYear(d){
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            const isoYear = date.getUTCFullYear();
+            const yearStart = new Date(Date.UTC(isoYear,0,1));
+            const week = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+            return {year: isoYear, week: week};
         }
 
         function toNum(val){
@@ -653,7 +683,7 @@
                                         totals.cant_prend_rech += (row.cant_prend_rech||0);
 
                                         html += '<tr>' +
-                                            '<td>'+ (row.equipo || '') +'</td>' +
+                                            '<td><a href="#" class="eq-link" data-eq="'+ (row.equipo || '') +'">'+ (row.equipo || '') +'</a></td>' +
                                             '<td>'+ nf.format(row.cant_auditada||0) +'</td>' +
                                             '<td style="background-color: rgb(238,236,225)">'+ nf.format(row.cant_muestra||0) +'</td>' +
                                             '<td>'+ nf.format(row.tela||0) +'</td>' +
@@ -807,6 +837,102 @@
                                     html += '</tbody></table></div>';
                                     modal.innerHTML = html;
                                     ol.style.display = 'flex';
+                                    // Attach small-chart tooltip for equipo links inside the modal
+                                    (function(){
+                                        // ensure tooltip container
+                                        let chartTT = document.getElementById('chartTooltip');
+                                        if(!chartTT){
+                                            chartTT = document.createElement('div');
+                                            chartTT.id = 'chartTooltip';
+                                            chartTT.className = 'mini-tooltip';
+                                            chartTT.style.width = '320px';
+                                            chartTT.style.padding = '8px';
+                                            chartTT.style.display = 'none';
+                                            // Ensure tooltip is positioned above modal overlays
+                                            chartTT.style.position = 'fixed';
+                                            chartTT.style.zIndex = '20000';
+                                            chartTT.style.pointerEvents = 'auto';
+                                            chartTT.innerHTML = '<div style="font-weight:700;margin-bottom:6px" id="chartTTTitle"></div><div style="height:160px"><canvas id="chartTTCanvas" width="300" height="150"></canvas></div>';
+                                            document.body.appendChild(chartTT);
+                                        }
+
+                                        function hideChartTT(){ try{ if(window._eqTooltipChart){ window._eqTooltipChart.destroy(); window._eqTooltipChart = null; } }catch(e){} chartTT.style.display='none'; }
+
+                                        function showChartForEquipoLink(linkEl, eqNum){
+                                            const meta = window.latestFilteredData || {};
+                                            const anchor = { year: Number(meta.filteredYear || FILTER_YEAR), value: Number(meta.filteredPeriodValue || PERIOD_VALUE), type: (meta.filteredPeriodType || PERIOD_TYPE) };
+                                            // lastNPeriodsAnchored computes the last N periods ending BEFORE the provided anchor.
+                                            // To include the selected period (ej. SEM52) in the displayed series, pass the NEXT period as anchor
+                                            let anchorForSeries = anchor;
+                                            try{
+                                                if(anchor.type === 'Sem'){
+                                                    const nextDate = dateOfISOWeek(anchor.value, anchor.year);
+                                                    nextDate.setDate(nextDate.getDate() + 7);
+                                                    const isoNext = getISOWeekYear(nextDate);
+                                                    anchorForSeries = { year: isoNext.year, value: isoNext.week, type: 'Sem' };
+                                                } else {
+                                                    // Mes: move to first day of next month
+                                                    let yy = Number(anchor.year); let mm = Number(anchor.value);
+                                                    mm = mm + 1; if(mm > 12){ mm = 1; yy += 1; }
+                                                    anchorForSeries = { year: yy, value: mm, type: 'Mes' };
+                                                }
+                                            }catch(e){ /* fallback: use anchor as-is */ }
+                                            const res = computeSeriesForOptions({ type: anchor.type || PERIOD_TYPE, lastN:8, equipo: Number(eqNum), anchor: anchorForSeries });
+                                            // build short X labels like S45 S46 ... when period is weeks
+                                            let labelsShort = res.labels || [];
+                                            try{
+                                                if((anchorForSeries && anchorForSeries.type === 'Sem') || (anchor.type === 'Sem')){
+                                                    const periodsArr = lastNPeriodsAnchored('Sem', 8, anchorForSeries);
+                                                    labelsShort = periodsArr.map(p=>{
+                                                        // p.key format: YYYY-Www
+                                                        const m = (p.key||'').match(/-W(\d{1,2})$/);
+                                                        if(m) return 'S' + String(Number(m[1]));
+                                                        // fallback: try to parse from label 'Sem 52/2025'
+                                                        const ml = (p.label||'').match(/(\d{1,2})/);
+                                                        return ml ? ('S' + String(Number(ml[1]))) : (p.label||'');
+                                                    });
+                                                }
+                                            }catch(e){ labelsShort = res.labels || []; }
+                                            const hasData = (res && Array.isArray(res.pctDef) && res.pctDef.some(v=>v>0));
+                                            const titleEl = document.getElementById('chartTTTitle');
+                                            titleEl.textContent = 'Equipo ' + eqNum + ' — %Def. (últimas 8)';
+                                            const canvas = document.getElementById('chartTTCanvas');
+                                            if(!canvas) return;
+                                            // destroy previous small chart
+                                            try{ if(window._eqTooltipChart){ window._eqTooltipChart.destroy(); window._eqTooltipChart = null; } }catch(e){}
+                                            const ctx = canvas.getContext('2d');
+                                            if(!hasData){ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.font = '12px Arial'; ctx.fillStyle='#333'; ctx.fillText('No hay datos históricos para este equipo', 8, 20); }
+                                            else{
+                                                window._eqTooltipChart = new Chart(ctx, {
+                                                    type: 'bar',
+                                                    data: { labels: labelsShort, datasets: [
+                                                        { type: 'bar', label: 'Nivel Acep', data: (res.pctNivel || []), yAxisID: 'yNivel', backgroundColor: 'rgba(75,192,192,0.6)', barPercentage:0.6 },
+                                                        { type: 'line', label: '%Def.', data: res.pctDef, yAxisID: 'yDef', borderColor: 'rgba(203,23,46,0.9)', backgroundColor: 'rgba(203,23,46,0.12)', tension:0.2, pointRadius:3, fill:true }
+                                                    ] },
+                                                    options: { responsive:false, maintainAspectRatio:false, scales:{ x:{ ticks:{ autoSkip:false } }, yDef:{ type:'linear', position:'left', ticks:{ callback: v => v + '%' } }, yNivel:{ type:'linear', position:'right', min:0, max:100, grid:{ drawOnChartArea:false }, ticks:{ callback: v => v + '%' } } }, plugins:{ legend:{ display:false } }
+                                                    }
+                                                });
+                                            }
+                                            // position tooltip near element
+                                            chartTT.style.display = 'block';
+                                            const r = linkEl.getBoundingClientRect(); const ttR = chartTT.getBoundingClientRect();
+                                            let left = r.left + (r.width/2) - (ttR.width/2); let top = r.top - ttR.height - 8;
+                                            if(top < 8) top = r.bottom + 8; if(left < 8) left = 8; if(left + ttR.width > window.innerWidth - 8) left = window.innerWidth - ttR.width - 8;
+                                            chartTT.style.left = left + 'px'; chartTT.style.top = top + 'px';
+                                            // outside click hide
+                                            function hideOnDocClick(ev){ if(!chartTT.contains(ev.target) && !linkEl.contains(ev.target)){ hideChartTT(); document.removeEventListener('click', hideOnDocClick); } }
+                                            setTimeout(()=>document.addEventListener('click', hideOnDocClick), 0);
+                                        }
+
+                                        // attach click listeners on equipo links
+                                        const modalRoot = document.getElementById('modalDefects');
+                                        if(modalRoot){
+                                            modalRoot.querySelectorAll('.eq-link').forEach(a=>{
+                                                a.style.cursor = 'pointer';
+                                                a.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); const eq = this.dataset.eq || this.textContent || ''; showChartForEquipoLink(this, eq); });
+                                            });
+                                        }
+                                    })();
                                     // attach export button
                                     const exportBtn = document.getElementById('exportExcelDef');
                                     if(exportBtn){ exportBtn.onclick = function(){ const fname = 'AUDITORIA_DEFECTOS_'+year+'_'+(pType==='Sem'?('SEM'+pVal):('MES'+pVal))+'_EQ'+minEq+'-'+maxEq+'.xls'; exportModalTableToExcel('modalDefects', fname); }; }
@@ -1111,6 +1237,9 @@
 
                 // Identificar columnas
                 const headers = Object.keys(data[0]);
+                // Hacer accesibles los datos y headers para otros componentes (modal/gráfico)
+                window.sheetData = data;
+                window.sheetHeaders = headers;
                 const map = {};
                 headers.forEach(h=>{
                     const nh = norm(h);
@@ -1130,6 +1259,9 @@
                 // Prefer exact header 'Total Defectos' if present
                 const exactDef = headers.find(h => norm(h) === 'total defectos');
                 if(exactDef) map.defectos = exactDef;
+
+                // Expose the detected map globally so other components reuse the same column choices
+                try{ window.colMap = map; }catch(e){}
 
                 // If fecha not detected, try to auto-detect by sampling columns
                 function detectDateColumn(data, headers){
@@ -1211,9 +1343,10 @@
                 let costuraRows = 0;
                 let acabadosRows = 0;
                 const sampleDates = [];
-                const yearsSet = new Set();
-                const monthsByYear = {}; // year -> Set(monthIndex 1-12)
-                const weeksByYear = {}; // year -> Set(weekNumber)
+                const calendarYearsSet = new Set(); // calendar year for months
+                const isoYearsSet = new Set(); // ISO week-year for weeks
+                const monthsByYear = {}; // calendarYear -> Set(monthIndex 1-12)
+                const weeksByYear = {}; // isoYear -> Set(weekNumber)
 
                 data.forEach(row=>{
                     totalRows++;
@@ -1225,23 +1358,26 @@
                     if(!dt || isNaN(dt)) return;
                     parsedDates++;
                     row._parsedFecha = dt;
-                    const y = dt.getFullYear();
-                    const m = dt.getMonth() + 1; // 1-12
-                    const wk = getISOWeek(dt);
-                    yearsSet.add(y);
-                    monthsByYear[y] = monthsByYear[y] || new Set(); monthsByYear[y].add(m);
-                    weeksByYear[y] = weeksByYear[y] || new Set(); weeksByYear[y].add(wk);
+                    const calendarYear = dt.getFullYear();
+                    const m = dt.getMonth() + 1; // 1-12 (for month grouping we use calendar year)
+                    const iso = getISOWeekYear(dt);
+                    const isoYear = iso.year;
+                    const wk = iso.week;
+                    calendarYearsSet.add(calendarYear);
+                    isoYearsSet.add(isoYear);
+                    monthsByYear[calendarYear] = monthsByYear[calendarYear] || new Set(); monthsByYear[calendarYear].add(m);
+                    weeksByYear[isoYear] = weeksByYear[isoYear] || new Set(); weeksByYear[isoYear].add(wk);
                 });
 
                 // If no years found (maybe fecha detection failed), try auto-detect and re-run preprocess once
-                if(yearsSet.size === 0){
+                if(calendarYearsSet.size === 0 && isoYearsSet.size === 0){
                     const auto = detectDateColumn(data, headers);
                     if(auto && auto !== map.fecha){
                         map.fecha = auto;
                         // clear and redo
-                        yearsSet.clear();
                         Object.keys(monthsByYear).forEach(k=>delete monthsByYear[k]);
                         Object.keys(weeksByYear).forEach(k=>delete weeksByYear[k]);
+                        calendarYearsSet.clear(); isoYearsSet.clear();
                         totalRows = 0; parsedDates = 0;
                         data.forEach(row=>{
                             totalRows++;
@@ -1250,12 +1386,15 @@
                             if(!dt2 || isNaN(dt2)) return;
                             parsedDates++;
                             row._parsedFecha = dt2;
-                            const y2 = dt2.getFullYear();
+                            const calendarYear2 = dt2.getFullYear();
                             const m2 = dt2.getMonth()+1;
-                            const wk2 = getISOWeek(dt2);
-                            yearsSet.add(y2);
-                            monthsByYear[y2] = monthsByYear[y2] || new Set(); monthsByYear[y2].add(m2);
-                            weeksByYear[y2] = weeksByYear[y2] || new Set(); weeksByYear[y2].add(wk2);
+                            const iso2 = getISOWeekYear(dt2);
+                            const isoYear2 = iso2.year;
+                            const wk2 = iso2.week;
+                            calendarYearsSet.add(calendarYear2);
+                            isoYearsSet.add(isoYear2);
+                            monthsByYear[calendarYear2] = monthsByYear[calendarYear2] || new Set(); monthsByYear[calendarYear2].add(m2);
+                            weeksByYear[isoYear2] = weeksByYear[isoYear2] || new Set(); weeksByYear[isoYear2].add(wk2);
                         });
                     }
                 }
@@ -1266,11 +1405,12 @@
                 const periodSelect = document.getElementById('periodSelect');
                 // clear
                 yearSelect.innerHTML = '';
-                const years = Array.from(yearsSet).sort((a,b)=>b-a);
-                years.forEach(y=>{ const opt = document.createElement('option'); opt.value = y; opt.textContent = y; yearSelect.appendChild(opt); });
+                // build union of calendar years and ISO-week years so the select shows relevant years for either period type
+                const yearsUnion = Array.from(new Set([ ...Array.from(calendarYearsSet||[]), ...Array.from(isoYearsSet||[]) ])).sort((a,b)=>b-a);
+                yearsUnion.forEach(y=>{ const opt = document.createElement('option'); opt.value = y; opt.textContent = y; yearSelect.appendChild(opt); });
                 const nowYear = (new Date()).getFullYear();
-                // Prefer current year if present in data; otherwise use most recent year available
-                FILTER_YEAR = years.includes(nowYear) ? nowYear : (years.length ? years[0] : nowYear);
+                // Prefer current calendar year if present, else prefer current ISO year if present, otherwise most recent available
+                FILTER_YEAR = yearsUnion.includes(nowYear) ? nowYear : (yearsUnion.length ? yearsUnion[0] : nowYear);
                 // set selected value on the select
                 yearSelect.value = String(FILTER_YEAR);
 
@@ -1329,10 +1469,12 @@
                 data.forEach(row=>{
                     const dt = row._parsedFecha;
                     if(!dt) return;
-                    if(dt.getFullYear() !== selectedYear) return;
                     if(PERIOD_TYPE === 'Sem'){
-                        if(getISOWeek(dt) !== selectedVal) return;
+                        const iso = getISOWeekYear(dt);
+                        if(iso.year !== selectedYear) return;
+                        if(iso.week !== selectedVal) return;
                     }else{
+                        if(dt.getFullYear() !== selectedYear) return;
                         if((dt.getMonth()+1) !== selectedVal) return;
                     }
 
@@ -1510,6 +1652,345 @@
                 });
             }
         })();
+
+        // --- Performance modal & chart helpers ---
+        function findHeaderByNormLike(patterns){
+            if(!window.sheetHeaders || !Array.isArray(window.sheetHeaders)) return null;
+            const norm = h => (h||'').toString().trim().toLowerCase();
+            for(const p of patterns){
+                const ph = window.sheetHeaders.find(h => norm(h).includes(p));
+                if(ph) return ph;
+            }
+            return null;
+        }
+
+        function periodKeyForDate(dt, type){
+            if(!(dt instanceof Date)) return null;
+            if(type === 'Mes'){
+                const y = dt.getFullYear(); const m = dt.getMonth()+1; return `${y}-${String(m).padStart(2,'0')}`;
+            }
+            // Sem
+            const iso = getISOWeekYear(dt); const wk = iso.week; const y = iso.year; return `${y}-W${String(wk).padStart(2,'0')}`;
+        }
+
+        function lastNPeriods(type, n){
+            const out = [];
+            const now = new Date();
+            if(type === 'Mes'){
+                let y = now.getFullYear(); let m = now.getMonth()+1;
+                for(let i=0;i<n;i++){
+                    out.push({key:`${y}-${String(m).padStart(2,'0')}`,label:(new Date(y,m-1,1)).toLocaleString('es-ES',{month:'short',year:'numeric'})});
+                    m--; if(m<1){ m=12; y--; }
+                }
+            } else {
+                // weeks: use ISO-week for labels and ISO-year
+                let d = new Date(now);
+                for(let i=0;i<n;i++){
+                    const iso = getISOWeekYear(d); const wk = iso.week; const y = iso.year; out.push({key:`${y}-W${String(wk).padStart(2,'0')}`, label:`Sem ${wk}/${y}`});
+                    // step back 7 days
+                    d.setDate(d.getDate() - 7);
+                }
+            }
+            return out.reverse(); // oldest -> newest
+        }
+
+        // Returns Date (Monday) for given ISO week and year
+        function dateOfISOWeek(week, year){
+            const w = Number(week); const y = Number(year);
+            // Find Thursday in that week to ensure correct ISO week-year
+            const simple = new Date(y, 0, 1 + (w - 1) * 7);
+            const dow = simple.getDay();
+            let ISOweekStart = new Date(simple);
+            if(dow <= 4){ // Mon..Thu -> back to Monday
+                ISOweekStart.setDate(simple.getDate() - (dow === 0 ? 6 : dow - 1));
+            }else{
+                ISOweekStart.setDate(simple.getDate() + (8 - dow));
+            }
+            ISOweekStart.setHours(0,0,0,0);
+            return ISOweekStart;
+        }
+
+        // Compute last N periods ending immediately BEFORE the provided anchor (anchor = {type:'Sem'|'Mes', year, value})
+        function lastNPeriodsAnchored(type, n, anchor){
+            if(!anchor) return lastNPeriods(type, n);
+            const out = [];
+            if(type === 'Mes'){
+                // anchor.value is month number 1-12, anchor.year is year
+                let y = Number(anchor.year); let m = Number(anchor.value) - 1; // make 0-based
+                // move to previous month (one before the anchor)
+                m -= 1; if(m < 0){ m = 11; y -= 1; }
+                for(let i=0;i<n;i++){
+                    out.push({ key: `${y}-${String(m+1).padStart(2,'0')}`, label: (new Date(y, m, 1)).toLocaleString('es-ES',{month:'short',year:'numeric'}) });
+                    m -= 1; if(m < 0){ m = 11; y -= 1; }
+                }
+            } else {
+                // weeks: anchor.value is ISO week number, anchor.year is ISO year
+                let y = Number(anchor.year); let wk = Number(anchor.value);
+                // move to previous week
+                let baseDate = dateOfISOWeek(wk, y);
+                baseDate.setDate(baseDate.getDate() - 7);
+                for(let i=0;i<n;i++){
+                    const iso = getISOWeekYear(baseDate); const w = iso.week; const yy = iso.year;
+                    out.push({ key: `${yy}-W${String(w).padStart(2,'0')}`, label: `Sem ${w}/${yy}` });
+                    baseDate.setDate(baseDate.getDate() - 7);
+                }
+            }
+            return out.reverse();
+        }
+
+        function computeSeriesForOptions(opts){
+            // opts: {type:'Sem'|'Mes', ubic:'Todos'|value, grupo:'Todos'|'COSTURA'|'COSTURA DIA'|'COSTURA NOCHE'|'ACABADOS', lastN:8, equipo:number, anchor:{year,value,type}}
+            const sheet = window.sheetData || [];
+            const periodo = opts.type || 'Sem'; const lastN = opts.lastN || 8;
+            const periods = opts.anchor ? lastNPeriodsAnchored(periodo, lastN, opts.anchor) : lastNPeriods(periodo, lastN);
+            const keys = periods.map(p=>p.key);
+            // find relevant headers — prefer the same `map` discovered during loadAndCompute (keeps consistency with main table)
+            const cm = (window.colMap && typeof window.colMap === 'object') ? window.colMap : null;
+            const ubicHdr = (cm && cm.ubic) ? cm.ubic : findHeaderByNormLike(['ubic','ubicaci','location','sede']);
+            const equipoHdr = (cm && cm.equipo) ? cm.equipo : findHeaderByNormLike(['equipo','eqp','maq']);
+            const defHdr = (cm && cm.defectos) ? cm.defectos : findHeaderByNormLike(['defect','total defect','total_defec','t.def','t.defectos','total']);
+            const cantHdr = (cm && cm.cant) ? cm.cant : findHeaderByNormLike(['cant muestra','cant_muestra','muestra','cant']);
+            const a1Hdr = (cm && cm.a1) ? cm.a1 : findHeaderByNormLike(['a 1','a1','a_1']);
+            const totalAudHdr = (cm && cm.total) ? cm.total : findHeaderByNormLike(['total','total aud','total_aud']);
+            const a2Hdr = findHeaderByNormLike(['a 2','a2','a_2']);
+            const a3Hdr = findHeaderByNormLike(['a 3','a3','a_3']);
+            const a4Hdr = findHeaderByNormLike(['a 4','a4','a_4']);
+            const loteHdr = findHeaderByNormLike(['lote no aprob','lote_no_aprob','lote no aprobado','lote no aprobado']);
+            try{ console.debug('perf series using headers', {ubicHdr,equipoHdr,defHdr,cantHdr,a1Hdr,totalAudHdr}); }catch(e){}
+
+            // Prepare accumulators for each key
+            const acc = {};
+            keys.forEach(k=> acc[k] = {def:0, sample:0, a1:0, total:0, a2:0, a3:0, a4:0, lote:0});
+
+            function matchesGrupo(eqp, grupo, equipoExact){
+                if(equipoExact !== undefined && equipoExact !== null){
+                    const eqn = Number(String(eqp||'').replace(/[^0-9]/g,''));
+                    return !isNaN(eqn) && eqn === Number(equipoExact);
+                }
+                if(!grupo || grupo === 'Todos') return true;
+                const num = Number(String(eqp||'').replace(/[^0-9]/g,''));
+                if(isNaN(num)) return false;
+                if(grupo === 'COSTURA') return num>=1 && num<=29;
+                if(grupo === 'COSTURA DIA') return num>=1 && num<=19;
+                if(grupo === 'COSTURA NOCHE') return num>=20 && num<=29;
+                if(grupo === 'ACABADOS') return num>=30 && num<=40;
+                return true;
+            }
+
+            for(const row of sheet){
+                const dt = row._parsedFecha instanceof Date ? row._parsedFecha : parseFechaValue(row[findHeaderByNormLike(['fecha','date'])] || row.fecha);
+                if(!dt) continue;
+                const k = periodKeyForDate(dt, periodo);
+                if(!acc[k]) continue; // outside range
+                // filter ubic
+                if(opts.ubic && opts.ubic !== 'Todos' && ubicHdr){ const v = (row[ubicHdr]||'').toString().trim(); if(v !== opts.ubic) continue; }
+                // filter grupo/equipo
+                if(opts.equipo !== undefined && opts.equipo !== null){
+                    if(!matchesGrupo(row[equipoHdr], null, opts.equipo)) continue;
+                } else {
+                    if(!matchesGrupo(row[equipoHdr], opts.grupo)) continue;
+                }
+                // accumulate
+                const defVal = toNum(row[defHdr] || row[findHeaderByNormLike(['defectos','total defectos'])]);
+                const samp = toNum(row[cantHdr] || row[findHeaderByNormLike(['cant','muestra'])]);
+                const a1v = toNum(row[a1Hdr] || 0);
+                const a2v = toNum(row[a2Hdr] || 0);
+                const a3v = toNum(row[a3Hdr] || 0);
+                const a4v = toNum(row[a4Hdr] || 0);
+                const lotev = toNum(row[loteHdr] || 0);
+                const totAud = toNum(row[totalAudHdr] || 0);
+                acc[k].def += defVal;
+                acc[k].sample += samp;
+                acc[k].a1 += a1v;
+                acc[k].a2 += a2v;
+                acc[k].a3 += a3v;
+                acc[k].a4 += a4v;
+                acc[k].lote += lotev;
+                acc[k].total += totAud;
+            }
+
+            const labels = []; const pctDef = []; const pctBap = []; const pctNivel = [];
+            // DEBUG: mostrar acumuladores por periodo para inspección en consola
+            try{ console.debug('computeSeriesForOptions - opts:', opts); console.debug('accumulators:', JSON.parse(JSON.stringify(acc))); }catch(e){}
+            periods.forEach(p=>{
+                labels.push(p.label);
+                const v = acc[p.key] || {def:0,sample:0,a1:0,total:0};
+                const defPct = (v.sample && v.sample>0) ? (v.def / v.sample * 100) : 0;
+                const bapPct = (v.total && v.total>0) ? (v.a1 / v.total * 100) : 0;
+                pctDef.push(Number(defPct.toFixed(2)));
+                pctBap.push(Number(bapPct.toFixed(2)));
+                const denomA = (v.a1 + v.a2 + v.a3 + v.a4 + v.lote);
+                const nivel = (denomA && denomA>0) ? (v.a1 / denomA * 100) : 0;
+                pctNivel.push(Number(nivel.toFixed(2)));
+            });
+            return {labels, pctDef, pctBap, pctNivel};
+        }
+
+        // Chart instance holder
+        window._perfChart = null;
+        function renderPerfChartCanvas(ctx, labels, defArr, bapArr){
+            if(window._perfChart){ window._perfChart.data.labels = labels; window._perfChart.data.datasets[0].data = bapArr; window._perfChart.data.datasets[1].data = defArr; window._perfChart.update(); return; }
+            // plugin dibuja etiquetas encima de cada barra/punto
+            const dataLabelPlugin = {
+                id: 'dataLabelPlugin',
+                afterDatasetsDraw(chart, args, options){
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    chart.data.datasets.forEach((dataset, datasetIndex) => {
+                        const meta = chart.getDatasetMeta(datasetIndex);
+                        if(!meta || !meta.data) return;
+                        for(let i=0;i<meta.data.length;i++){
+                            const el = meta.data[i];
+                            const rawVal = dataset.data[i];
+                            if(rawVal === null || rawVal === undefined) continue;
+                            const valText = (typeof rawVal === 'number') ? rawVal.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2}) + '%' : String(rawVal);
+                            const x = el.x;
+                            let y = (el.y !== undefined) ? el.y : (el.base !== undefined ? el.base : 0);
+                            // estilo y posición según tipo
+                            if(dataset.type === 'bar' || datasetIndex === 0){
+                                y = el.y - 6; // encima de la barra
+                                ctx.fillStyle = '#c9172e'; // rojo para barras
+                            } else {
+                                y = el.y - 10; // encima del punto
+                                ctx.fillStyle = '#0b3d91'; // azul oscuro para puntos
+                            }
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            ctx.font = 'bold 15px Calibri';
+                            ctx.fillText(valText, x, y);
+                        }
+                    });
+                    ctx.restore();
+                }
+            };
+
+            const cfg = {
+                plugins: [dataLabelPlugin],
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { type: 'bar', label: '%BAP', data: bapArr, yAxisID: 'yBap', backgroundColor: 'rgba(59,130,246,0.8)' },
+                        { type: 'line', label: '%Def.', data: defArr, yAxisID: 'yDef', borderColor: 'rgba(203, 23, 46, 0.9)', backgroundColor: 'rgba(203,23,46,0.08)', tension:0.2, pointRadius:4, fill:false }
+                    ]
+                },
+                options: {
+                    responsive:true, maintainAspectRatio:false,
+                    scales: {
+                        x: { stacked:false },
+                        yDef: { type:'linear', position:'left', title:{display:true,text:'%Def.'}, ticks:{callback: v=> v+'%'} },
+                        yBap: { type:'linear', position:'right', title:{display:true,text:'%BAP'}, grid:{drawOnChartArea:false}, ticks:{callback: v=> v+'%'} }
+                    },
+                    plugins: { legend:{position:'top'} }
+                }
+            };
+            window._perfChart = new Chart(ctx, cfg);
+        }
+
+        function buildPerformanceModal(){
+            if(!window.sheetData) return alert('Los datos aún se están cargando. Intenta nuevamente en unos segundos.');
+            let ol = document.getElementById('perfModalOverlay');
+            if(!ol){ ol = document.createElement('div'); ol.id='perfModalOverlay'; ol.className='modal-overlay'; const modal = document.createElement('div'); modal.className='modal'; modal.id='perfModal'; ol.appendChild(modal); document.body.appendChild(ol); }
+            const modal = document.getElementById('perfModal');
+            // build controls
+            const ubicHdr = findHeaderByNormLike(['ubic','ubicaci','location','sede']);
+            const uniqueUbics = new Set();
+            (window.sheetData||[]).forEach(r=>{ if(ubicHdr){ const v=(r[ubicHdr]||'').toString().trim(); if(v) uniqueUbics.add(v); } });
+            const ubicOptions = ['Todos'].concat(Array.from(uniqueUbics).sort());
+
+            const html = `
+                <div style="display:flex;align-items:center;justify-content:space-between"><h2>Performance Auditorias Lotes Produccion</h2><div><button class="close-btn" id="perfClose">Cerrar</button></div></div>
+                <fieldset style="border:1px solid #e6eef8;padding:10px;border-radius:8px;margin-top:10px"><legend style="font-weight:700">Controles</legend>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <label style="font-weight:700">Periodo:</label>
+                        <select id="perfPeriodType" style="padding:6px;border:1px solid #ccd;border-radius:6px"><option value="Sem">Sem</option><option value="Mes">Mes</option></select>
+                        <label style="font-weight:700">Ubicación:</label>
+                        <select id="perfUbic" style="padding:6px;border:1px solid #ccd;border-radius:6px">${ubicOptions.map(u=>`<option value="${u}">${u}</option>`).join('')}</select>
+                        <label style="font-weight:700">Grupo:</label>
+                        <select id="perfGrupo" style="padding:6px;border:1px solid #ccd;border-radius:6px"><option value="Todos">Todos</option><option value="COSTURA">COSTURA (todos)</option><option value="COSTURA DIA">COSTURA DIA</option><option value="COSTURA NOCHE">COSTURA NOCHE</option><option value="ACABADOS">ACABADOS</option></select>
+                        <button id="perfApply" style="padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer">Aplicar</button>
+                    </div>
+                </fieldset>
+                <div style="margin-top:12px;height:360px"><canvas id="perfChartCanvas"></canvas></div>
+            `;
+            modal.innerHTML = html;
+            ol.style.display = 'flex';
+            document.getElementById('perfClose').onclick = ()=>{ 
+                try{ if(window._perfChart){ window._perfChart.destroy(); } }catch(e){}
+                window._perfChart = null;
+                ol.style.display='none'; 
+            };
+            ol.onclick = (ev)=>{ 
+                if(ev.target === ol){ 
+                    try{ if(window._perfChart){ window._perfChart.destroy(); } }catch(e){}
+                    window._perfChart = null;
+                    ol.style.display='none';
+                }
+            };
+            // attach apply
+            document.getElementById('perfApply').onclick = ()=>{ const type = document.getElementById('perfPeriodType').value; const ubic = document.getElementById('perfUbic').value; const grupo = document.getElementById('perfGrupo').value; const res = computeSeriesForOptions({type,ubic,grupo,lastN:8}); const ctx = document.getElementById('perfChartCanvas').getContext('2d'); renderPerfChartCanvas(ctx, res.labels, res.pctDef, res.pctBap); };
+            // initial apply
+            setTimeout(()=>{ document.getElementById('perfApply').click(); }, 50);
+        }
+
+        // wire the button
+        const perfBtnEl = document.getElementById('perfBtn');
+        if(perfBtnEl){ perfBtnEl.addEventListener('click', function(){ try{ buildPerformanceModal(); }catch(e){ alert('Error al mostrar modal: '+(e && e.message)); } }); }
+
+        // Top 5 worst lines modal
+        function showTop5Modal(){
+            const meta = window.latestFilteredData || {};
+            const perEquipo = meta.perEquipo || {};
+            const year = meta.filteredYear || FILTER_YEAR;
+            const pType = meta.filteredPeriodType || PERIOD_TYPE;
+            const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
+            // build array of equipos
+            const rows = Object.keys(perEquipo).map(k=>{
+                const r = perEquipo[k] || {};
+                const cantM = Number(r.cant_muestra || 0);
+                const totalA = (Number(r.a1||0)+Number(r.a2||0)+Number(r.a3||0)+Number(r.a4||0)+Number(r.lote_no_aprob||0));
+                const bapPct = (Number(r.total || 0) > 0) ? (Number(r.a1||0) / Number(r.total||0) * 100) : 0;
+                const nivel = (totalA > 0) ? (Number(r.a1||0) / totalA * 100) : 0;
+                const defPct = (cantM > 0) ? (Number(r.total_defec||0) / cantM * 100) : 0;
+                return { equipo: Number(k), bapPct, nivel, defPct, raw: r };
+            }).filter(x=> !isNaN(x.equipo));
+
+            // sort: ascending %BAP, ascending Nivel, descending %Def
+            rows.sort((a,b)=>{
+                if(a.bapPct !== b.bapPct) return a.bapPct - b.bapPct;
+                if(a.nivel !== b.nivel) return a.nivel - b.nivel;
+                return b.defPct - a.defPct;
+            });
+
+            const top = rows.slice(0,5);
+
+            // build modal
+            let ol = document.getElementById('top5ModalOverlay');
+            if(!ol){ ol = document.createElement('div'); ol.id='top5ModalOverlay'; ol.className='modal-overlay'; const modal = document.createElement('div'); modal.className='modal'; modal.id='top5Modal'; ol.appendChild(modal); document.body.appendChild(ol); }
+            const modal = document.getElementById('top5Modal');
+            let title = 'TOP 5 Peores Líneas — ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal));
+            let html = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button class="close-btn" id="closeTop5">Cerrar</button></div></div>';
+            html += '<div class="table-wrap"><table style="font-size:12px;table-layout:fixed"><thead><tr><th>Equipo</th><th>Nivel Acep</th><th>%Def.</th></tr></thead><tbody>';
+            if(top.length===0){ html += '<tr><td colspan="6" style="text-align:center;padding:18px;color:#666">No hay datos para el periodo seleccionado.</td></tr>'; }
+                else{
+                const nf = new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});
+                top.forEach(t=>{
+                    html += '<tr><td style="font-weight:700">'+t.equipo+'</td>' +
+                        '<td>'+ nf.format(t.nivel) +'%</td>' +
+                        '<td style="font-weight:700;background:#fff2f0;color:#b40d0d">'+ nf.format(t.defPct) +'%</td>' +
+                    '</tr>';
+                });
+            }
+            html += '</tbody></table></div>';
+            modal.innerHTML = html;
+            ol.style.display = 'flex';
+            const closeBtn = document.getElementById('closeTop5'); if(closeBtn) closeBtn.onclick = ()=>{ ol.style.display='none'; };
+            ol.onclick = (ev)=>{ if(ev.target === ol) ol.style.display='none'; };
+        }
+
+        // bind info button
+        const infoBtn = document.getElementById('infoBtn');
+        if(infoBtn){ infoBtn.addEventListener('click', ()=>{ try{ showTop5Modal(); }catch(e){ alert('Error al mostrar Top5: '+(e&&e.message)); } }); }
 
         // Run once on load (will try non-published endpoints first)
         loadAndCompute();

@@ -74,6 +74,8 @@
         .modal{background:#fff;border-radius:8px;max-width:none;width:95vw;box-sizing:border-box;max-height:86vh;overflow:auto;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.25)}
         /* Modal específico para el gráfico: 70% del ancho anterior (95vw * 0.7 = 66.5vw) */
         #perfModal{width:66.5vw}
+        /* Modal específico para el Top 5 (botón "i"): 35% del ancho actual (95vw * 0.35 = 33.25vw) */
+        #top5Modal{width:33.25vw}
         .modal h2{margin:0 0 12px 0;font-size:16px}
         .modal .close-btn{float:right;background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer}
         .modal table{width:100%;border-collapse:collapse;margin-top:8px}
@@ -1968,9 +1970,9 @@
             let ol = document.getElementById('top5ModalOverlay');
             if(!ol){ ol = document.createElement('div'); ol.id='top5ModalOverlay'; ol.className='modal-overlay'; const modal = document.createElement('div'); modal.className='modal'; modal.id='top5Modal'; ol.appendChild(modal); document.body.appendChild(ol); }
             const modal = document.getElementById('top5Modal');
-            let title = 'TOP 5 Peores Líneas — ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal));
+            let title = 'TOP 5 ↓Lineas - ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal));
             let html = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button class="close-btn" id="closeTop5">Cerrar</button></div></div>';
-            html += '<div class="table-wrap"><table style="font-size:12px;table-layout:fixed"><thead><tr><th>Equipo</th><th>Nivel Acep</th><th>%Def.</th></tr></thead><tbody>';
+            html += '<div class="table-wrap"><table style="font-size:12px;table-layout:fixed"><thead><tr><th>Equipo</th><th>%BAP</th><th>%Def.</th></tr></thead><tbody>';
             if(top.length===0){ html += '<tr><td colspan="6" style="text-align:center;padding:18px;color:#666">No hay datos para el periodo seleccionado.</td></tr>'; }
                 else{
                 const nf = new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});

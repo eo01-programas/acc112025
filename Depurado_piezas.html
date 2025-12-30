@@ -4353,28 +4353,23 @@
                 currentFilters.periodType = 'week';
                 togglePeriodFilter();
                 
-                // 3. Semana anterior a la actual
-                const currentDate = new Date();
-                const currentWeekNumber = getWeekNumber(currentDate);
-                const previousWeekNumber = currentWeekNumber - 1;
-                
+                // 3. Seleccionar por defecto la ÚLTIMA semana registrada disponible
                 const weekSelect = document.getElementById('weekSelect');
-                let weekFound = false;
-                
-                // Intentar seleccionar la semana anterior
-                for (let i = 0; i < weekSelect.options.length; i++) {
-                    if (weekSelect.options[i].value == previousWeekNumber) {
-                        weekSelect.selectedIndex = i;
-                        currentFilters.week = weekSelect.value;
-                        weekFound = true;
-                        break;
+                if (weekSelect && weekSelect.options.length > 1) {
+                    // Buscar la última opción que no sea la opción vacía ("Todas")
+                    for (let i = weekSelect.options.length - 1; i >= 0; i--) {
+                        if (weekSelect.options[i].value !== '') {
+                            weekSelect.selectedIndex = i;
+                            currentFilters.week = weekSelect.value;
+                            break;
+                        }
                     }
-                }
-                
-                // Si no existe la semana anterior, seleccionar la última disponible
-                if (!weekFound && weekSelect.options.length > 1) {
-                    weekSelect.selectedIndex = weekSelect.options.length - 1;
-                    currentFilters.week = weekSelect.value;
+                } else {
+                    // No hay semanas registradas: dejar 'Todas'
+                    if (weekSelect) {
+                        weekSelect.value = '';
+                    }
+                    currentFilters.week = '';
                 }
                 
                 applyFilters();

@@ -1411,9 +1411,12 @@
                 const yearsUnion = Array.from(new Set([ ...Array.from(calendarYearsSet||[]), ...Array.from(isoYearsSet||[]) ])).sort((a,b)=>b-a);
                 yearsUnion.forEach(y=>{ const opt = document.createElement('option'); opt.value = y; opt.textContent = y; yearSelect.appendChild(opt); });
                 const nowYear = (new Date()).getFullYear();
-                // Prefer current calendar year if present, else prefer current ISO year if present, otherwise most recent available
-                FILTER_YEAR = yearsUnion.includes(nowYear) ? nowYear : (yearsUnion.length ? yearsUnion[0] : nowYear);
-                // set selected value on the select
+                // If a year has already been selected by the user and is still available, preserve it.
+                // Otherwise prefer current calendar year if present, else most recent available year.
+                const preserved = (typeof FILTER_YEAR === 'number' && yearsUnion.includes(FILTER_YEAR)) ? FILTER_YEAR : null;
+                const defaultYear = preserved !== null ? preserved : (yearsUnion.includes(nowYear) ? nowYear : (yearsUnion.length ? yearsUnion[0] : nowYear));
+                FILTER_YEAR = defaultYear;
+                // set selected value on the select (preserve user's selection when possible)
                 yearSelect.value = String(FILTER_YEAR);
 
                 // helper to populate periodSelect (preserve current PERIOD_VALUE when possible)

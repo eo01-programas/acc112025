@@ -46,8 +46,8 @@
         }
 
         .menu-list {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 14px;
         }
 
@@ -158,6 +158,10 @@
         }
 
         @media (max-width: 900px) {
+            .menu-list {
+                grid-template-columns: 1fr;
+            }
+
             .card-wrapper {
                 padding: 24px 20px 28px;
             }
@@ -220,7 +224,7 @@
                         RESUMEN DE AUDITORÍA POR FACTORY CODE
                     </div>
                     <div class="menu-subtitle">
-                        Reportes Interna y Cliente - Performance Auditorias Producto Terminado Internas
+                        Reportes Interna y Cliente - Performance Auditorias
                     </div>
                 </div>
             </a>
@@ -238,14 +242,14 @@
                 </div>
             </a>
 
-            <!-- BOTÓN 4: RESULTADO DE AUDITORIAS DE PRODUCTO TERMINADO -->
+            <!-- BOTÓN 4: AUDITORIAS DE PRODUCTO TERMINADO -->
             <a class="menu-item" href="RESULTADO DE AUDITORIAS DE PRODUCTO TERMINADO.html">
                 <div class="icon-circle">
                     <span>✔</span>
                 </div>
                 <div class="menu-texts">
                     <div class="menu-title">
-                        RESULTADO DE AUDITORIAS DE PRODUCTO TERMINADO
+                        AUDITORIAS DE PRODUCTO TERMINADO
                     </div>
                     <div class="menu-subtitle">
                         Resumen y gráficos de producto terminado
@@ -271,7 +275,7 @@
             <!-- BOTÓN 6: AUDITORIA LOTES DE PRODUCCION -->
             <a class="menu-item" href="AUDITORIA LOTES DE PRODUCCION.html">
                 <div class="icon-circle">
-                    <span>🧾</span>
+                    <span>✔</span>
                 </div>
                 <div class="menu-texts">
                     <div class="menu-title">
@@ -279,6 +283,21 @@
                     </div>
                     <div class="menu-subtitle">
                         Auditoría por lotes y equipos (costura / acabados)
+                    </div>
+                </div>
+            </a>
+
+            <!-- BOTÓN 7: REPORTE INSPECCION -->
+            <a class="menu-item" href="REPORTE INSPECCION.html">
+                <div class="icon-circle">
+                    <span>✔</span>
+                </div>
+                <div class="menu-texts">
+                    <div class="menu-title">
+                        REPORTE INSPECCION
+                    </div>
+                    <div class="menu-subtitle">
+                        Defectos por Linea y tipo
                     </div>
                 </div>
             </a>

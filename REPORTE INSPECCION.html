@@ -156,7 +156,13 @@
 
         .row-total {
             font-weight: 700;
-            background: rgb(85,211,145);
+            background: rgb(85,211,145) !important;
+        }
+
+        /* Asegurar que todas las celdas de la fila TOTAL DEFECTOS mantengan el fondo */
+        .row-total td {
+            background: rgb(85,211,145) !important;
+            color: #062017; /* texto oscuro para buen contraste */
         }
 
         .row-percent {
@@ -369,6 +375,11 @@
             </div>
         </div>
         <div class="top-actions" style="display:flex; align-items:center; gap:10px;">
+            <button id="btnDefectosCircle" class="btn-chart-circle" title="Defectos Principales">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+                </svg>
+            </button>
             <button id="btnChartCircle" class="btn-chart-circle" title="Gráficos">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
@@ -436,6 +447,52 @@
                 </div>
                 <!-- resumen numérico eliminado a petición -->
                 <canvas id="chartsCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Defectos Principales -->
+    <div id="defectosModalOverlay" class="modal-overlay">
+        <div class="modal">
+            <header>
+                <h3>PRINCIPALES DEFECTOS - EVOLUCIÓN</h3>
+                <button id="defectosModalClose" class="close-btn">Cerrar</button>
+            </header>
+            <div class="modal-body">
+                <div class="charts-controls">
+                    <label>
+                        Periodo:
+                        <select id="defectosPeriodo">
+                            <option value="Semanal">Semanal</option>
+                            <option value="Mensual">Mensual</option>
+                        </select>
+                    </label>
+                    <label id="defectosDesdeYearLabel">
+                        Desde Año:
+                        <select id="defectosDesdeYear"></select>
+                    </label>
+                    <label id="defectosDesdeWeekLabel">
+                        Desde Semana:
+                        <select id="defectosDesdeWeek"></select>
+                    </label>
+                    <label id="defectosHastaYearLabel">
+                        Hasta Año:
+                        <select id="defectosHastaYear"></select>
+                    </label>
+                    <label id="defectosHastaWeekLabel">
+                        Hasta Semana:
+                        <select id="defectosHastaWeek"></select>
+                    </label>
+                    <label id="defectosDesdeMonthLabel" style="display:none;">
+                        Desde Mes:
+                        <select id="defectosDesdeMonth"></select>
+                    </label>
+                    <label id="defectosHastaMonthLabel" style="display:none;">
+                        Hasta Mes:
+                        <select id="defectosHastaMonth"></select>
+                    </label>
+                </div>
+                <canvas id="defectosCanvas"></canvas>
             </div>
         </div>
     </div>
@@ -918,13 +975,18 @@
                 subtotal: entry.subtotal || 0
             };
         }).filter(d => d.subtotal > 0).sort((a,b) => b.subtotal - a.subtotal);
-
+        // Resaltar con fondo rojo transparente las filas de defectos
+        // cuya suma acumulada de %Part sea menor a 80% (Pareto style)
+        let acumuladoDistrib = 0;
         defsList.forEach(def => {
             const tr = document.createElement("tr");
+            const rowCells = [];
+
             const tdDef = document.createElement("td");
             tdDef.textContent = def.defecto;
             tdDef.classList.add("col-defecto");
             tr.appendChild(tdDef);
+            rowCells.push(tdDef);
 
             lineas.forEach(l => {
                 const val = def.porLinea[l] || 0;
@@ -932,11 +994,13 @@
                 const td = document.createElement("td");
                 td.textContent = val ? formatNumber(val) : "";
                 tr.appendChild(td);
+                rowCells.push(td);
             });
 
             const tdTotal = document.createElement("td");
             tdTotal.textContent = def.subtotal ? formatNumber(def.subtotal) : "";
             tr.appendChild(tdTotal);
+            rowCells.push(tdTotal);
 
             const tdDefLote = document.createElement("td");
             if (totalIngreso > 0 && def.subtotal > 0) {
@@ -945,14 +1009,26 @@
                 tdDefLote.textContent = "";
             }
             tr.appendChild(tdDefLote);
+            rowCells.push(tdDefLote);
 
             const tdDistrib = document.createElement("td");
+            let distribPercent = 0;
             if (totalDefectos > 0 && def.subtotal > 0) {
-                tdDistrib.textContent = formatPercent((def.subtotal / totalDefectos) * 100);
+                distribPercent = (def.subtotal / totalDefectos) * 100;
+                tdDistrib.textContent = formatPercent(distribPercent);
             } else {
                 tdDistrib.textContent = "";
             }
             tr.appendChild(tdDistrib);
+            rowCells.push(tdDistrib);
+
+            // Actualizar acumulado y aplicar estilo si la suma acumulada es menor a 80%
+            acumuladoDistrib += distribPercent;
+            if (acumuladoDistrib < 80) {
+                rowCells.forEach(cell => {
+                    cell.style.backgroundColor = 'rgba(239,68,68,0.12)';
+                });
+            }
 
             tbody.appendChild(tr);
         });
@@ -1768,6 +1844,383 @@
         if (chartHastaWeek) chartHastaWeek.addEventListener('change', renderChart);
         if (chartDesdeMonth) chartDesdeMonth.addEventListener('change', renderChart);
         if (chartHastaMonth) chartHastaMonth.addEventListener('change', renderChart);
+    })();
+
+    /*************************************************************
+     * MODAL DE DEFECTOS PRINCIPALES
+     *************************************************************/
+    (function setupDefectosChart() {
+        const btnDefectosCircle = document.getElementById('btnDefectosCircle');
+        const defectosModalOverlay = document.getElementById('defectosModalOverlay');
+        const defectosModalClose = document.getElementById('defectosModalClose');
+        const defectosPeriodo = document.getElementById('defectosPeriodo');
+        const defectosDesdeYear = document.getElementById('defectosDesdeYear');
+        const defectosDesdeWeek = document.getElementById('defectosDesdeWeek');
+        const defectosHastaYear = document.getElementById('defectosHastaYear');
+        const defectosHastaWeek = document.getElementById('defectosHastaWeek');
+        const defectosDesdeMonth = document.getElementById('defectosDesdeMonth');
+        const defectosHastaMonth = document.getElementById('defectosHastaMonth');
+        const defectosCanvas = document.getElementById('defectosCanvas');
+
+        let defectosChartInstance = null;
+
+        function openDefectosModal() {
+            defectosModalOverlay.classList.add('open');
+            populateDefectosFilters();
+            renderDefectosChart();
+        }
+
+        function closeDefectosModal() {
+            defectosModalOverlay.classList.remove('open');
+            if (defectosChartInstance) {
+                defectosChartInstance.destroy();
+                defectosChartInstance = null;
+            }
+        }
+
+        function populateDefectosFilters() {
+            try {
+                // Usar _originalBdcof directamente que ya está cargado
+                const defectRows = _originalBdcof || [];
+                if (!defectRows.length) {
+                    console.error('[defectos] No hay datos disponibles');
+                    return;
+                }
+                
+                const fechaKey = detectFechaKey(defectRows);
+                console.log('[defectos] fechaKey:', fechaKey, 'rows:', defectRows.length);
+                
+                let years = getYearsFromRows(defectRows, fechaKey);
+
+                if (!years || years.length === 0) {
+                    years = [String((new Date()).getFullYear())];
+                }
+
+                defectosDesdeYear.innerHTML = '';
+                defectosHastaYear.innerHTML = '';
+                years.forEach(y => {
+                    const opt1 = document.createElement('option');
+                    opt1.value = y;
+                    opt1.textContent = y;
+                    defectosDesdeYear.appendChild(opt1);
+                    
+                    const opt2 = document.createElement('option');
+                    opt2.value = y;
+                    opt2.textContent = y;
+                    defectosHastaYear.appendChild(opt2);
+                });
+
+                if (years.length > 0) {
+                    defectosDesdeYear.value = years[0];
+                    defectosHastaYear.value = years[years.length - 1];
+                }
+
+                updateDefectosPeriodSelects();
+            } catch (err) {
+                console.error('[defectos] Error en populateDefectosFilters:', err);
+            }
+        }
+
+        function updateDefectosPeriodSelects() {
+            try {
+                const periodo = defectosPeriodo.value;
+                const defectRows = _originalBdcof || [];
+                if (!defectRows.length) return;
+                const fechaKey = detectFechaKey(defectRows);
+
+            if (periodo === 'Semanal') {
+                document.getElementById('defectosDesdeYearLabel').style.display = '';
+                document.getElementById('defectosDesdeWeekLabel').style.display = '';
+                document.getElementById('defectosHastaYearLabel').style.display = '';
+                document.getElementById('defectosHastaWeekLabel').style.display = '';
+                document.getElementById('defectosDesdeMonthLabel').style.display = 'none';
+                document.getElementById('defectosHastaMonthLabel').style.display = 'none';
+
+                const yearDesde = defectosDesdeYear.value;
+                const yearHasta = defectosHastaYear.value;
+                
+                defectosDesdeWeek.innerHTML = '';
+                defectosHastaWeek.innerHTML = '';
+                
+                if (yearDesde) {
+                    let weeksDesde = getWeeksForYear(defectRows, yearDesde, fechaKey);
+                    if (!weeksDesde || weeksDesde.length === 0) {
+                        weeksDesde = Array.from({length:52}, (_,i) => i+1);
+                    }
+                    weeksDesde.forEach(w => {
+                        const opt = document.createElement('option');
+                        opt.value = w;
+                        opt.textContent = `Sem${w}`;
+                        defectosDesdeWeek.appendChild(opt);
+                    });
+                }
+                
+                if (yearHasta) {
+                    let weeksHasta = getWeeksForYear(defectRows, yearHasta, fechaKey);
+                    if (!weeksHasta || weeksHasta.length === 0) {
+                        weeksHasta = Array.from({length:52}, (_,i) => i+1);
+                    }
+                    weeksHasta.forEach(w => {
+                        const opt = document.createElement('option');
+                        opt.value = w;
+                        opt.textContent = `Sem${w}`;
+                        defectosHastaWeek.appendChild(opt);
+                    });
+                    if (weeksHasta.length > 0) {
+                        defectosHastaWeek.value = weeksHasta[weeksHasta.length - 1];
+                    }
+                }
+            } else {
+                document.getElementById('defectosDesdeYearLabel').style.display = '';
+                document.getElementById('defectosDesdeWeekLabel').style.display = 'none';
+                document.getElementById('defectosHastaYearLabel').style.display = '';
+                document.getElementById('defectosHastaWeekLabel').style.display = 'none';
+                document.getElementById('defectosDesdeMonthLabel').style.display = '';
+                document.getElementById('defectosHastaMonthLabel').style.display = '';
+
+                const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                defectosDesdeMonth.innerHTML = '';
+                defectosHastaMonth.innerHTML = '';
+                
+                for (let i = 1; i <= 12; i++) {
+                    const opt1 = document.createElement('option');
+                    opt1.value = i;
+                    opt1.textContent = monthNames[i - 1];
+                    defectosDesdeMonth.appendChild(opt1);
+                    
+                    const opt2 = document.createElement('option');
+                    opt2.value = i;
+                    opt2.textContent = monthNames[i - 1];
+                    defectosHastaMonth.appendChild(opt2);
+                }
+                defectosDesdeMonth.value = 1;
+                defectosHastaMonth.value = 12;
+            }
+            } catch (err) {
+                console.error('[defectos] Error en updateDefectosPeriodSelects:', err);
+            }
+        }
+
+        function getTop6Defectos() {
+            const defectRows = _originalBdcof || [];
+            if (!defectRows.length) return [];
+            const defectosTotales = {};
+
+            DEFECT_DEFS.forEach(def => {
+                let total = 0;
+                defectRows.forEach(r => {
+                    total += toNumber(r[def.col]);
+                });
+                if (total > 0) {
+                    defectosTotales[def.defecto] = { col: def.col, total };
+                }
+            });
+
+            const sorted = Object.entries(defectosTotales)
+                .sort((a, b) => b[1].total - a[1].total)
+                .slice(0, 6);
+
+            return sorted.map(([defecto, data]) => ({ defecto, col: data.col }));
+        }
+
+        function renderDefectosChart() {
+            try {
+                const periodo = defectosPeriodo.value;
+                const defectRows = _originalBdcof || [];
+                if (!defectRows.length) {
+                    console.error('[defectos] No hay datos de defectos disponibles');
+                    return;
+                }
+                const fechaKey = detectFechaKey(defectRows);
+                const top6 = getTop6Defectos();
+
+                console.log('[defectos] Top 6 defectos:', top6);
+
+                let dataPoints = [];
+
+            if (periodo === 'Semanal') {
+                const yearDesde = parseInt(defectosDesdeYear.value);
+                const weekDesde = parseInt(defectosDesdeWeek.value);
+                const yearHasta = parseInt(defectosHastaYear.value);
+                const weekHasta = parseInt(defectosHastaWeek.value);
+
+                const allWeeks = [];
+                for (let y = yearDesde; y <= yearHasta; y++) {
+                    const weeks = getWeeksForYear(defectRows, y.toString(), fechaKey);
+                    weeks.forEach(w => {
+                        if ((y === yearDesde && w >= weekDesde) || 
+                            (y === yearHasta && w <= weekHasta) || 
+                            (y > yearDesde && y < yearHasta)) {
+                            allWeeks.push({ year: y, week: w });
+                        }
+                    });
+                }
+
+                dataPoints = allWeeks.map(({ year, week }) => {
+                    const filtered = filterByPeriod(defectRows, 'SEMANA', `${year}|${String(week).padStart(2, '0')}`);
+                    const defectosData = {};
+                    top6.forEach(({ defecto, col }) => {
+                        let total = 0;
+                        filtered.forEach(r => {
+                            total += toNumber(r[col]);
+                        });
+                        defectosData[defecto] = total;
+                    });
+
+                    return {
+                        label: `Sem${week}`,
+                        fullLabel: `${year}-SEM${String(week).padStart(2, '0')}`,
+                        ...defectosData
+                    };
+                });
+            } else {
+                const monthDesde = parseInt(defectosDesdeMonth.value);
+                const monthHasta = parseInt(defectosHastaMonth.value);
+                const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                const yearDesde = parseInt(defectosDesdeYear.value);
+                const yearHasta = parseInt(defectosHastaYear.value);
+
+                const allMonths = [];
+                for (let y = yearDesde; y <= yearHasta; y++) {
+                    const startM = (y === yearDesde) ? monthDesde : 1;
+                    const endM = (y === yearHasta) ? monthHasta : 12;
+                    for (let m = startM; m <= endM; m++) allMonths.push({ year: y, month: m });
+                }
+
+                allMonths.forEach(({ year, month }) => {
+                    const filtered = defectRows.filter(r => {
+                        const d = tryParseDate(r[fechaKey]);
+                        return d && d.getFullYear() === year && (d.getMonth() + 1) === month;
+                    });
+
+                    const defectosData = {};
+                    top6.forEach(({ defecto, col }) => {
+                        let total = 0;
+                        filtered.forEach(r => {
+                            total += toNumber(r[col]);
+                        });
+                        defectosData[defecto] = total;
+                    });
+
+                    dataPoints.push({
+                        label: monthNames[month - 1],
+                        fullLabel: `${year}-MES${String(month).padStart(2,'0')}`,
+                        ...defectosData
+                    });
+                });
+            }
+
+                console.log('[defectos] dataPoints sample:', dataPoints.slice(0, 3));
+
+                if (defectosChartInstance) {
+                    defectosChartInstance.destroy();
+                }
+
+            // Colores para las líneas
+            const colors = [
+                { border: 'rgba(239, 68, 68, 1)', bg: 'rgba(239, 68, 68, 0.1)' },    // rojo
+                { border: 'rgba(59, 130, 246, 1)', bg: 'rgba(59, 130, 246, 0.1)' },  // azul
+                { border: 'rgba(245, 158, 11, 1)', bg: 'rgba(245, 158, 11, 0.1)' },  // naranja
+                { border: 'rgba(16, 185, 129, 1)', bg: 'rgba(16, 185, 129, 0.1)' },  // verde
+                { border: 'rgba(139, 92, 246, 1)', bg: 'rgba(139, 92, 246, 0.1)' },  // morado
+                { border: 'rgba(236, 72, 153, 1)', bg: 'rgba(236, 72, 153, 0.1)' }   // rosa
+            ];
+
+            const datasets = top6.map(({ defecto }, idx) => {
+                const color = colors[idx % colors.length];
+                return {
+                    label: defecto,
+                    data: dataPoints.map(d => d[defecto] || 0),
+                    borderColor: color.border,
+                    backgroundColor: color.bg,
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: color.border,
+                    tension: 0.3,
+                    fill: false
+                };
+            });
+
+            const ctx = defectosCanvas.getContext('2d');
+            defectosChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dataPoints.map(d => d.fullLabel),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.5,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatNumber(context.parsed.y);
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Cantidad de Defectos'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatNumber(value);
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Periodo'
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+            } catch (err) {
+                console.error('[defectos] Error en renderDefectosChart:', err);
+            }
+        }
+
+        if (btnDefectosCircle) btnDefectosCircle.addEventListener('click', openDefectosModal);
+        if (defectosModalClose) defectosModalClose.addEventListener('click', closeDefectosModal);
+        if (defectosModalOverlay) defectosModalOverlay.addEventListener('click', (e) => {
+            if (e.target === defectosModalOverlay) closeDefectosModal();
+        });
+        if (defectosPeriodo) defectosPeriodo.addEventListener('change', () => {
+            updateDefectosPeriodSelects();
+            renderDefectosChart();
+        });
+        if (defectosDesdeYear) defectosDesdeYear.addEventListener('change', () => {
+            updateDefectosPeriodSelects();
+            renderDefectosChart();
+        });
+        if (defectosDesdeWeek) defectosDesdeWeek.addEventListener('change', renderDefectosChart);
+        if (defectosHastaYear) defectosHastaYear.addEventListener('change', () => {
+            updateDefectosPeriodSelects();
+            renderDefectosChart();
+        });
+        if (defectosHastaWeek) defectosHastaWeek.addEventListener('change', renderDefectosChart);
+        if (defectosDesdeMonth) defectosDesdeMonth.addEventListener('change', renderDefectosChart);
+        if (defectosHastaMonth) defectosHastaMonth.addEventListener('change', renderDefectosChart);
     })();
 
     

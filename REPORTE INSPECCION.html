@@ -221,6 +221,114 @@
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(59,130,246,0.25);
         }
+
+        /* Botón circular de gráficos */
+        .btn-chart-circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(180deg,#4f9ef7,#3b82f6);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.25);
+            transition: all 0.2s;
+        }
+        .btn-chart-circle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(59,130,246,0.35);
+        }
+        .btn-chart-circle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Modal overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            max-width: 1080px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .modal h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .modal .close-btn {
+            background: #f1f5f9;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #334155;
+        }
+        .modal .close-btn:hover {
+            background: #e2e8f0;
+        }
+        .modal-body {
+            padding: 16px 20px;
+        }
+
+        /* Chart controls */
+        .charts-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .charts-controls label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 10px;
+            margin: 0;
+        }
+        .charts-controls select {
+            height: 24px;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-family: Calibri, Arial, sans-serif;
+            min-width: 70px;
+            max-width: 120px;
+        }
+        #chartsCanvas {
+            width: 100% !important;
+            max-height: 60vh;
+            height: auto;
+        }
     </style>
 
     <!-- Chart.js CDN -->
@@ -243,7 +351,7 @@
                     <label style="font-family: Calibri, Arial, sans-serif; font-size: 9pt; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
                         Periodo:
                         <select id="filterGroupBy" style="min-width: 80px;">
-                            <option value="SEMANA">SEMANA</option>
+                            <option value="SEMANA">SEM</option>
                             <option value="MES">MES</option>
                         </select>
                     </label>
@@ -261,6 +369,11 @@
             </div>
         </div>
         <div class="top-actions" style="display:flex; align-items:center; gap:10px;">
+            <button id="btnChartCircle" class="btn-chart-circle" title="Gráficos">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                </svg>
+            </button>
             <a href="index.html" class="back-btn" style="font-family:Calibri, Arial, sans-serif; font-size:10px; margin-left:4px; padding:6px 10px; background:#001a54; color:#fff; border-radius:6px; text-decoration:none; font-weight:700; display:inline-block;">← Volver</a>
             <span id="statusBadge" class="badge badge-loading">Cargando datos desde Google Sheets…</span>
         </div>
@@ -278,6 +391,53 @@
 
     <div id="noData" class="footer-summary hidden">
         <span>No se encontraron datos en la hoja bdcof.</span>
+    </div>
+
+    <!-- Modal de Gráficos -->
+    <div id="chartsModalOverlay" class="modal-overlay">
+        <div class="modal">
+            <header>
+                <h3>% DEFECTOS vs INGRESO A EMBALAJE</h3>
+                <button id="chartsModalClose" class="close-btn">Cerrar</button>
+            </header>
+            <div class="modal-body">
+                <div class="charts-controls">
+                    <label>
+                        Periodo:
+                        <select id="chartPeriodo">
+                            <option value="Semanal">Semanal</option>
+                            <option value="Mensual">Mensual</option>
+                        </select>
+                    </label>
+                    <label id="chartDesdeYearLabel">
+                        Desde Año:
+                        <select id="chartDesdeYear"></select>
+                    </label>
+                    <label id="chartDesdeWeekLabel">
+                        Desde Semana:
+                        <select id="chartDesdeWeek"></select>
+                    </label>
+                    <label id="chartHastaYearLabel">
+                        Hasta Año:
+                        <select id="chartHastaYear"></select>
+                    </label>
+                    <label id="chartHastaWeekLabel">
+                        Hasta Semana:
+                        <select id="chartHastaWeek"></select>
+                    </label>
+                    <label id="chartDesdeMonthLabel" style="display:none;">
+                        Desde Mes:
+                        <select id="chartDesdeMonth"></select>
+                    </label>
+                    <label id="chartHastaMonthLabel" style="display:none;">
+                        Hasta Mes:
+                        <select id="chartHastaMonth"></select>
+                    </label>
+                </div>
+                <!-- resumen numérico eliminado a petición -->
+                <canvas id="chartsCanvas"></canvas>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -900,7 +1060,7 @@
                 weeks.forEach(w => {
                     const opt = document.createElement('option');
                     opt.value = `${year}|${String(w).padStart(2,'0')}`;
-                    opt.textContent = `Semana ${w}`;
+                    opt.textContent = `Sem${w}`;
                     periodSel.appendChild(opt);
                 });
                 // Seleccionar la última semana por defecto
@@ -1151,6 +1311,463 @@
             setStatus("Error al cargar", "error");
             showError(err.message || "Ocurrió un error al cargar los datos.");
         });
+    })();
+
+    /*************************************************************
+     * MODAL DE GRÁFICOS
+     *************************************************************/
+    (function setupCharts() {
+        const btnChartCircle = document.getElementById('btnChartCircle');
+        const chartsModalOverlay = document.getElementById('chartsModalOverlay');
+        const chartsModalClose = document.getElementById('chartsModalClose');
+        const chartPeriodo = document.getElementById('chartPeriodo');
+        const chartDesdeYear = document.getElementById('chartDesdeYear');
+        const chartDesdeWeek = document.getElementById('chartDesdeWeek');
+        const chartHastaYear = document.getElementById('chartHastaYear');
+        const chartHastaWeek = document.getElementById('chartHastaWeek');
+        const chartDesdeMonth = document.getElementById('chartDesdeMonth');
+        const chartHastaMonth = document.getElementById('chartHastaMonth');
+        const chartsCanvas = document.getElementById('chartsCanvas');
+
+        let chartInstance = null;
+
+        function openChartsModal() {
+            chartsModalOverlay.classList.add('open');
+            populateChartFilters();
+            renderChart();
+        }
+
+        function closeChartsModal() {
+            chartsModalOverlay.classList.remove('open');
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+        }
+
+        function populateChartFilters() {
+            const defectRows = findDefectRows();
+            const fechaKey = detectFechaKey(defectRows);
+            console.log('[charts] === DIAGNÓSTICO ===');
+            console.log('[charts] bdcof rows:', (_originalBdcof||[]).length);
+            console.log('[charts] ingembcof rows:', (_originalIngembcof||[]).length);
+            console.log('[charts] bdcofprod rows:', (_originalBdcofprod||[]).length);
+            console.log('[charts] defectRows detectados:', defectRows.length, 'fechaKey:', fechaKey);
+            if (defectRows.length > 0) {
+                console.log('[charts] Columnas en defectRows:', Object.keys(defectRows[0]).slice(0, 15));
+            }
+            if ((_originalBdcofprod||[]).length > 0) {
+                console.log('[charts] Columnas en bdcofprod:', Object.keys(_originalBdcofprod[0]).slice(0, 15));
+            }
+            let years = getYearsFromRows(defectRows, fechaKey);
+
+            // fallback: usar año actual si no hay años detectados
+            if (!years || years.length === 0) {
+                years = [String((new Date()).getFullYear())];
+            }
+
+            // Poblar años
+            chartDesdeYear.innerHTML = '';
+            chartHastaYear.innerHTML = '';
+            years.forEach(y => {
+                const opt1 = document.createElement('option');
+                opt1.value = y;
+                opt1.textContent = y;
+                chartDesdeYear.appendChild(opt1);
+                
+                const opt2 = document.createElement('option');
+                opt2.value = y;
+                opt2.textContent = y;
+                chartHastaYear.appendChild(opt2);
+            });
+
+            if (years.length > 0) {
+                chartDesdeYear.value = years[0];
+                chartHastaYear.value = years[years.length - 1];
+            }
+
+            try { updatePeriodSelects(); } catch (e) { console.error('[charts] updatePeriodSelects failed', e); }
+        }
+
+        function updatePeriodSelects() {
+            const periodo = chartPeriodo.value;
+            const defectRows = findDefectRows();
+            const fechaKey = detectFechaKey(defectRows);
+
+            if (periodo === 'Semanal') {
+                // Mostrar controles de semana, ocultar controles de mes
+                document.getElementById('chartDesdeYearLabel').style.display = '';
+                document.getElementById('chartDesdeWeekLabel').style.display = '';
+                document.getElementById('chartHastaYearLabel').style.display = '';
+                document.getElementById('chartHastaWeekLabel').style.display = '';
+                document.getElementById('chartDesdeMonthLabel').style.display = 'none';
+                document.getElementById('chartHastaMonthLabel').style.display = 'none';
+
+                // Poblar semanas
+                const yearDesde = chartDesdeYear.value;
+                const yearHasta = chartHastaYear.value;
+                
+                chartDesdeWeek.innerHTML = '';
+                chartHastaWeek.innerHTML = '';
+                
+                if (yearDesde) {
+                    let weeksDesde = getWeeksForYear(defectRows, yearDesde, fechaKey);
+                    if (!weeksDesde || weeksDesde.length === 0) {
+                        weeksDesde = Array.from({length:52}, (_,i) => i+1);
+                    }
+                    weeksDesde.forEach(w => {
+                        const opt = document.createElement('option');
+                        opt.value = w;
+                        opt.textContent = `Sem${w}`;
+                        chartDesdeWeek.appendChild(opt);
+                    });
+                }
+                
+                if (yearHasta) {
+                    let weeksHasta = getWeeksForYear(defectRows, yearHasta, fechaKey);
+                    if (!weeksHasta || weeksHasta.length === 0) {
+                        weeksHasta = Array.from({length:52}, (_,i) => i+1);
+                    }
+                    weeksHasta.forEach(w => {
+                        const opt = document.createElement('option');
+                        opt.value = w;
+                        opt.textContent = `Sem${w}`;
+                        chartHastaWeek.appendChild(opt);
+                    });
+                    if (weeksHasta.length > 0) {
+                        chartHastaWeek.value = weeksHasta[weeksHasta.length - 1];
+                    }
+                }
+            } else {
+                // Mostrar controles de año+mes, ocultar controles de semana
+                document.getElementById('chartDesdeYearLabel').style.display = '';
+                document.getElementById('chartDesdeWeekLabel').style.display = 'none';
+                document.getElementById('chartHastaYearLabel').style.display = '';
+                document.getElementById('chartHastaWeekLabel').style.display = 'none';
+                document.getElementById('chartDesdeMonthLabel').style.display = '';
+                document.getElementById('chartHastaMonthLabel').style.display = '';
+
+                // Poblar meses
+                const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                chartDesdeMonth.innerHTML = '';
+                chartHastaMonth.innerHTML = '';
+                
+                for (let i = 1; i <= 12; i++) {
+                    const opt1 = document.createElement('option');
+                    opt1.value = i;
+                    opt1.textContent = monthNames[i - 1];
+                    chartDesdeMonth.appendChild(opt1);
+                    
+                    const opt2 = document.createElement('option');
+                    opt2.value = i;
+                    opt2.textContent = monthNames[i - 1];
+                    chartHastaMonth.appendChild(opt2);
+                }
+                chartDesdeMonth.value = 1;
+                chartHastaMonth.value = 12;
+            }
+        }
+
+        function getMonthsForYear(rows, year, fechaKey) {
+            const set = new Set();
+            rows.forEach(r => {
+                const d = tryParseDate(r[fechaKey]);
+                if (d && d.getFullYear() === parseInt(year)) {
+                    set.add(d.getMonth() + 1);
+                }
+            });
+            return Array.from(set).sort((a, b) => a - b);
+        }
+
+        function findDefectRows() {
+            const candidates = [_originalBdcof, _originalIngembcof, _originalBdcofprod];
+            for (let i = 0; i < candidates.length; i++) {
+                const rows = candidates[i] || [];
+                if (!rows.length) continue;
+                const keys = Object.keys(rows[0] || {}).map(k => toUpperTrim(k));
+                for (const def of DEFECT_DEFS) {
+                    if (!def.col) continue;
+                    const target = toUpperTrim(def.col);
+                    if (keys.includes(target)) return rows;
+                }
+            }
+            return _originalBdcof || [];
+        }
+
+        function renderChart() {
+            const periodo = chartPeriodo.value;
+            const defectRows = findDefectRows();
+            const fechaKey = detectFechaKey(defectRows);
+
+            let dataPoints = [];
+            try {
+
+            if (periodo === 'Semanal') {
+                const yearDesde = parseInt(chartDesdeYear.value);
+                const weekDesde = parseInt(chartDesdeWeek.value);
+                const yearHasta = parseInt(chartHastaYear.value);
+                const weekHasta = parseInt(chartHastaWeek.value);
+
+                // Generar todas las semanas en el rango
+                const allWeeks = [];
+                for (let y = yearDesde; y <= yearHasta; y++) {
+                    const weeks = getWeeksForYear(defectRows, y.toString(), fechaKey);
+                    weeks.forEach(w => {
+                        if ((y === yearDesde && w >= weekDesde) || 
+                            (y === yearHasta && w <= weekHasta) || 
+                            (y > yearDesde && y < yearHasta)) {
+                            allWeeks.push({ year: y, week: w });
+                        }
+                    });
+                }
+
+                // Calcular datos para cada semana
+                dataPoints = allWeeks.map(({ year, week }) => {
+                    const bdcofFiltered = filterByPeriod(defectRows, 'SEMANA', `${year}|${String(week).padStart(2, '0')}`);
+                    // Usar la hoja 'bdcofprod' como fuente de "Ingreso a embalaje"
+                    // Para filas de ingreso usar la función especializada que detecta columnas de año/semana/mes
+                    const bdcofprodFiltered = filterIngresoRowsByPeriod(_originalBdcofprod, 'SEMANA', `${year}|${String(week).padStart(2, '0')}`);
+
+                    console.log(`[charts] ${year}-SEM${week}: defectRows filtradas=${bdcofFiltered.length}, bdcofprodRows filtradas=${bdcofprodFiltered.length}`);
+                    const totalDefectos = sumTotalDefectos(bdcofFiltered);
+                    const totalIngreso = sumTotalIngreso(bdcofprodFiltered);
+                    const percentage = totalIngreso > 0 ? (totalDefectos / totalIngreso) * 100 : 0;
+                    console.log(`[charts] ${year}-SEM${week}: defectos=${totalDefectos}, ingreso=${totalIngreso}, %=${percentage.toFixed(2)}%`);
+
+                    return {
+                        label: `Sem${week}`,
+                        fullLabel: `${year}-SEM${String(week).padStart(2, '0')}`,
+                        totalDefectos,
+                        totalIngreso,
+                        percentage
+                    };
+                });
+            } else {
+                // Mensual - Similar logic pero con meses
+                const monthDesde = parseInt(chartDesdeMonth.value);
+                const monthHasta = parseInt(chartHastaMonth.value);
+                const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+                const yearDesde = parseInt(chartDesdeYear.value);
+                const yearHasta = parseInt(chartHastaYear.value);
+                const allMonths = [];
+                for (let y = yearDesde; y <= yearHasta; y++) {
+                    const startM = (y === yearDesde) ? monthDesde : 1;
+                    const endM = (y === yearHasta) ? monthHasta : 12;
+                    for (let m = startM; m <= endM; m++) allMonths.push({ year: y, month: m });
+                }
+
+                allMonths.forEach(({ year, month }) => {
+                    const bdcofFiltered = defectRows.filter(r => {
+                        const d = tryParseDate(r[fechaKey]);
+                        return d && d.getFullYear() === year && (d.getMonth() + 1) === month;
+                    });
+                    const bdcofprodFiltered = filterIngresoRowsByPeriod(_originalBdcofprod, 'MES', `${year}|${String(month).padStart(2,'0')}`);
+
+                    console.log(`[charts] ${year}-MES${String(month).padStart(2,'0')}: defectRows filtradas=${bdcofFiltered.length}, bdcofprodRows filtradas=${bdcofprodFiltered.length}`);
+                    const totalDefectos = sumTotalDefectos(bdcofFiltered);
+                    const totalIngreso = sumTotalIngreso(bdcofprodFiltered);
+                    const percentage = totalIngreso > 0 ? (totalDefectos / totalIngreso) * 100 : 0;
+                    console.log(`[charts] ${year}-MES${String(month).padStart(2,'0')}: defectos=${totalDefectos}, ingreso=${totalIngreso}, %=${percentage.toFixed(2)}%`);
+
+                    dataPoints.push({
+                        label: monthNames[month - 1],
+                        fullLabel: `${year}-MES${String(month).padStart(2,'0')}`,
+                        totalDefectos,
+                        totalIngreso,
+                        percentage
+                    });
+                });
+            }
+
+            } catch (err) { console.error('[charts] renderChart error', err); }
+            console.log('[charts] dataPoints sample', dataPoints.slice(0,5));
+                // Destruir gráfico anterior si existe
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // Crear nuevo gráfico
+            const ctx = chartsCanvas.getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dataPoints.map(d => d.fullLabel),
+                    datasets: [
+                        {
+                            label: 'TOTAL INGRESO A EMBALAJE',
+                            data: dataPoints.map(d => d.totalIngreso),
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y',
+                            order: 2
+                        },
+                        {
+                            label: '% DEFECTOS vs INGRESO',
+                            data: dataPoints.map(d => d.percentage),
+                            type: 'line',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                            yAxisID: 'y1',
+                            order: 1,
+                            datalabels: {
+                                align: 'top',
+                                anchor: 'end',
+                                color: '#ef4444',
+                                font: { weight: 'bold', size: 11 },
+                                formatter: (val) => val.toFixed(2) + '%'
+                            }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.5,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    if (context.datasetIndex === 1) {
+                                        return datasetLabel + ': ' + value.toFixed(2) + '%';
+                                    }
+                                    return datasetLabel + ': ' + formatNumber(value);
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: function(context) {
+                                return context.datasetIndex === 1;
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'TOTAL INGRESO A EMBALAJE'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatNumber(value);
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '% DEFECTOS vs INGRESO'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(2) + '%';
+                                }
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+
+            // summary removed per user request
+        }
+
+        function sumTotalDefectos(rows) {
+            let total = 0;
+            if (!rows || rows.length === 0) {
+                console.log('[charts] sumTotalDefectos: no rows');
+                return 0;
+            }
+            const sampleRow = rows[0];
+            const availableKeys = Object.keys(sampleRow);
+            let foundCols = 0;
+            rows.forEach(r => {
+                DEFECT_DEFS.forEach(def => {
+                    const val = toNumber(r[def.col]);
+                    if (val > 0) foundCols++;
+                    total += val;
+                });
+            });
+            console.log('[charts] sumTotalDefectos:', total, 'from', rows.length, 'rows, foundCols:', foundCols, 'sample keys:', availableKeys.slice(0,10));
+            return total;
+        }
+
+        function sumTotalIngreso(rows) {
+            let total = 0;
+            if (!rows || rows.length === 0) {
+                console.log('[charts] sumTotalIngreso: no rows');
+                return 0;
+            }
+            const ingresoKey = detectarColumnaIngreso(rows);
+            rows.forEach(r => {
+                const val = toNumber(r[ingresoKey]);
+                total += val;
+            });
+            console.log('[charts] sumTotalIngreso:', total, 'from', rows.length, 'rows using key:', ingresoKey);
+            return total;
+        }
+
+        function detectarColumnaIngreso(rows) {
+            if (!rows.length) return "INGRESO A EMBALAJE";
+            const headers = Object.keys(rows[0]);
+            // Buscar la columna que contenga "INGRESO" y "EMBALAJE"
+            let byIngreso = headers.find(h => {
+                const upper = toUpperTrim(h);
+                return upper.includes('INGRESO') && upper.includes('EMBALAJE');
+            });
+            // Fallback: buscar solo "INGRESO"
+            if (!byIngreso) {
+                byIngreso = headers.find(h => toUpperTrim(h).includes('INGRESO'));
+            }
+            console.log('[charts] detectarColumnaIngreso:', byIngreso, 'from headers:', headers.slice(0,10));
+            return byIngreso || "INGRESO A EMBALAJE";
+        }
+
+        // Event listeners
+        if (btnChartCircle) btnChartCircle.addEventListener('click', openChartsModal);
+        if (chartsModalClose) chartsModalClose.addEventListener('click', closeChartsModal);
+        if (chartsModalOverlay) chartsModalOverlay.addEventListener('click', (e) => {
+            if (e.target === chartsModalOverlay) closeChartsModal();
+        });
+        if (chartPeriodo) chartPeriodo.addEventListener('change', () => {
+            updatePeriodSelects();
+            renderChart();
+        });
+        if (chartDesdeYear) chartDesdeYear.addEventListener('change', () => {
+            updatePeriodSelects();
+            renderChart();
+        });
+        if (chartDesdeWeek) chartDesdeWeek.addEventListener('change', renderChart);
+        if (chartHastaYear) chartHastaYear.addEventListener('change', () => {
+            updatePeriodSelects();
+            renderChart();
+        });
+        if (chartHastaWeek) chartHastaWeek.addEventListener('change', renderChart);
+        if (chartDesdeMonth) chartDesdeMonth.addEventListener('change', renderChart);
+        if (chartHastaMonth) chartHastaMonth.addEventListener('change', renderChart);
     })();
 
     

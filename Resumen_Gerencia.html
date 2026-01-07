@@ -933,6 +933,38 @@
 				]);
 				segDefectRows = dRows || [];
 				segIngresoRows = iRows || [];
+				
+				// Preprocess dates: add _year, _month, _week to each row
+				segDefectRows.forEach(r => {
+					if (!r) return;
+					const f = r['FECHA DE TIMBRADO'] || r['FECHA_DE_TIMBRADO'] || r['FECHA'] || r['Fecha'] || r.FECHA || r['FECHA_CORTE'] || r['FECHA CORTE'] || '';
+					const d = parseDateFlexible(f);
+					if (d) {
+						r._year = d.getFullYear();
+						r._month = d.getMonth() + 1;
+						r._week = getWeekNumber(d);
+					} else {
+						r._year = r._year || toNum(r.AÑO) || toNum(r['AÑO']) || null;
+						r._month = r._month || toNum(r.MES) || toNum(r['MES']) || null;
+						r._week = r._week || toNum(r.SEM) || toNum(r.SEMANA) || null;
+					}
+				});
+				
+				segIngresoRows.forEach(r => {
+					if (!r) return;
+					const f = r['FECHA DE TIMBRADO'] || r['FECHA_DE_TIMBRADO'] || r['FECHA'] || r['Fecha'] || r.FECHA || r['FECHA_CORTE'] || r['FECHA CORTE'] || '';
+					const d = parseDateFlexible(f);
+					if (d) {
+						r._year = d.getFullYear();
+						r._month = d.getMonth() + 1;
+						r._week = getWeekNumber(d);
+					} else {
+						r._year = r._year || toNum(r.AÑO) || toNum(r['AÑO']) || null;
+						r._month = r._month || toNum(r.MES) || toNum(r['MES']) || null;
+						r._week = r._week || toNum(r.SEM) || toNum(r.SEMANA) || null;
+					}
+				});
+				
 				console.log('initSegTile: filas defectos=', segDefectRows.length, ' filas ingreso=', segIngresoRows.length);
 				bindSegControls();
 				buildSegCharts();
@@ -944,18 +976,6 @@
 			const tipo = document.getElementById('segTipoSelect');
 			if(per) per.addEventListener('change', buildSegCharts);
 			if(tipo) tipo.addEventListener('change', buildSegCharts);
-
-			// Also listen to the global period selector (if present) so tile follows page-level filter
-			const globalPer = document.getElementById('periodSelect');
-			if(globalPer){
-				// keep tile selector in sync with global but DO NOT force rebuild of the tile's charts
-					if(per) per.value = globalPer.value;
-					// NOTE: previously we called buildSegCharts() here which made the
-					// Pdas 2das y 3ras charts react to the main `periodSelect` change.
-					// That couples two distinct data sources. To keep them independent,
-					// only sync the select value without triggering a rebuild.
-					globalPer.addEventListener('change', function(){ if(per) per.value = this.value; });
-			}
 		}
 
 		function detectTipoKey(rows){ if(!rows||!rows.length) return null; return Object.keys(rows[0]).find(k=> ['TIPO','TIPO.','TYPE','TIP'].includes(k.toString().toUpperCase()) || k.toString().toUpperCase().includes('TIPO')) || null; }
@@ -1083,7 +1103,18 @@
 
 		function updatePareto(labels, values){
 			const card = document.getElementById('segParetoChart') && document.getElementById('segParetoChart').closest('.chart-card');
-			if(!labels || !labels.length){ if(card) card.querySelector('.title').textContent = 'Defectos (top 7) - Sin datos'; }
+			if(!labels || !labels.length){
+				if(card) card.querySelector('.title').textContent = 'Defectos (top 7) - Sin datos';
+				// Clear chart if no data
+				if(segParetoChartInstance){
+					segParetoChartInstance.data.labels = [];
+					segParetoChartInstance.data.datasets[0].data = [];
+					segParetoChartInstance.update();
+				}
+				return;
+			}
+			// Reset title if we have data
+			if(card) card.querySelector('.title').textContent = 'Defectos (top 7)';
 			if(!segParetoChartInstance){
 				const ctx = document.getElementById('segParetoChart').getContext('2d');
 				segParetoChartInstance = new Chart(ctx, {
@@ -1147,25 +1178,36 @@
 			});
 			const keys = Array.from(new Set(Object.keys(defByPeriod).concat(Object.keys(ingByPeriod))));
 			keys.sort((a,b)=>{ if(a.startsWith('SEM') && b.startsWith('SEM')) return parseInt(a.replace(/[^0-9]/g,''),10) - parseInt(b.replace(/[^0-9]/g,''),10); return a.localeCompare(b); });
-			const labels = keys;
-			const ingresoVals = keys.map(k=> ingByPeriod[k]||0);
-			const defectVals = keys.map(k=> defByPeriod[k]||0);
-			const pctVals = keys.map((k,i)=> { const ing = ingresoVals[i]||0; return ing>0 ? (defectVals[i]/ing)*100 : 0; });
-			updatePctChart(labels, ingresoVals, pctVals);
-		}
+			// Mostrar solo los últimos 3 periodos (últimas 3 semanas o últimos 3 meses)
+			const last3Keys = keys.slice(-3);
+			const ingresoVals = last3Keys.map(k=> ingByPeriod[k]||0);
+			const defectVals = last3Keys.map(k=> defByPeriod[k]||0);
+			const pctVals = last3Keys.map((k,i)=> { const ing = ingresoVals[i]||0; return ing>0 ? (defectVals[i]/ing)*100 : 0; });
 
-		function updatePctChart(labels, ingresoVals, pctVals){
+			// Formatear etiquetas X: SEM -> 'SEM##', MES -> mes corto (Oct, Nov, Dec)
+			const monthsShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+			const displayLabels = last3Keys.map(k => {
+				if(per === 'SEM'){
+					let m = k.match(/^SEM(?:\d{4}-)?0*(\d{1,2})$/);
+					if(m && m[1]) return 'SEM' + m[1];
+					m = k.match(/(\d{1,2})$/);
+					return m && m[1] ? ('SEM' + m[1]) : k;
+				} else {
+					const mm = (function(){ const r = k.match(/-(\d{1,2})$/); if(r) return parseInt(r[1],10); const parts = k.split('-'); if(parts.length>=2) return parseInt(parts[1],10); return null; })();
+					return (mm && mm>=1 && mm<=12) ? monthsShort[mm-1] : k;
+				}
+			});
 			const card = document.getElementById('segPctChart') && document.getElementById('segPctChart').closest('.chart-card');
-			if(!labels || !labels.length){ if(card) card.querySelector('.title').textContent = '% DEFECTOS vs INGRESO - Sin datos'; }
+			if(!displayLabels || !displayLabels.length){ if(card) card.querySelector('.title').textContent = '% DEFECTOS vs INGRESO - Sin datos'; }
 			if(!segPctChartInstance){
 				const ctx = document.getElementById('segPctChart').getContext('2d');
 				segPctChartInstance = new Chart(ctx, {
-					data: { labels: labels, datasets: [ { type:'bar', label: 'TOTAL INGRESO A EMBALAJE', data: ingresoVals, backgroundColor: '#7fb3ff', yAxisID: 'y1' }, { type:'line', label: '% DEFECTOS vs INGRESO', data: pctVals, borderColor: '#d9534f', backgroundColor: 'rgba(217,83,79,0.08)', fill:false, yAxisID: 'y' } ] },
+					data: { labels: displayLabels, datasets: [ { type:'bar', label: 'TOTAL INGRESO A EMBALAJE', data: ingresoVals, backgroundColor: '#7fb3ff', yAxisID: 'y1' }, { type:'line', label: '% DEFECTOS vs INGRESO', data: pctVals, borderColor: '#d9534f', backgroundColor: 'rgba(217,83,79,0.08)', fill:false, yAxisID: 'y' } ] },
 					options: { maintainAspectRatio:false, scales: { y: { type:'linear', position:'left', ticks:{ callback: v => v + '%' }, beginAtZero:true }, y1: { type:'linear', position:'right', grid:{ display:false }, beginAtZero:true }, x:{ ticks:{ maxRotation:0 } } }, plugins:{ legend:{ position:'bottom' }, datalabels:{ display:false } }
 					}
 				});
 			} else {
-				segPctChartInstance.data.labels = labels;
+				segPctChartInstance.data.labels = displayLabels;
 				segPctChartInstance.data.datasets[0].data = ingresoVals;
 				segPctChartInstance.data.datasets[1].data = pctVals;
 				segPctChartInstance.update();
@@ -1184,4 +1226,3 @@
 
 	</body>
 	</html>
-

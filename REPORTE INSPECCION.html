@@ -1307,6 +1307,59 @@
         }
     }
 
+    // Devuelve la última semana (ISO) encontrada en `rows` usando la columna de fecha detectada
+    function getLastWeekFromRows(rows) {
+        if (!rows || !rows.length) return null;
+        const fechaKey = detectFechaKey(rows);
+        if (!fechaKey) return null;
+        let lastDate = null;
+        rows.forEach(r => {
+            const d = tryParseDate(r[fechaKey]);
+            if (d && (!lastDate || d.getTime() > lastDate.getTime())) lastDate = d;
+        });
+        if (!lastDate) return null;
+        return { year: lastDate.getFullYear(), week: getISOWeek(lastDate) };
+    }
+
+    // Devuelve el último periodo (año/semana) de bdcofprod según la última fila que tenga dato en 'INGRESO A EMBALAJE'
+    function getLastPeriodFromBdcofprod(rows) {
+        if (!rows || !rows.length) return null;
+        const ingresoKey = detectarColumnaIngreso(rows);
+        const keys = Object.keys(rows[0] || {});
+        const keyAno = keys.find(k => {
+            const upper = toUpperTrim(k);
+            return upper === 'AÑO' || upper === 'ANO' || upper.replace(/\s+/g,'') === 'AÑO' || upper.replace(/\s+/g,'') === 'ANO';
+        });
+        const keySemana = keys.find(k => toUpperTrim(k).includes('SEMANA'));
+
+        for (let i = rows.length - 1; i >= 0; i--) {
+            const r = rows[i];
+            const val = r[ingresoKey];
+            if (val !== null && val !== undefined && String(val).trim() !== '') {
+                if (keyAno && keySemana) {
+                    const ano = toNumber(r[keyAno]);
+                    const sem = toNumber(r[keySemana]);
+                    if (ano > 0 && sem > 0) return { year: ano, week: sem };
+                }
+                // Fallback: intentar buscar alguna columna de fecha en la fila
+                const keysRow = Object.keys(r || {});
+                for (const k of keysRow) {
+                    const d = tryParseDate(r[k]);
+                    if (d) return { year: d.getFullYear(), week: getISOWeek(d) };
+                }
+            }
+        }
+        return null;
+    }
+
+    function earlierPeriod(a, b) {
+        if (!a) return b;
+        if (!b) return a;
+        if (a.year < b.year) return a;
+        if (a.year > b.year) return b;
+        return (a.week <= b.week) ? a : b;
+    }
+
     function applyFiltersAndBuild() {
         const group = document.getElementById('filterGroupBy') ? document.getElementById('filterGroupBy').value : 'SEMANA';
         const period = document.getElementById('filterPeriodSelect') ? document.getElementById('filterPeriodSelect').value : '';
@@ -1338,47 +1391,55 @@
                 setStatus("Datos cargados", "ok");
                 populateFilters(_originalBdcof);
 
-                // Establecer filtros por defecto solicitados: Año=2025, Periodo=SEMANA, Semana=48
+                // Establecer filtros por defecto basados en la última fecha de `bdcof` y `bdcofprod`.
                 try {
-                    const desiredYear = '2025';
-                    const desiredGroup = 'SEMANA';
-                    const desiredWeek = '48';
                     const yearSel = document.getElementById('filterYear');
                     const groupSel = document.getElementById('filterGroupBy');
                     const periodSel = document.getElementById('filterPeriodSelect');
 
-                    // Asegurar que la opción de año exista (si no, la añadimos)
-                    if (yearSel) {
-                        if (!Array.from(yearSel.options).some(o => String(o.value) === desiredYear)) {
-                            const opt = document.createElement('option');
-                            opt.value = desiredYear;
-                            opt.textContent = desiredYear;
-                            yearSel.appendChild(opt);
-                        }
-                        yearSel.value = desiredYear;
-                        yearSel.dispatchEvent(new Event('change'));
-                    }
+                    const lastBdcof = getLastWeekFromRows(_originalBdcof);
+                    const lastBdcofprod = getLastPeriodFromBdcofprod(_originalBdcofprod);
 
-                    // Forzar grupo (SEMANA)
-                    if (groupSel) {
-                        groupSel.value = desiredGroup;
-                        groupSel.dispatchEvent(new Event('change'));
-                    }
+                    const chosen = earlierPeriod(lastBdcof, lastBdcofprod);
 
-                    // Esperar a que se hayan poblado las opciones de periodo, luego forzar semana 48
-                    setTimeout(() => {
-                        if (periodSel) {
-                            const optVal = `${desiredYear}|${String(desiredWeek).padStart(2,'0')}`;
-                            if (!Array.from(periodSel.options).some(o => o.value === optVal)) {
-                                const o = document.createElement('option');
-                                o.value = optVal;
-                                o.textContent = `Semana ${desiredWeek}`;
-                                periodSel.appendChild(o);
+                    if (chosen) {
+                        const desiredYear = String(chosen.year);
+                        const desiredGroup = 'SEMANA';
+                        const desiredWeek = String(chosen.week);
+
+                        if (yearSel) {
+                            if (!Array.from(yearSel.options).some(o => String(o.value) === desiredYear)) {
+                                const opt = document.createElement('option');
+                                opt.value = desiredYear;
+                                opt.textContent = desiredYear;
+                                yearSel.appendChild(opt);
                             }
-                            periodSel.value = optVal;
+                            yearSel.value = desiredYear;
+                            yearSel.dispatchEvent(new Event('change'));
                         }
+
+                        if (groupSel) {
+                            groupSel.value = desiredGroup;
+                            groupSel.dispatchEvent(new Event('change'));
+                        }
+
+                        // Esperar a que se hayan poblado las opciones de periodo, luego forzar la semana elegida
+                        setTimeout(() => {
+                            if (periodSel) {
+                                const optVal = `${desiredYear}|${String(desiredWeek).padStart(2,'0')}`;
+                                if (!Array.from(periodSel.options).some(o => o.value === optVal)) {
+                                    const o = document.createElement('option');
+                                    o.value = optVal;
+                                    o.textContent = `Sem${desiredWeek}`;
+                                    periodSel.appendChild(o);
+                                }
+                                periodSel.value = optVal;
+                            }
+                            applyFiltersAndBuild();
+                        }, 120);
+                    } else {
                         applyFiltersAndBuild();
-                    }, 120);
+                    }
                 } catch (e) {
                     applyFiltersAndBuild();
                 }
@@ -1665,6 +1726,16 @@
 
             // Crear nuevo gráfico
             const ctx = chartsCanvas.getContext('2d');
+
+            // Calcular máximo del % (eje secundario) para dejar margen visible
+            let maxPercent = 0;
+            (dataPoints || []).forEach(dp => {
+                if (isFinite(dp.percentage) && dp.percentage > maxPercent) maxPercent = dp.percentage;
+            });
+            if (!isFinite(maxPercent) || maxPercent <= 0) maxPercent = 1;
+            // margen del 15% para que las etiquetas no queden cortadas
+            const y1Max = Math.ceil((maxPercent * 1.15) * 100) / 100;
+
             chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -1750,6 +1821,7 @@
                             type: 'linear',
                             display: true,
                             position: 'right',
+                            suggestedMax: y1Max,
                             title: {
                                 display: true,
                                 text: '% DEFECTOS vs INGRESO'
@@ -2023,6 +2095,21 @@
             return sorted.map(([defecto, data]) => ({ defecto, col: data.col }));
         }
 
+        function sumTotalIngresoDefectos(rows) {
+            let total = 0;
+            if (!rows || rows.length === 0) {
+                console.log('[defectos] sumTotalIngresoDefectos: no rows');
+                return 0;
+            }
+            const ingresoKey = detectarColumnaIngreso(rows);
+            rows.forEach(r => {
+                const val = toNumber(r[ingresoKey]);
+                total += val;
+            });
+            console.log('[defectos] sumTotalIngresoDefectos:', total, 'from', rows.length, 'rows using key:', ingresoKey);
+            return total;
+        }
+
         function renderDefectosChart() {
             try {
                 const periodo = defectosPeriodo.value;
@@ -2058,13 +2145,18 @@
 
                 dataPoints = allWeeks.map(({ year, week }) => {
                     const filtered = filterByPeriod(defectRows, 'SEMANA', `${year}|${String(week).padStart(2, '0')}`);
+                    const bdcofprodFiltered = filterIngresoRowsByPeriod(_originalBdcofprod, 'SEMANA', `${year}|${String(week).padStart(2,'0')}`);
+                    const totalIngreso = sumTotalIngresoDefectos(bdcofprodFiltered);
+                    
                     const defectosData = {};
                     top6.forEach(({ defecto, col }) => {
                         let total = 0;
                         filtered.forEach(r => {
                             total += toNumber(r[col]);
                         });
-                        defectosData[defecto] = total;
+                        // Calcular %Def = (Total Defecto / Ingreso a Embalaje) * 100
+                        const porcentaje = totalIngreso > 0 ? (total / totalIngreso) * 100 : 0;
+                        defectosData[defecto] = porcentaje;
                     });
 
                     return {
@@ -2092,6 +2184,8 @@
                         const d = tryParseDate(r[fechaKey]);
                         return d && d.getFullYear() === year && (d.getMonth() + 1) === month;
                     });
+                    const bdcofprodFiltered = filterIngresoRowsByPeriod(_originalBdcofprod, 'MES', `${year}|${String(month).padStart(2,'0')}`);
+                    const totalIngreso = sumTotalIngresoDefectos(bdcofprodFiltered);
 
                     const defectosData = {};
                     top6.forEach(({ defecto, col }) => {
@@ -2099,7 +2193,9 @@
                         filtered.forEach(r => {
                             total += toNumber(r[col]);
                         });
-                        defectosData[defecto] = total;
+                        // Calcular %Def = (Total Defecto / Ingreso a Embalaje) * 100
+                        const porcentaje = totalIngreso > 0 ? (total / totalIngreso) * 100 : 0;
+                        defectosData[defecto] = porcentaje;
                     });
 
                     dataPoints.push({
@@ -2142,6 +2238,15 @@
             });
 
             const ctx = defectosCanvas.getContext('2d');
+
+            // Calcular máximo Y en base a los datos para dejar margen visible
+            let maxVal = 0;
+            datasets.forEach(ds => {
+                (ds.data || []).forEach(v => { if (v > maxVal) maxVal = v; });
+            });
+            if (!isFinite(maxVal) || maxVal <= 0) maxVal = 1;
+            const yMax = Math.ceil((maxVal * 1.12) * 100) / 100;
+
             defectosChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -2159,36 +2264,74 @@
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'bottom'
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 15
+                            },
+                            onClick: function(e, legendItem, legend) {
+                                const chart = legend.chart;
+                                const clickedIndex = legendItem.datasetIndex;
+
+                                // Contar visibles actualmente
+                                const visibleCount = chart.data.datasets.reduce((acc, d, i) => acc + (!chart.getDatasetMeta(i).hidden ? 1 : 0), 0);
+                                const clickedVisible = !chart.getDatasetMeta(clickedIndex).hidden;
+
+                                if (visibleCount === 1 && clickedVisible) {
+                                    // Si solo estaba visible la serie clickeada -> restaurar todas visibles
+                                    chart.data.datasets.forEach((d, i) => {
+                                        chart.getDatasetMeta(i).hidden = false;
+                                    });
+                                } else {
+                                    // Mostrar únicamente la serie clickeada, ocultar las demás
+                                    chart.data.datasets.forEach((d, i) => {
+                                        chart.getDatasetMeta(i).hidden = (i !== clickedIndex);
+                                    });
+                                }
+
+                                chart.update();
+                            }
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.dataset.label + ': ' + formatNumber(context.parsed.y);
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
                                 }
                             }
                         },
                         datalabels: {
-                            display: false
+                            display: function(ctx) {
+                                const chart = ctx.chart;
+                                const visibleCount = chart.data.datasets.reduce((acc, d, i) => acc + (!chart.getDatasetMeta(i).hidden ? 1 : 0), 0);
+                                return visibleCount === 1 && !chart.getDatasetMeta(ctx.datasetIndex).hidden;
+                            },
+                            align: 'top',
+                            anchor: 'end',
+                            color: '#111',
+                            font: function(ctx) {
+                                return { weight: 'bold', size: 12 };
+                            },
+                            formatter: function(val) { return Number(val).toFixed(2) + '%'; }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
+                            suggestedMax: yMax,
                             title: {
                                 display: true,
-                                text: 'Cantidad de Defectos'
+                                text: '% Defectos (% Def.)'
                             },
                             ticks: {
                                 callback: function(value) {
-                                    return formatNumber(value);
+                                    return value.toFixed(2) + '%';
                                 }
                             }
                         },
                         x: {
                             title: {
-                                display: true,
-                                text: 'Periodo'
+                                display: false
                             }
                         }
                     }

@@ -693,7 +693,7 @@
                 <div class="filters-group">
                     <div class="control-group">
                         <label>Año:</label>
-                        <select id="yearSelect" onchange="applyFilters()">
+                        <select id="yearSelect" onchange="updateWeeksForYear(); updateMonthsForYear(); applyFilters();">
                             <option value="">Todos</option>
                         </select>
                     </div>
@@ -782,7 +782,7 @@
                             </div>
                         </div>
 
-                        <div class="op-table-wrapper" style="border-top:1px solid:#eee;padding-top:8px;">
+                        <div class="op-table-wrapper" style="border-top:1px solid #eee;padding-top:8px;">
                             <table id="opResumenTable" class="modal-table" style="border-collapse:collapse;font-family:Calibri, sans-serif;font-size:11px;">
                                 <thead id="opResumenHead"><tr></tr></thead>
                                 <tbody id="opResumenBody"></tbody>
@@ -832,7 +832,7 @@
                             </div>
                         </div>
 
-                        <div class="op-table-wrapper" style="border-top:1px solid:#eee;padding-top:8px;">
+                        <div class="op-table-wrapper" style="border-top:1px solid #eee;padding-top:8px;">
                             <table id="telaResumenTable" class="modal-table" style="border-collapse:collapse;font-family:Calibri, sans-serif;font-size:12px;">
                                 <thead id="telaResumenHead"><tr></tr></thead>
                                 <tbody id="telaResumenBody"></tbody>
@@ -1134,7 +1134,7 @@
             const knownCols = ['SEM', 'SEMANA', 'CLIENTE', 'OP', 'TENDIDO', 'FECHA', 'FECHA CORTE', 'FECHA_COR',
                              'CODIGO', 'TELA', 'PARTIDA', 'DESCRIPCION', 'COLOR', 'OP_TELA', 'PTDA',
                              'CANT.', 'CANT', 'CORTADA', 'DEPURADO', 'RECUPERADOS', 'RECUPERADO', 
-                             'REAL', 'NO RECUPERADO', 'PERDIDA', 'NETA', 'FACTORY', '_year', '_month', '_week'];
+                             'REAL', 'NO RECUPERADO', 'PERDIDA', 'NETA', 'FACTORY', 'AÑO', 'ANO', 'MES', '_year', '_month', '_week'];
             
             return allCols.filter(col => {
                 const upperCol = col.toUpperCase().trim();
@@ -1160,11 +1160,20 @@
             // Procesar fechas y extraer año, mes, semana usando parseo flexible
             const badDates = [];
             baseData.forEach(row => {
+                // Priorizar columna AÑO directa si existe, sino calcular desde FECHA CORTE
+                const yearFromColumn = toNum(row['AÑO']) || toNum(row.AÑO);
+                if (yearFromColumn) {
+                    row._year = yearFromColumn;
+                }
+                
                 const fechaCorte = row['FECHA CORTE'];
                 if (fechaCorte) {
                     const date = parseDateFlexible(fechaCorte);
                     if (date) {
-                        row._year = date.getFullYear();
+                        // Solo asignar _year desde fecha si no existe columna AÑO
+                        if (!yearFromColumn) {
+                            row._year = date.getFullYear();
+                        }
                         row._month = date.getMonth() + 1; // 1-12
                         row._week = getWeekNumber(date);
                     } else {
@@ -1173,7 +1182,7 @@
                 }
             });
 
-            // Años: combinar de base (FECHA CORTE procesada) y prod_corte (columna AÑO)
+            // Años: combinar de base (columna AÑO y FECHA CORTE procesada) y prod_corte (columna AÑO)
             const yearsFromBase = baseData.map(r => r._year).filter(y => y);
             const yearsFromProdCorte = prodCorteData.map(r => toNum(r['AÑO']) || toNum(r.AÑO)).filter(y => y);
             const years = [...new Set([...yearsFromBase, ...yearsFromProdCorte])].sort((a, b) => a - b);
@@ -1249,6 +1258,139 @@
             d.setUTCDate(d.getUTCDate() + 4 - dayNum);
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
             return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function updateWeeksForYear() {
+            const selectedYear = document.getElementById('yearSelect').value;
+            const weekSelect = document.getElementById('weekSelect');
+            const currentWeekValue = weekSelect.value;
+            
+            // Limpiar opciones existentes excepto "Todas"
+            weekSelect.innerHTML = '<option value="">Todas</option>';
+            
+            if (!selectedYear) {
+                // Si no hay año seleccionado, mostrar todas las semanas
+                const weeksFromBase = baseData.map(r => toNum(r.SEM)).filter(w => w);
+                const weeksFromProdCorte = prodCorteData.map(r => toNum(r.SEM)).filter(w => w);
+                const weeks = [...new Set([...weeksFromBase, ...weeksFromProdCorte])].sort((a, b) => a - b);
+                
+                weeks.forEach(week => {
+                    const opt = document.createElement('option');
+                    opt.value = week;
+                    opt.textContent = `Semana ${week}`;
+                    weekSelect.appendChild(opt);
+                });
+            } else {
+                // Filtrar semanas por año seleccionado
+                const year = toNum(selectedYear);
+                
+                // Semanas de base filtradas por año
+                const weeksFromBase = baseData
+                    .filter(r => {
+                        const yearFromColumn = toNum(r['AÑO']) || toNum(r.AÑO);
+                        const yearFromDate = r._year;
+                        return yearFromColumn == year || yearFromDate == year;
+                    })
+                    .map(r => toNum(r.SEM))
+                    .filter(w => w);
+                
+                // Semanas de prod_corte filtradas por año
+                const weeksFromProdCorte = prodCorteData
+                    .filter(r => toNum(r['AÑO']) == year || toNum(r.AÑO) == year)
+                    .map(r => toNum(r.SEM))
+                    .filter(w => w);
+                
+                const weeks = [...new Set([...weeksFromBase, ...weeksFromProdCorte])].sort((a, b) => a - b);
+                
+                weeks.forEach(week => {
+                    const opt = document.createElement('option');
+                    opt.value = week;
+                    opt.textContent = `Semana ${week}`;
+                    weekSelect.appendChild(opt);
+                });
+            }
+            
+            // Intentar restaurar el valor anterior si existe
+            if (currentWeekValue) {
+                let found = false;
+                for (let i = 0; i < weekSelect.options.length; i++) {
+                    if (weekSelect.options[i].value == currentWeekValue) {
+                        weekSelect.value = currentWeekValue;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    weekSelect.value = '';
+                }
+            }
+        }
+
+        function updateMonthsForYear() {
+            const selectedYear = document.getElementById('yearSelect').value;
+            const monthSelect = document.getElementById('monthSelect');
+            const currentMonthValue = monthSelect.value;
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            
+            // Limpiar opciones existentes excepto "Todos"
+            monthSelect.innerHTML = '<option value="">Todos</option>';
+            
+            if (!selectedYear) {
+                // Si no hay año seleccionado, mostrar todos los meses
+                const monthsFromBase = baseData.map(r => r._month).filter(m => m);
+                const monthsFromProdCorte = prodCorteData.map(r => toNum(r.MES) || toNum(r['MES'])).filter(m => m);
+                const months = [...new Set([...monthsFromBase, ...monthsFromProdCorte])].sort((a, b) => a - b);
+                
+                months.forEach(month => {
+                    const opt = document.createElement('option');
+                    opt.value = month;
+                    opt.textContent = monthNames[month - 1];
+                    monthSelect.appendChild(opt);
+                });
+            } else {
+                // Filtrar meses por año seleccionado
+                const year = toNum(selectedYear);
+                
+                // Meses de base filtrados por año
+                const monthsFromBase = baseData
+                    .filter(r => {
+                        const yearFromColumn = toNum(r['AÑO']) || toNum(r.AÑO);
+                        const yearFromDate = r._year;
+                        return yearFromColumn == year || yearFromDate == year;
+                    })
+                    .map(r => r._month)
+                    .filter(m => m);
+                
+                // Meses de prod_corte filtrados por año
+                const monthsFromProdCorte = prodCorteData
+                    .filter(r => toNum(r['AÑO']) == year || toNum(r.AÑO) == year)
+                    .map(r => toNum(r.MES) || toNum(r['MES']))
+                    .filter(m => m);
+                
+                const months = [...new Set([...monthsFromBase, ...monthsFromProdCorte])].sort((a, b) => a - b);
+                
+                months.forEach(month => {
+                    const opt = document.createElement('option');
+                    opt.value = month;
+                    opt.textContent = monthNames[month - 1];
+                    monthSelect.appendChild(opt);
+                });
+            }
+            
+            // Intentar restaurar el valor anterior si existe
+            if (currentMonthValue) {
+                let found = false;
+                for (let i = 0; i < monthSelect.options.length; i++) {
+                    if (monthSelect.options[i].value == currentMonthValue) {
+                        monthSelect.value = currentMonthValue;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    monthSelect.value = '';
+                }
+            }
         }
 
         function togglePeriodFilter() {
@@ -4353,15 +4495,34 @@
                 currentFilters.periodType = 'week';
                 togglePeriodFilter();
                 
-                // 3. Seleccionar por defecto la ÚLTIMA semana registrada disponible
+                // Actualizar las semanas y meses disponibles basándose en el año seleccionado
+                updateWeeksForYear();
+                updateMonthsForYear();
+                
+                // 3. Seleccionar por defecto la semana pasada (semana 3)
                 const weekSelect = document.getElementById('weekSelect');
+                const currentWeek = getWeekNumber(new Date());
+                const lastWeek = currentWeek - 1; // Semana pasada
+                
                 if (weekSelect && weekSelect.options.length > 1) {
-                    // Buscar la última opción que no sea la opción vacía ("Todas")
-                    for (let i = weekSelect.options.length - 1; i >= 0; i--) {
-                        if (weekSelect.options[i].value !== '') {
+                    let weekFound = false;
+                    // Intentar encontrar la semana pasada (3)
+                    for (let i = 0; i < weekSelect.options.length; i++) {
+                        if (weekSelect.options[i].value == lastWeek || weekSelect.options[i].value == '3') {
                             weekSelect.selectedIndex = i;
                             currentFilters.week = weekSelect.value;
+                            weekFound = true;
                             break;
+                        }
+                    }
+                    // Si no existe la semana pasada, seleccionar la última disponible
+                    if (!weekFound) {
+                        for (let i = weekSelect.options.length - 1; i >= 0; i--) {
+                            if (weekSelect.options[i].value !== '') {
+                                weekSelect.selectedIndex = i;
+                                currentFilters.week = weekSelect.value;
+                                break;
+                            }
                         }
                     }
                 } else {

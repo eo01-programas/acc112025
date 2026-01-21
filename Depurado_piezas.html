@@ -1577,12 +1577,9 @@
             let filtered = baseData;
             const initialCount = filtered.length;
 
-            // Solo aplicar filtro de año si NO estamos filtrando por semana o mes específico
-            // (porque SEM y MES ya son específicos y no dependen de FECHA CORTE)
-            const isFilteringByPeriod = (currentFilters.periodType === 'week' && currentFilters.week) || 
-                                       (currentFilters.periodType === 'month' && currentFilters.month);
-            
-            if (currentFilters.year && !isFilteringByPeriod) {
+            // SIEMPRE aplicar filtro de año cuando esté seleccionado
+            // Esto evita mezclar datos de la misma semana/mes de diferentes años
+            if (currentFilters.year) {
                 // Usar múltiples fuentes para el año: columna directa AÑO/ANO o _year calculado
                 filtered = filtered.filter(r => {
                     const yearFromColumn = toNum(r['AÑO']) || toNum(r.AÑO) || toNum(r.ANO);
@@ -1622,9 +1619,11 @@
 
         function getFilteredProdCorteData() {
             let filtered = prodCorteData;
+            const initialCount = filtered.length;
 
             if (currentFilters.year) {
                 filtered = filtered.filter(r => toNum(r['AÑO']) == currentFilters.year || toNum(r.AÑO) == currentFilters.year);
+                console.log(`Filtro año prod_corte ${currentFilters.year}: ${filtered.length} de ${initialCount} filas`);
             }
 
             if (currentFilters.periodType === 'month' && currentFilters.month) {
@@ -2748,6 +2747,15 @@
             return weekNo;
         }
 
+        function getISOWeekYear(d) {
+            // Get the year that the ISO week belongs to
+            // ISO weeks belong to the year that contains the Thursday
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            return date.getUTCFullYear();
+        }
+
         function calculateWeekComparison(baseAll, prodCorteAll) {
             // Use provided datasets or fall back to global loaded data
             const base = baseAll && baseAll.length ? baseAll : (typeof baseData !== 'undefined' ? baseData : []);
@@ -2757,27 +2765,43 @@
             const today = new Date();
             const lastWeekDate = new Date(today);
             lastWeekDate.setDate(today.getDate() - 7); // one week back
-            const weeks = [];
+            const weeksData = []; // Almacenar semana y año
             // Build 10 weeks ending at the previous week (lastWeekDate), stepping backwards by 7 days
             for (let i = 9; i >= 0; i--) {
                 const d = new Date(lastWeekDate);
                 d.setDate(lastWeekDate.getDate() - (i * 7));
-                weeks.push(getISOWeekNumber(d));
+                weeksData.push({
+                    week: getISOWeekNumber(d),
+                    year: getISOWeekYear(d) // Usar año ISO correcto
+                });
             }
 
-            const labels = weeks.map(w => `SEM${w}`);
+            // Crear etiquetas con semana y año en líneas separadas
+            const labels = weeksData.map(w => [`SEM${w.week}`, `${w.year}`]);
 
             const cortadas = [];
             const revisadas = [];
             const realNoRecuperado = [];
             const pctRealNoRecuperado = [];
 
-            weeks.forEach(week => {
-                const prodRows = prod.filter(r => toNum(r.SEM) == week || toNum(r._week) == week || toNum(r['SEM']) == week);
+            weeksData.forEach(weekData => {
+                const { week, year } = weekData;
+                
+                // Filtrar por semana Y año correspondiente
+                const prodRows = prod.filter(r => {
+                    const rowWeek = toNum(r.SEM) || toNum(r._week) || toNum(r['SEM']);
+                    const rowYear = toNum(r['AÑO']) || toNum(r.AÑO);
+                    return rowWeek == week && rowYear == year;
+                });
                 const cort = prodRows.reduce((s, r) => s + (toNum(r['CANTIDAD CORTADA']) || toNum(r.CANTIDAD_CORTADA) || toNum(r['CANT. CORTADA']) || 0), 0);
                 const rev = prodRows.reduce((s, r) => s + (toNum(r['CANTIDAD REVISADA']) || toNum(r.CANTIDAD_REVISADA) || 0), 0);
 
-                const baseRows = base.filter(r => toNum(r._week) == week || toNum(r.SEM) == week);
+                // Filtrar baseData también por semana Y año
+                const baseRows = base.filter(r => {
+                    const rowWeek = toNum(r._week) || toNum(r.SEM);
+                    const rowYear = r._year; // baseData tiene _year pre-calculado
+                    return rowWeek == week && rowYear == year;
+                });
                 const real = baseRows.reduce((s, r) => s + toNum(r['REAL NO RECUPERADO']), 0);
 
                 cortadas.push(cort);
@@ -2835,7 +2859,7 @@
             const pctRealNoRecuperado = [];
 
             months.forEach(monthObj => {
-                // Filtrar prodCorteData por AÑO y MES
+                // Filtrar prodCorteData por AÑO y MES (ahora con filtro de año correcto)
                 const prodRows = prod.filter(r => {
                     const year = toNum(r['AÑO']) || toNum(r.AÑO);
                     // El campo MES puede ser texto (ej: 'ENERO') o número

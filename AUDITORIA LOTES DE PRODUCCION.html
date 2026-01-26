@@ -39,6 +39,12 @@
             display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#0b69c7;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 14px rgba(10,20,40,0.12);margin-right:6px;padding:0;
         }
         .perf-btn svg{width:18px;height:18px;display:block}
+        /* Print button styling */
+        .print-btn{
+            display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#22863a;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 14px rgba(10,20,40,0.12);margin-right:6px;padding:0;transition:background 0.2s;
+        }
+        .print-btn:hover{background:#1e7535}
+        .print-btn svg{width:18px;height:18px;display:block}
         /* Charts area */
         .charts-wrapper{margin-top:18px;background:#fff;border-radius:8px;padding:18px;box-shadow:0 3px 12px rgba(10,20,40,0.04)}
         .charts{display:flex;gap:24px;justify-content:space-between;align-items:flex-start}
@@ -90,6 +96,25 @@
         /* Info button left of title */
         .info-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 8px;border-radius:50%;background:#eef3ff;color:#0b69c7;border:1px solid #d0d7e3;font-weight:700;cursor:pointer;margin-right:8px}
         .info-btn:hover{background:#e1ecff}
+        /* Print styles */
+        @media print{
+            body{padding:0;background:none;margin:0}
+            .page-header{display:none}
+            .card{display:none}
+            .charts-wrapper{display:none}
+            .modal-overlay{position:static;display:block !important;background:none;align-items:unset;justify-content:unset;z-index:auto}
+            .modal{position:static;display:block !important;max-width:100%;width:100%;max-height:none;overflow:visible;padding:0;box-shadow:none;border-radius:0;background:none;margin:0;page-break-after:avoid}
+            #perfModal{width:100%;page-break-inside:avoid}
+            #perfModal h2{margin:0 0 12px 0;font-size:16px;page-break-after:avoid}
+            #perfModal fieldset{page-break-inside:avoid;margin:0 0 12px 0}
+            #perfModal #perfChartCanvas{max-height:800px;page-break-inside:avoid}
+            .modal .close-btn{display:none}
+            .print-btn{display:none}
+            @page{size:A4 portrait;margin:2cm;margin-bottom:1cm}
+            @page{@bottom-center{content:"";display:none}}
+            body,html{margin:0;padding:0}
+            #perfModalOverlay{position:static;display:block !important;margin:0;padding:0}
+        }
     </style>
 </head>
 <body>
@@ -1817,7 +1842,21 @@
             const labels = []; const pctDef = []; const pctBap = []; const pctNivel = [];
             // DEBUG: mostrar acumuladores por periodo para inspección en consola
             try{ console.debug('computeSeriesForOptions - opts:', opts); console.debug('accumulators:', JSON.parse(JSON.stringify(acc))); }catch(e){}
-            periods.forEach(p=>{
+            
+            // Find the last period with data
+            let lastPeriodWithData = -1;
+            for(let i = periods.length - 1; i >= 0; i--){
+                const v = acc[periods[i].key] || {def:0,sample:0,a1:0,total:0};
+                if(v.sample > 0 || v.total > 0){
+                    lastPeriodWithData = i;
+                    break;
+                }
+            }
+            
+            // Only iterate up to the last period with data
+            const periodsToUse = lastPeriodWithData >= 0 ? periods.slice(0, lastPeriodWithData + 1) : periods;
+            
+            periodsToUse.forEach(p=>{
                 labels.push(p.label);
                 const v = acc[p.key] || {def:0,sample:0,a1:0,total:0};
                 const defPct = (v.sample && v.sample>0) ? (v.def / v.sample * 100) : 0;
@@ -1875,7 +1914,7 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        { type: 'bar', label: '%BAP', data: bapArr, yAxisID: 'yBap', backgroundColor: 'rgba(59,130,246,0.8)' },
+                        { type: 'bar', label: '%BAP', data: bapArr, yAxisID: 'yBap', backgroundColor: 'rgba(59,130,246,0.4)' },
                         { type: 'line', label: '%Def.', data: defArr, yAxisID: 'yDef', borderColor: 'rgba(203, 23, 46, 0.9)', backgroundColor: 'rgba(203,23,46,0.08)', tension:0.2, pointRadius:4, fill:false }
                     ]
                 },
@@ -1904,7 +1943,7 @@
             const ubicOptions = ['Todos'].concat(Array.from(uniqueUbics).sort());
 
             const html = `
-                <div style="display:flex;align-items:center;justify-content:space-between"><h2>Performance Auditorias Lotes Produccion</h2><div><button class="close-btn" id="perfClose">Cerrar</button></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between"><h2>Performance Auditorias Lotes Produccion</h2><div style="display:flex;gap:6px;align-items:center"><button class="print-btn" id="perfPrint" title="Imprimir"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v3h12V3z"/></svg></button><button class="close-btn" id="perfClose">Cerrar</button></div></div>
                 <fieldset style="border:1px solid #e6eef8;padding:10px;border-radius:8px;margin-top:10px"><legend style="font-weight:700">Controles</legend>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                         <label style="font-weight:700">Periodo:</label>
@@ -1932,10 +1971,18 @@
                     ol.style.display='none';
                 }
             };
-            // attach apply
-            document.getElementById('perfApply').onclick = ()=>{ const type = document.getElementById('perfPeriodType').value; const ubic = document.getElementById('perfUbic').value; const grupo = document.getElementById('perfGrupo').value; const res = computeSeriesForOptions({type,ubic,grupo,lastN:8}); const ctx = document.getElementById('perfChartCanvas').getContext('2d'); renderPerfChartCanvas(ctx, res.labels, res.pctDef, res.pctBap); };
+            // function to apply filters dynamically
+            const applyFilters = ()=>{ const type = document.getElementById('perfPeriodType').value; const ubic = document.getElementById('perfUbic').value; const grupo = document.getElementById('perfGrupo').value; const res = computeSeriesForOptions({type,ubic,grupo,lastN:8}); const ctx = document.getElementById('perfChartCanvas').getContext('2d'); renderPerfChartCanvas(ctx, res.labels, res.pctDef, res.pctBap); };
+            // attach apply to button
+            document.getElementById('perfApply').onclick = applyFilters;
+            // attach change events to each filter for dynamic updates
+            document.getElementById('perfPeriodType').addEventListener('change', applyFilters);
+            document.getElementById('perfUbic').addEventListener('change', applyFilters);
+            document.getElementById('perfGrupo').addEventListener('change', applyFilters);
+            // attach print button event
+            document.getElementById('perfPrint').onclick = ()=>{ window.print(); };
             // initial apply
-            setTimeout(()=>{ document.getElementById('perfApply').click(); }, 50);
+            setTimeout(()=>{ applyFilters(); }, 50);
         }
 
         // wire the button

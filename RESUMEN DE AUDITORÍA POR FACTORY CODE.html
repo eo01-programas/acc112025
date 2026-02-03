@@ -1621,13 +1621,14 @@
                 }
             } catch(e) { console.error('Error setting period:', e); }
             
-            // Intentar seleccionar Año 2025 por defecto si existe en las opciones
+            // Intentar seleccionar el año actual por defecto si existe en las opciones
             try {
                 if (yearSelect) {
-                    const has2025 = Array.from(yearSelect.options).some(o => o.value === '2025');
-                    if (has2025) {
-                        yearSelect.value = '2025';
-                        console.log('[processSheetData] Year selected: 2025');
+                    const currentYear = String(new Date().getFullYear());
+                    const hasCurrentYear = Array.from(yearSelect.options).some(o => o.value === currentYear);
+                    if (hasCurrentYear) {
+                        yearSelect.value = currentYear;
+                        console.log('[processSheetData] Year selected: ' + currentYear);
                     } else if (yearSelect.options.length > 1) {
                         // seleccionar el último año disponible
                         yearSelect.selectedIndex = yearSelect.options.length - 1;
@@ -1640,21 +1641,14 @@
             populateWeekSelect();
             console.log('[processSheetData] Week/month select populated');
 
-            // Seleccionar por defecto la semana actual (ISO week) si existe en las opciones
+            // Seleccionar por defecto la última semana con registros en el sheet
             try {
-                const nowWeek = String(getISOWeek(new Date()));
-                console.log('[processSheetData] Current ISO week: ' + nowWeek);
-                
                 if (periodSelect && periodSelect.value === 'Sem') {
-                    // buscar opción con value == nowWeek
-                    const opt = Array.from(weekSelect.options).find(o => o.value === nowWeek);
-                    if (opt) {
-                        weekSelect.value = nowWeek;
-                        console.log('[processSheetData] Week selected: ' + nowWeek);
-                    } else if (weekSelect.options.length > 1) {
-                        // seleccionar la última disponible
+                    // Obtener la última semana disponible (la de mayor número con registros)
+                    if (weekSelect.options.length > 1) {
+                        // La última opción es la semana más reciente (ya están ordenadas)
                         weekSelect.selectedIndex = weekSelect.options.length - 1;
-                        console.log('[processSheetData] Week selected (fallback): ' + weekSelect.value);
+                        console.log('[processSheetData] Week selected (last with data): ' + weekSelect.value);
                     } else {
                         console.warn('[processSheetData] No week options available');
                     }

@@ -96,12 +96,20 @@
         /* Info button left of title */
         .info-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 8px;border-radius:50%;background:#eef3ff;color:#0b69c7;border:1px solid #d0d7e3;font-weight:700;cursor:pointer;margin-right:8px}
         .info-btn:hover{background:#e1ecff}
+        /* Loading modal styles */
+        .loading-overlay{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.3);display:none;align-items:center;justify-content:center;z-index:20000}
+        .loading-overlay.active{display:flex}
+        .loading-spinner{background:#fff;border-radius:12px;padding:24px 32px;box-shadow:0 10px 40px rgba(0,0,0,0.2);text-align:center}
+        .spinner{width:50px;height:50px;margin:0 auto 16px;border:4px solid #f0f0f0;border-top-color:#0b69c7;border-radius:50%;animation:spin 0.8s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .loading-text{font-size:14px;color:#333;font-weight:600;margin-top:8px}
         /* Print styles */
         @media print{
             body{padding:0;background:none;margin:0}
             .page-header{display:none}
             .card{display:none}
             .charts-wrapper{display:none}
+            .loading-overlay{display:none !important}
             .modal-overlay{position:static;display:block !important;background:none;align-items:unset;justify-content:unset;z-index:auto}
             .modal{position:static;display:block !important;max-width:100%;width:100%;max-height:none;overflow:visible;padding:0;box-shadow:none;border-radius:0;background:none;margin:0;page-break-after:avoid}
             #perfModal{width:100%;page-break-inside:avoid}
@@ -110,7 +118,8 @@
             #perfModal #perfChartCanvas{max-height:800px;page-break-inside:avoid}
             .modal .close-btn{display:none}
             .print-btn{display:none}
-            @page{size:A4 portrait;margin:2cm;margin-bottom:1cm}
+            /* Prefer landscape for the performance modal printout */
+            @page{size:A4 landscape;margin:1.5cm}
             @page{@bottom-center{content:"";display:none}}
             body,html{margin:0;padding:0}
             #perfModalOverlay{position:static;display:block !important;margin:0;padding:0}
@@ -118,6 +127,14 @@
     </style>
 </head>
 <body>
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div class="loading-text">Cargando datos...</div>
+        </div>
+    </div>
+
     <div class="page-header" style="max-width:900px;margin:0 auto 12px;padding:6px 12px;border-radius:4px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
             <div style="color:#007acc;font-weight:700;font-size:16px">AUDITORIA LOTES DE PRODUCCION</div>
@@ -1224,6 +1241,20 @@
             throw lastErr || new Error('No se pudo obtener hoja');
         }
 
+        // Helper functions to show/hide loading modal
+        function showLoading(text='Cargando datos...'){
+            const modal = document.getElementById('loadingModal');
+            if(modal){
+                const loadingText = modal.querySelector('.loading-text');
+                if(loadingText) loadingText.textContent = text;
+                modal.classList.add('active');
+            }
+        }
+        function hideLoading(){
+            const modal = document.getElementById('loadingModal');
+            if(modal) modal.classList.remove('active');
+        }
+
         async function loadAndCompute(){
             console.log('Descargando hoja...');
             try{
@@ -1478,7 +1509,7 @@
                 let __loadTimer = null;
                 function scheduleLoad(delay = 250){
                     if(__loadTimer) clearTimeout(__loadTimer);
-                    __loadTimer = setTimeout(()=>{ try{ loadAndCompute(); }catch(e){ console.warn('scheduleLoad err', e); } __loadTimer = null; }, delay);
+                    __loadTimer = setTimeout(()=>{ try{ showLoading('Aplicando filtros...'); loadAndCompute(); }catch(e){ console.warn('scheduleLoad err', e); hideLoading(); } __loadTimer = null; }, delay);
                 }
 
                 // attach change handlers
@@ -1665,6 +1696,8 @@
                 console.log('Listo. Datos filtrados por ' + filterDesc + '.');
             }catch(err){
                 console.error('Error: '+err.message, err);
+            }finally{
+                hideLoading();
             }
         }
         // Wire Apply filter button (safe: only attach if element exists)
@@ -1678,6 +1711,7 @@
                     PERIOD_TYPE = selType; FILTER_YEAR = selYear; PERIOD_VALUE = selVal;
                     const lbl = document.getElementById('filterLabel');
                     if(lbl){ lbl.innerHTML = '✓'; lbl.title = 'Check Datos'; lbl.setAttribute('aria-label','Check Datos'); }
+                    showLoading('Aplicando filtros...');
                     loadAndCompute();
                 });
             }
@@ -2045,6 +2079,7 @@
         if(infoBtn){ infoBtn.addEventListener('click', ()=>{ try{ showTop5Modal(); }catch(e){ alert('Error al mostrar Top5: '+(e&&e.message)); } }); }
 
         // Run once on load (will try non-published endpoints first)
+        showLoading('Inicializando datos...');
         loadAndCompute();
     </script>
 </body>

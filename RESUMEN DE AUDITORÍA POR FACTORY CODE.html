@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.0/dist/chartjs-plugin-annotation.min.js"></script>
     <!-- jQuery + Select2 para multi-select amigable -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -557,6 +558,12 @@
             table-layout: fixed;
         }
 
+        /* Force both tables to use absolute colgroup widths instead of stretching to 100% */
+        #internaTable,
+        #clienteTable {
+            width: auto;
+        }
+
         thead {
             background-color: #E3F2FD;
             position: sticky;
@@ -1014,6 +1021,33 @@
                 <h2>INTERNA</h2>
                 <div class="table-wrapper scaled-wrapper">
                     <table id="internaTable">
+                        <colgroup>
+                            <col style="width:90px">  <!-- Factory Code -->
+                            <col style="width:80px">  <!-- Customer -->
+                            <col style="width:60px">  <!-- Lot Size -->
+                            <col style="width:60px">  <!-- Sample Size -->
+                            <col style="width:45px">  <!-- Tot. Def. -->
+                            <col style="width:50px">  <!-- Fabric -->
+                            <col style="width:65px">  <!-- Untrimmed threads End -->
+                            <col style="width:55px">  <!-- Embellisment -->
+                            <col style="width:40px">  <!-- Hole -->
+                            <col style="width:60px">  <!-- Broken/skip stitches -->
+                            <col style="width:50px">  <!-- Color Shading -->
+                            <col style="width:70px">  <!-- Puckering/Excessive Fullness -->
+                            <col style="width:55px">  <!-- Cleaness -->
+                            <col style="width:60px">  <!-- Asymmetrical -->
+                            <col style="width:35px">  <!-- Pin -->
+                            <col style="width:55px">  <!-- Wrong Hangtas -->
+                            <col style="width:55px">  <!-- Assorment -->
+                            <col style="width:60px">  <!-- Shipping Marks -->
+                            <col style="width:50px">  <!-- Others -->
+                            <col style="width:45px">  <!-- Meas. -->
+                            <col style="width:65px">  <!-- Cuenta de Nº Report -->
+                            <col style="width:35px">  <!-- A1 -->
+                            <col style="width:35px">  <!-- A2 -->
+                            <col style="width:35px">  <!-- A3 -->
+                            <col style="width:35px">  <!-- A4 -->
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>Factory Code</th>
@@ -1053,6 +1087,29 @@
                 <h2>CLIENTE</h2>
                 <div class="table-wrapper scaled-wrapper">
                     <table id="clienteTable">
+                        <colgroup>
+                            <col style="width:90px">  <!-- Factory Code -->
+                            <col style="width:80px">  <!-- Customer -->
+                            <col style="width:60px">  <!-- Lot Size -->
+                            <col style="width:60px">  <!-- Sample Size -->
+                            <col style="width:45px">  <!-- Tot. Def. -->
+                            <col style="width:50px">  <!-- Fabric -->
+                            <col style="width:65px">  <!-- Untrimmed threads End -->
+                            <col style="width:55px">  <!-- Embellisment -->
+                            <col style="width:40px">  <!-- Hole -->
+                            <col style="width:60px">  <!-- Broken/skip stitches -->
+                            <col style="width:50px">  <!-- Color Shading -->
+                            <col style="width:70px">  <!-- Puckering/Excessive Fullness -->
+                            <col style="width:55px">  <!-- Cleaness -->
+                            <col style="width:60px">  <!-- Asymmetrical -->
+                            <col style="width:35px">  <!-- Pin -->
+                            <col style="width:55px">  <!-- Wrong Hangtas -->
+                            <col style="width:55px">  <!-- Assorment -->
+                            <col style="width:60px">  <!-- Shipping Marks -->
+                            <col style="width:50px">  <!-- Others -->
+                            <col style="width:45px">  <!-- Meas. -->
+                            <col style="width:65px">  <!-- Cuenta de Nº Report -->
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>Factory Code</th>
@@ -2599,6 +2656,60 @@
                     cell.style.backgroundColor = 'white';
                 }
             }
+
+            // === Resaltar en amarillo las 3 columnas de defectos con mayor % en la última fila ===
+            const defectKeys = ['Fabric', 'Untrimmed threads End', 'Embellisment', 'Hole',
+                'Broken/skip stitches', 'Color Shading', 'Puckering/Excessive Fullness',
+                'Cleaness', 'Asymmetrical', 'Pin', 'Wrong Hangtas', 'Assorment',
+                'Shipping Marks', 'Others', 'Meas.'];
+
+            // Calcular porcentaje numérico de cada defecto (cada defecto / Tot. Def.)
+            const defectPercents = defectKeys.map((key, idx) => ({
+                idx: idx,           // posición dentro de defectKeys (0-14)
+                colIdx: idx + 5,    // índice de columna en la tabla (5-19)
+                value: totDefTotal > 0 ? (totals[key] / totDefTotal * 100) : 0
+            }));
+
+            // Ordenar descendente y tomar las 3 con mayor % (solo si > 0)
+            defectPercents.sort((a, b) => b.value - a.value);
+            const top3 = defectPercents.slice(0, 3).filter(item => item.value > 0);
+
+            if (top3.length > 0) {
+                const tableId = tableType === 'INTERNA' ? 'internaTable' : 'clienteTable';
+                const tableEl = document.getElementById(tableId);
+                const headerRow = tableEl.querySelector('thead tr');
+
+                // Helper: obtener la celda que cubre la columna colIdx en una fila con posibles colspans
+                function getCellForColumn(row, colIdx) {
+                    let currentCol = 0;
+                    for (let i = 0; i < row.cells.length; i++) {
+                        const span = row.cells[i].colSpan || 1;
+                        if (colIdx >= currentCol && colIdx < currentCol + span) {
+                            return span === 1 ? row.cells[i] : null; // no pintar celdas con colspan
+                        }
+                        currentCol += span;
+                    }
+                    return null;
+                }
+
+                top3.forEach(item => {
+                    const colIdx = item.colIdx;
+
+                    // Pintar encabezado (th)
+                    if (headerRow && headerRow.cells[colIdx]) {
+                        headerRow.cells[colIdx].style.setProperty('background-color', 'rgba(255, 255, 0, 0.45)', 'important');
+                    }
+
+                    // Pintar todas las filas del body en esa columna
+                    Array.from(tbody.rows).forEach(tr => {
+                        const cell = getCellForColumn(tr, colIdx);
+                        if (cell) {
+                            cell.style.setProperty('background-color', 'rgba(255, 255, 0, 0.45)', 'important');
+                            cell.style.setProperty('color', '#000', 'important');
+                        }
+                    });
+                });
+            }
         }
 
         // Función para poblar los dropdowns de semanas
@@ -3163,7 +3274,8 @@
             // Calcular el máximo valor de % Defectuosos para ajustar el eje Y
             const defectValues = data.map(item => item.defects);
             const maxDefectValue = Math.max(...defectValues);
-            const yAxisMax = Math.ceil(maxDefectValue * 1.2); // Agregar 20% de padding arriba
+            let yAxisMax = Math.ceil(maxDefectValue * 1.2); // Agregar 20% de padding arriba
+            if (yAxisMax < 3) yAxisMax = 3; // Asegurar que la META %Def 2% sea visible con espacio
             console.log('Max defect value:', maxDefectValue, 'Y-axis max:', yAxisMax);
             
             const ctx = document.getElementById('trendsChart').getContext('2d');
@@ -3223,6 +3335,54 @@
                                         return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
                                     } else {
                                         return `${context.dataset.label}: ${context.parsed.y}%`;
+                                    }
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                metaDef: {
+                                    type: 'line',
+                                    yMin: 2,
+                                    yMax: 2,
+                                    yScaleID: 'y',
+                                    borderColor: 'rgba(255, 0, 0, 0.8)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 4],
+                                    label: {
+                                        display: true,
+                                        content: 'META %Def 2%',
+                                        position: 'start',
+                                        backgroundColor: 'transparent',
+                                        color: 'red',
+                                        font: {
+                                            size: 12,
+                                            weight: 'bold'
+                                        },
+                                        yAdjust: 14,
+                                        padding: 4
+                                    }
+                                },
+                                metaBap: {
+                                    type: 'line',
+                                    yMin: 95,
+                                    yMax: 95,
+                                    yScaleID: 'y1',
+                                    borderColor: 'rgba(0, 0, 200, 0.8)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 4],
+                                    label: {
+                                        display: true,
+                                        content: 'META BAP 95%',
+                                        position: 'end',
+                                        backgroundColor: 'transparent',
+                                        color: 'blue',
+                                        font: {
+                                            size: 12,
+                                            weight: 'bold'
+                                        },
+                                        yAdjust: -14,
+                                        padding: 4
                                     }
                                 }
                             }
@@ -3288,7 +3448,8 @@
                             ticks: {
                                 callback: function(value) {
                                     return value.toFixed(2) + '%';
-                                }
+                                },
+                                stepSize: 0.5
                             }
                         },
                         y1: {
@@ -3303,12 +3464,13 @@
                                     weight: 'bold'
                                 }
                             },
-                            beginAtZero: true,
-                            max: 100,
+                            min: 0,
+                            max: 105,
                             grid: {
                                 drawOnChartArea: false,
                             },
                             ticks: {
+                                stepSize: 10,
                                 callback: function(value) {
                                     return value + '%';
                                 }

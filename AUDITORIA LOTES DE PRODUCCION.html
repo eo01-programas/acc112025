@@ -603,7 +603,7 @@
                                     let title = 'AUDITORIA LOTES DE PRODUCCION - COFACO';
                                     title += ' — ' + year + ' / ' + (pType === 'Sem' ? ('Semana ' + pVal) : ('Mes ' + pVal));
                                     title += ' — Equipos ' + minEq + '-' + maxEq;
-                                    let html = '<style>#modalDefects table{font-size:5pt;border-collapse:collapse}#modalDefects th{padding:6px 8px;line-height:1.05;font-size:7pt}#modalDefects td{padding:3px 6px;line-height:1.05;font-size:7.5pt;font-weight:700}#modalDefects thead th{font-size:7pt;padding:6px 8px} .modal{padding:10px}</style>' +
+                                    let html = '<style>#modalDefects table{font-size:5pt;border-collapse:collapse}#modalDefects th{padding:6px 8px;line-height:1.05;font-size:7pt}#modalDefects td{padding:3px 6px;line-height:1.05;font-size:7.5pt;font-weight:700}#modalDefects thead th{font-size:7pt;padding:6px 8px} .modal{padding:10px} #modalDefects tr.peor-equipo td{box-shadow:inset 0 0 0 1000px rgba(255,255,0,0.35)}</style>' +
                                         '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button id="exportExcelDef" style="margin-right:8px;padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer">Excel</button><button class="close-btn" id="closeModalDef">Cerrar</button></div></div>';
                                     // Build a three-row header: top row with DEFECTOS, middle row with groups (COSTURA, MANCHAS, APROBACION), bottom row with column titles
                                     const topGroups = [ {label:'DEFECTOS', start:'Tela', end:'Jalad'} ];
@@ -686,6 +686,22 @@
                                         return 'background-color:#fff;color:#000';
                                     }
                                     function tdNivel(p){ return '<td style="'+bgNivel(p)+'">'+ nfPctNoDec.format(p) +'%</td>'; }
+                                    // Pre-calcular %Def de cada equipo para identificar los 3 peores (mayor %Def)
+                                    const equiposConPctDef = [];
+                                    for(let eqPre=minEq; eqPre<=maxEq; eqPre++){
+                                        const keyPre = String(eqPre);
+                                        const rowPre = (perEquipo && perEquipo[keyPre]) ? perEquipo[keyPre] : null;
+                                        if(!rowPre) continue;
+                                        const sumFieldsPre = (rowPre.cant_auditada||0) + (rowPre.cant_muestra||0) + (rowPre.tela||0) + (rowPre.huecos||0) + (rowPre.punt_saltadas||0) + (rowPre.punt_cortadas||0) + (rowPre.hilos||0) + (rowPre.cost_defectuosas||0) + (rowPre.operac_faltantes||0) + (rowPre.mnch_aceite||0) + (rowPre.mnch_suciedad||0) + (rowPre.mnch_tinto||0) + (rowPre.acabados||0) + (rowPre.medidas||0) + (rowPre.jaladuras||0) + (rowPre.total_defec||0) + (rowPre.a1||0) + (rowPre.a2||0) + (rowPre.a3||0) + (rowPre.a4||0) + (rowPre.lote_no_aprob||0) + (rowPre.cant_prend_rech||0);
+                                        if(sumFieldsPre === 0) continue;
+                                        const totalDefPre = rowPre.total_defec || 0;
+                                        const cantMPre = rowPre.cant_muestra || 0;
+                                        const pctDefPre = (cantMPre>0)? (totalDefPre / cantMPre * 100) : 0;
+                                        equiposConPctDef.push({ eq: eqPre, pctDef: pctDefPre });
+                                    }
+                                    // Ordenar por %Def descendente y tomar los 3 peores
+                                    equiposConPctDef.sort((a,b) => b.pctDef - a.pctDef);
+                                    const peores3Def = equiposConPctDef.slice(0, 3).map(e => e.eq);
                                     // iterate equipos in the requested range and skip rows where all numeric fields are zero
                                     let visibleCount = 0;
                                     // acumuladores para fila de totales
@@ -726,7 +742,10 @@
                                         totals.totalA += (totalA||0);
                                         totals.cant_prend_rech += (row.cant_prend_rech||0);
 
-                                        html += '<tr>' +
+                                        // Verificar si el equipo está entre los 3 peores por %Def
+                                        const esPeorDef = peores3Def.includes(eq);
+                                        const rowClass = esPeorDef ? 'peor-equipo' : '';
+                                        html += '<tr class="' + rowClass + '">' +
                                             '<td><a href="#" class="eq-link" data-eq="'+ (row.equipo || '') +'">'+ (row.equipo || '') +'</a></td>' +
                                             '<td>'+ nf.format(row.cant_auditada||0) +'</td>' +
                                             '<td style="background-color: rgb(238,236,225)">'+ nf.format(row.cant_muestra||0) +'</td>' +
@@ -1031,7 +1050,8 @@
                                         const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + i);
                                         dayLabels.push(days[i] + ' ' + formatDateShort(d));
                                     }
-                                    let html = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button id="exportExcelBap" style="margin-right:8px;padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer">Excel</button><button class="close-btn" id="closeModalBap">Cerrar</button></div></div>';
+                                    let html = '<style>#modalBap tr.peor-equipo-bap td{box-shadow:inset 0 0 0 1000px rgba(255,255,0,0.35)}</style>' +
+                                        '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button id="exportExcelBap" style="margin-right:8px;padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer">Excel</button><button class="close-btn" id="closeModalBap">Cerrar</button></div></div>';
                                     // build table headers (with dates)
                                     html += '<div class="table-wrap"><table style="font-size:9px;table-layout:fixed"><thead>';
                                     html += '<tr><th rowspan="2">Equipo</th>';
@@ -1047,6 +1067,26 @@
                                     html += '</tr></thead><tbody>';
                                     const nf = new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
                                     const nfPct = new Intl.NumberFormat('es-ES',{minimumFractionDigits:0,maximumFractionDigits:0});
+                                    // Pre-calcular %BAP semanal de cada equipo para identificar los 3 peores (menor %BAP)
+                                    const equiposConPctBap = [];
+                                    for(let eq=minEq; eq<=maxEq; eq++){
+                                        const key = String(eq);
+                                        const row = perEquipo && perEquipo[key] ? perEquipo[key] : null;
+                                        if(!row) continue;
+                                        const any = Object.values(row.daily || {}).some(d=> (d.a1||0) + (d.total||0) > 0 );
+                                        if(!any) continue;
+                                        let wkA1 = 0, wkTotal = 0;
+                                        for(let d=0; d<7; d++){
+                                            const val = (row.daily && row.daily[d]) ? row.daily[d] : {a1:0,total:0};
+                                            wkA1 += (val.a1 || 0);
+                                            wkTotal += (val.total || 0);
+                                        }
+                                        const wkPct = wkTotal>0 ? (wkA1/wkTotal*100) : 100; // Si no hay datos, asignar 100% para no considerarlo como peor
+                                        equiposConPctBap.push({ eq: eq, pctBap: wkPct });
+                                    }
+                                    // Ordenar por %BAP ascendente y tomar los 3 peores (menor %BAP)
+                                    equiposConPctBap.sort((a,b) => a.pctBap - b.pctBap);
+                                    const peores3Bap = equiposConPctBap.slice(0, 3).map(e => e.eq);
                                     // Totals per day
                                     const dayTotals = []; for(let d=0; d<7; d++) dayTotals[d] = {a1:0,total:0};
                                     let weeklyTotals = {a1:0,total:0};
@@ -1061,7 +1101,10 @@
                                         const any = Object.values(row.daily || {}).some(d=> (d.a1||0) + (d.total||0) > 0 );
                                         if(!any) continue;
                                         visible++;
-                                        html += '<tr><td style="font-weight:700">'+eq+'</td>';
+                                        // Verificar si el equipo está entre los 3 peores por %BAP
+                                        const esPeorBap = peores3Bap.includes(eq);
+                                        const rowClassBap = esPeorBap ? 'peor-equipo-bap' : '';
+                                        html += '<tr class="' + rowClassBap + '"><td style="font-weight:700">'+eq+'</td>';
                                         let wkA1 = 0, wkTotal = 0;
                                         for(let d=0; d<7; d++){
                                             const val = (row.daily && row.daily[d]) ? row.daily[d] : {a1:0,total:0};

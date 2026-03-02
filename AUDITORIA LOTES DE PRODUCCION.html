@@ -103,6 +103,9 @@
         .spinner{width:50px;height:50px;margin:0 auto 16px;border:4px solid #f0f0f0;border-top-color:#0b69c7;border-radius:50%;animation:spin 0.8s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
         .loading-text{font-size:14px;color:#333;font-weight:600;margin-top:8px}
+        /* Side-by-side cards layout */
+        .cards-row{display:flex;gap:18px;max-width:1900px;margin:0 auto;align-items:flex-start}
+        .cards-row .card{flex:1;max-width:none;margin:0}
         /* Print styles */
         @media print{
             body{padding:0;background:none;margin:0}
@@ -135,7 +138,7 @@
         </div>
     </div>
 
-    <div class="page-header" style="max-width:900px;margin:0 auto 12px;padding:6px 12px;border-radius:4px;">
+    <div class="page-header" style="max-width:1900px;margin:0 auto 12px;padding:6px 12px;border-radius:4px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
             <div style="color:#007acc;font-weight:700;font-size:16px">AUDITORIA LOTES DE PRODUCCION</div>
             <div style="display:flex;gap:12px;align-items:center">
@@ -159,6 +162,7 @@
             </div>
         </div>
     </div>
+    <div class="cards-row">
     <div class="card">
         <div style="display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap">
             <button id="infoBtn" class="info-btn" title="Top 5 peores líneas" aria-label="Top 5 peores líneas">i</button>
@@ -190,8 +194,37 @@
         <div id="chartsWrapper" class="charts-wrapper" style="display:none;margin-top:14px">
             <div id="chartsContainer"></div>
         </div>
+    </div>
 
-        <!-- Status and debug output removed -->
+    <div class="card">
+        <div style="display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap">
+            <button id="infoBtnCT" class="info-btn" title="Top 5 peores líneas Cititex" aria-label="Top 5 peores líneas Cititex">i</button>
+            <h1 style="margin:0">CITITEX</h1>
+        </div>
+
+        <div id="resultCT">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Grupo</th>
+                        <th>Cant Muestra</th>
+                        <th>Total Defectos</th>
+                        <th>%Def.</th>
+                        <th>Total</th>
+                        <th>A 1</th>
+                        <th>%BAP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="ct-costura-row"><td>COSTURA (Eq 1-29)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="chartsWrapperCT" class="charts-wrapper" style="display:none;margin-top:14px">
+            <div id="chartsContainerCT"></div>
+        </div>
+    </div>
     </div>
 
     <script>
@@ -581,7 +614,7 @@
 
                                 // helper: show modal with per-equipo aggregated table
                                 // accepts optional range minEq..maxEq (default 1..29)
-                                function showModalDefects(perEquipo, minEq = 1, maxEq = 29){
+                                function showModalDefects(perEquipo, minEq = 1, maxEq = 29, ubicLabel = 'COFACO'){
                                     // ensure we only show equipos in provided range and include filter info
                                     const meta = window.latestFilteredData || {};
                                     const year = meta.filteredYear || FILTER_YEAR;
@@ -600,7 +633,7 @@
                                     const cols = [
                                         'Eqp.','Cant. Auditada','Cant. Muestra','Tela','Huecos','Punt Salt','Punt Cort.','Hilos','Cost Defc','Oper Falta','Mnch Aceite','Mnch Sucie','Mnch Tinto','Acab','Med','Jalad','T.Def','%Def','A1','A2','A3','A4','Lot No Aprob','Total','Nivel Acep','C.Pds Rech.'
                                     ];
-                                    let title = 'AUDITORIA LOTES DE PRODUCCION - COFACO';
+                                    let title = 'AUDITORIA LOTES DE PRODUCCION - ' + ubicLabel;
                                     title += ' — ' + year + ' / ' + (pType === 'Sem' ? ('Semana ' + pVal) : ('Mes ' + pVal));
                                     title += ' — Equipos ' + minEq + '-' + maxEq;
                                     let html = '<style>#modalDefects table{font-size:5pt;border-collapse:collapse}#modalDefects th{padding:6px 8px;line-height:1.05;font-size:7pt}#modalDefects td{padding:3px 6px;line-height:1.05;font-size:7.5pt;font-weight:700}#modalDefects thead th{font-size:7pt;padding:6px 8px} .modal{padding:10px} #modalDefects tr.peor-equipo td{box-shadow:inset 0 0 0 1000px rgba(255,255,0,0.35)}</style>' +
@@ -1005,7 +1038,7 @@
                                     ol.onclick = (ev)=>{ if(ev.target === ol) ol.style.display='none'; };
                                 }
                                 // Show modal with %BAP per equipo and per day (Lun-Dom) plus weekly summary
-                                function showBapModal(perEquipo, minEq = 1, maxEq = 29){
+                                function showBapModal(perEquipo, minEq = 1, maxEq = 29, ubicLabel = 'COFACO'){
                                     const days = ['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'];
                                     function dateOfISOWeek(w,y){
                                         const week = Number(w);
@@ -1036,7 +1069,7 @@
                                     const year = meta.filteredYear || FILTER_YEAR;
                                     const pType = meta.filteredPeriodType || PERIOD_TYPE;
                                     const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
-                                    let title = 'BIEN A LA PRIMERA - COFACO — ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal)) + ' — Equipos ' + minEq + '-' + maxEq;
+                                    let title = 'BIEN A LA PRIMERA - ' + ubicLabel + ' — ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal)) + ' — Equipos ' + minEq + '-' + maxEq;
                                     // compute header labels with dates (for week -> Monday..Sunday; for month -> first 7 days)
                                     let baseDate = new Date();
                                     if(pType === 'Sem'){
@@ -1169,7 +1202,66 @@
                                     const closeBtn = document.getElementById('closeModalBap'); if(closeBtn) closeBtn.onclick = ()=>{ ol.style.display='none'; };
                                     ol.onclick = (ev)=>{ if(ev.target === ol) ol.style.display='none'; };
                                 }
+                                // Expose modal functions globally for Cititex chart handlers
+                                window._showModalDefects = showModalDefects;
+                                window._showBapModal = showBapModal;
                         }catch(e){console.warn('renderCharts err', e)}
+                }
+
+                // --- Cititex chart rendering (COSTURA only, no sub-donuts, no ACABADOS) ---
+                function renderChartsCititex(sumsCT){
+                    try{
+                        const container = document.getElementById('chartsContainerCT');
+                        if(!container) return;
+                        const nfPct = new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2});
+                        const nfBap = new Intl.NumberFormat('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1});
+                        const nfNum = new Intl.NumberFormat('en-US', {maximumFractionDigits:0});
+                        const data = sumsCT.costura;
+                        const pctDef = (data.cant && data.cant>0) ? (data.defectos / data.cant * 100) : 0;
+                        const pctBap = (data.total && data.total>0) ? (data.a1 / data.total * 100) : 0;
+                        const leftSVG = makeDonutSVG(pctDef,160,18,'#2b6cb0','#e6eef8');
+                        const rightSVG = makeDonutSVG(pctBap,160,18,'#48bb78','#e6eef8');
+                        const html = `<div class="charts">
+                            <div class="group-charts">
+                                <h3>COSTURA (Equipos 1-29)</h3>
+                                <div class="donut-row">
+                                    <div class="donut" aria-hidden>
+                                        ${leftSVG}
+                                        <div class="center" id="ctCosturaDefCenter" style="cursor:pointer" title="Ver detalle por equipo"><div class="mainPct">${nfPct.format(pctDef)}%</div><div class="sublabel">%Def.</div></div>
+                                        <div class="small-label label-left"><span class="tag">T.Def:</span>${nfNum.format(data.defectos)}</div>
+                                        <div class="small-label label-bottom"><span class="tag">Cant.Muestra:</span>${nfNum.format(data.cant)}</div>
+                                    </div>
+                                    <div class="donut" aria-hidden>
+                                        ${rightSVG}
+                                        <div class="center" id="ctCosturaBapCenter" style="cursor:pointer" title="Ver %BAP por equipo (1-29)"><div class="mainPct">${nfBap.format(pctBap)}%</div><div class="sublabel">%BAP</div></div>
+                                        <div class="small-label label-left"><span class="num-a1">${nfNum.format(data.a1)}</span> <span class="tag-a1">:A1</span></div>
+                                        <div class="small-label label-right"><span class="num-taud">${nfNum.format(data.total)}</span> <span class="tag-aud">:T.Aud</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                        container.innerHTML = html;
+                        // Click on %Def donut -> open defects modal for Cititex
+                        const defCenter = document.getElementById('ctCosturaDefCenter');
+                        if(defCenter){
+                            defCenter.addEventListener('click', function(ev){
+                                ev.stopPropagation();
+                                if(window.latestFilteredData && window.latestFilteredData.perEquipoCT && typeof window._showModalDefects === 'function'){
+                                    window._showModalDefects(window.latestFilteredData.perEquipoCT, 1, 29, 'CITITEX');
+                                }
+                            });
+                        }
+                        // Click on %BAP donut -> open BAP modal for Cititex
+                        const bapCenter = document.getElementById('ctCosturaBapCenter');
+                        if(bapCenter){
+                            bapCenter.addEventListener('click', function(ev){
+                                ev.stopPropagation();
+                                if(window.latestFilteredData && window.latestFilteredData.perEquipoCT && typeof window._showBapModal === 'function'){
+                                    window._showBapModal(window.latestFilteredData.perEquipoCT, 1, 29, 'CITITEX');
+                                }
+                            });
+                        }
+                    }catch(e){console.warn('renderChartsCititex err', e)}
                 }
 
         // Convierte respuesta GViz (JSONP) a array de objetos [{col: value}]
@@ -1345,6 +1437,7 @@
                 headers.forEach(h=>{
                     const nh = norm(h);
                     if(nh.includes('fecha')) map.fecha = h;
+                    if(nh.includes('ubic')) map.ubic = h;
                     if(nh.includes('equipo')) map.equipo = h;
                     if(nh.includes('defect')) map.defectos = h;
                     // 'total' ambiguous: prefer exact 'total' that's not 'total defectos'
@@ -1397,6 +1490,10 @@
                     costura_20_29: {cant:0,defectos:0,total:0,a1:0},
                     acabados: {cant:0,defectos:0,total:0,a1:0}
                 };
+                // Cititex sums (solo COSTURA Eq 1-29)
+                const sumsCT = {
+                    costura: {cant:0,defectos:0,total:0,a1:0}
+                };
 
                 // Build a mapping from expected defect column canonical names -> header (if present)
                 const targetCanonical = {
@@ -1437,6 +1534,7 @@
 
                 // per-equipo aggregation container
                 const perEquipo = {};
+                const perEquipoCT = {};
 
                 // Preprocess: parse dates for all rows and collect available years/months/weeks
                 let totalRows = 0;
@@ -1587,34 +1685,50 @@
                     const equipoNum = parseInt((equipoRaw||'').toString().replace(/[^0-9\-]/g,''),10);
                     const group = (equipoNum>=1 && equipoNum<=29)?'costura':(equipoNum>=30 && equipoNum<=40)?'acabados':null;
                     if(!group) return;
-                    if(group==='costura') costuraRows++; else if(group==='acabados') acabadosRows++;
-                    // add to overall group
-                    sums[group].cant += toNum(row[map.cant]);
-                    sums[group].defectos += toNum(row[map.defectos]);
-                    sums[group].total += toNum(row[map.total]);
-                    sums[group].a1 += toNum(row[map.a1]);
-                    // if costura, also add to the proper sub-range
-                    if(group === 'costura'){
-                        if(equipoNum >= 1 && equipoNum <= 19){
-                            sums.costura_1_19.cant += toNum(row[map.cant]);
-                            sums.costura_1_19.defectos += toNum(row[map.defectos]);
-                            sums.costura_1_19.total += toNum(row[map.total]);
-                            sums.costura_1_19.a1 += toNum(row[map.a1]);
-                        } else if(equipoNum >= 20 && equipoNum <= 29){
-                            sums.costura_20_29.cant += toNum(row[map.cant]);
-                            sums.costura_20_29.defectos += toNum(row[map.defectos]);
-                            sums.costura_20_29.total += toNum(row[map.total]);
-                            sums.costura_20_29.a1 += toNum(row[map.a1]);
+
+                    // Determine ubicación
+                    const ubicRaw = map.ubic ? (row[map.ubic]||'').toString().trim().toLowerCase() : '';
+                    const isCofaco = ubicRaw.includes('cofaco');
+                    const isCititex = ubicRaw.includes('cititex');
+
+                    // --- COFACO accumulation ---
+                    if(isCofaco){
+                        if(group==='costura') costuraRows++; else if(group==='acabados') acabadosRows++;
+                        sums[group].cant += toNum(row[map.cant]);
+                        sums[group].defectos += toNum(row[map.defectos]);
+                        sums[group].total += toNum(row[map.total]);
+                        sums[group].a1 += toNum(row[map.a1]);
+                        if(group === 'costura'){
+                            if(equipoNum >= 1 && equipoNum <= 19){
+                                sums.costura_1_19.cant += toNum(row[map.cant]);
+                                sums.costura_1_19.defectos += toNum(row[map.defectos]);
+                                sums.costura_1_19.total += toNum(row[map.total]);
+                                sums.costura_1_19.a1 += toNum(row[map.a1]);
+                            } else if(equipoNum >= 20 && equipoNum <= 29){
+                                sums.costura_20_29.cant += toNum(row[map.cant]);
+                                sums.costura_20_29.defectos += toNum(row[map.defectos]);
+                                sums.costura_20_29.total += toNum(row[map.total]);
+                                sums.costura_20_29.a1 += toNum(row[map.a1]);
+                            }
                         }
                     }
-                    // --- per-equipo accumulation ---
+
+                    // --- CITITEX accumulation (solo COSTURA Eq 1-29) ---
+                    if(isCititex && group === 'costura'){
+                        sumsCT.costura.cant += toNum(row[map.cant]);
+                        sumsCT.costura.defectos += toNum(row[map.defectos]);
+                        sumsCT.costura.total += toNum(row[map.total]);
+                        sumsCT.costura.a1 += toNum(row[map.a1]);
+                    }
+
+                    // --- per-equipo accumulation (route by ubicación) ---
                     if(!isNaN(equipoNum)){
+                        const targetPE = isCititex ? perEquipoCT : perEquipo;
                         const k = String(equipoNum);
-                        if(!perEquipo[k]){
-                            // include daily buckets for Mon-Sun (index 0..6 -> Lunes..Domingo)
+                        if(!targetPE[k]){
                             const daily = {};
                             for(let di=0; di<7; di++) daily[di] = {a1:0, total:0};
-                            perEquipo[k] = {
+                            targetPE[k] = {
                                 equipo: equipoNum,
                                 cant_auditada:0, cant_muestra:0, tela:0, huecos:0, punt_saltadas:0, punt_cortadas:0, hilos:0, cost_defectuosas:0,
                                 operac_faltantes:0, mnch_aceite:0, mnch_suciedad:0, mnch_tinto:0, acabados:0, medidas:0, jaladuras:0,
@@ -1622,7 +1736,7 @@
                                 daily: daily
                             };
                         }
-                        const pe = perEquipo[k];
+                        const pe = targetPE[k];
                         // accumulate using discovered column headers (colField)
                         if(colField.cant_auditada) pe.cant_auditada += toNum(row[colField.cant_auditada]);
                         if(colField.cant_muestra) pe.cant_muestra += toNum(row[colField.cant_muestra]);
@@ -1730,10 +1844,27 @@
                     chartsWrapper.style.display = 'block';
                 }
                 // store latest filtered per-equipo data for modal use and render charts
-                window.latestFilteredData = { perEquipo: perEquipo, filteredYear: selectedYear, filteredPeriodType: PERIOD_TYPE, filteredPeriodValue: selectedVal };
+                window.latestFilteredData = { perEquipo: perEquipo, perEquipoCT: perEquipoCT, filteredYear: selectedYear, filteredPeriodType: PERIOD_TYPE, filteredPeriodValue: selectedVal };
                 renderCharts(sums);
                 const bapAcab = (sums.acabados.total && sums.acabados.total > 0) ? (sums.acabados.a1 / sums.acabados.total * 100) : null;
                 aRow.cells[6].textContent = bapAcab === null ? '–' : (nfBap.format(bapAcab) + '%');
+
+                // --- Fill CITITEX table ---
+                const ctRow = document.getElementById('ct-costura-row');
+                if(ctRow){
+                    ctRow.cells[1].textContent = nfNum.format(sumsCT.costura.cant);
+                    ctRow.cells[2].textContent = nfNum.format(sumsCT.costura.defectos);
+                    const pctCT = (sumsCT.costura.cant && sumsCT.costura.cant>0) ? (sumsCT.costura.defectos / sumsCT.costura.cant * 100) : null;
+                    ctRow.cells[3].textContent = pctCT === null ? '–' : (nfPct.format(pctCT) + '%');
+                    ctRow.cells[4].textContent = nfNum.format(sumsCT.costura.total);
+                    ctRow.cells[5].textContent = nfNum.format(sumsCT.costura.a1);
+                    const bapCT = (sumsCT.costura.total && sumsCT.costura.total>0) ? (sumsCT.costura.a1 / sumsCT.costura.total * 100) : null;
+                    ctRow.cells[6].textContent = bapCT === null ? '–' : (nfBap.format(bapCT) + '%');
+                }
+                // Render Cititex charts
+                const chartsWrapperCT = document.getElementById('chartsWrapperCT');
+                if(chartsWrapperCT) chartsWrapperCT.style.display = 'block';
+                renderChartsCititex(sumsCT);
 
                 const filterDesc = (PERIOD_TYPE === 'Sem') ? ('Semana ' + selectedVal + ' ' + selectedYear) : ('Mes ' + selectedVal + ' ' + selectedYear);
                 console.log('Listo. Datos filtrados por ' + filterDesc + '.');
@@ -2067,9 +2198,10 @@
         if(perfBtnEl){ perfBtnEl.addEventListener('click', function(){ try{ buildPerformanceModal(); }catch(e){ alert('Error al mostrar modal: '+(e && e.message)); } }); }
 
         // Top 5 worst lines modal
-        function showTop5Modal(){
+        function showTop5Modal(perEquipoOverride, ubicLabel){
             const meta = window.latestFilteredData || {};
-            const perEquipo = meta.perEquipo || {};
+            const perEquipo = perEquipoOverride || meta.perEquipo || {};
+            const ubLabel = ubicLabel || 'COFACO';
             const year = meta.filteredYear || FILTER_YEAR;
             const pType = meta.filteredPeriodType || PERIOD_TYPE;
             const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
@@ -2097,7 +2229,7 @@
             let ol = document.getElementById('top5ModalOverlay');
             if(!ol){ ol = document.createElement('div'); ol.id='top5ModalOverlay'; ol.className='modal-overlay'; const modal = document.createElement('div'); modal.className='modal'; modal.id='top5Modal'; ol.appendChild(modal); document.body.appendChild(ol); }
             const modal = document.getElementById('top5Modal');
-            let title = 'TOP 5 ↓Lineas - ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal));
+            let title = 'TOP 5 ↓Lineas ' + ubLabel + ' - ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal));
             let html = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button class="close-btn" id="closeTop5">Cerrar</button></div></div>';
             html += '<div class="table-wrap"><table style="font-size:12px;table-layout:fixed"><thead><tr><th>Equipo</th><th>%BAP</th><th>%Def.</th></tr></thead><tbody>';
             if(top.length===0){ html += '<tr><td colspan="6" style="text-align:center;padding:18px;color:#666">No hay datos para el periodo seleccionado.</td></tr>'; }
@@ -2117,9 +2249,13 @@
             ol.onclick = (ev)=>{ if(ev.target === ol) ol.style.display='none'; };
         }
 
-        // bind info button
+        // bind info button (Cofaco)
         const infoBtn = document.getElementById('infoBtn');
-        if(infoBtn){ infoBtn.addEventListener('click', ()=>{ try{ showTop5Modal(); }catch(e){ alert('Error al mostrar Top5: '+(e&&e.message)); } }); }
+        if(infoBtn){ infoBtn.addEventListener('click', ()=>{ try{ showTop5Modal(null, 'COFACO'); }catch(e){ alert('Error al mostrar Top5: '+(e&&e.message)); } }); }
+
+        // bind info button (Cititex)
+        const infoBtnCT = document.getElementById('infoBtnCT');
+        if(infoBtnCT){ infoBtnCT.addEventListener('click', ()=>{ try{ const meta = window.latestFilteredData || {}; showTop5Modal(meta.perEquipoCT, 'CITITEX'); }catch(e){ alert('Error al mostrar Top5: '+(e&&e.message)); } }); }
 
         // Run once on load (will try non-published endpoints first)
         showLoading('Inicializando datos...');

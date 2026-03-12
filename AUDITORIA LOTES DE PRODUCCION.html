@@ -75,6 +75,9 @@
         .mini-tooltip b{color:#155724}
         .sub-row{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;padding:8px 12px;margin-top:6px}
         .sub-row .sub-left,.sub-row .sub-right{flex:1;display:flex;justify-content:center}
+        /* Cititex: compact spacing between mini-donut groups */
+        .charts.charts-ct .sub-row{justify-content:center;gap:14px;padding:4px 0}
+        .charts.charts-ct .sub-row .sub-left,.charts.charts-ct .sub-row .sub-right{flex:0}
         /* Modal for defect table */
         .modal-overlay{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:10000}
         .modal{background:#fff;border-radius:8px;max-width:none;width:95vw;box-sizing:border-box;max-height:86vh;overflow:auto;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.25)}
@@ -217,6 +220,8 @@
                 </thead>
                 <tbody>
                     <tr id="ct-costura-row"><td>COSTURA (Eq 1-29)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                    <tr id="ct-costura-1-14-row"><td>COSTURA (Eq 1-14)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                    <tr id="ct-costura-15-29-row"><td>COSTURA (Eq 15-29)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
                 </tbody>
             </table>
         </div>
@@ -1208,7 +1213,7 @@
                         }catch(e){console.warn('renderCharts err', e)}
                 }
 
-                // --- Cititex chart rendering (COSTURA only, no sub-donuts, no ACABADOS) ---
+                // --- Cititex chart rendering (COSTURA only, with sub-donuts for Eq 1-14 and 15-29) ---
                 function renderChartsCititex(sumsCT){
                     try{
                         const container = document.getElementById('chartsContainerCT');
@@ -1216,12 +1221,22 @@
                         const nfPct = new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2});
                         const nfBap = new Intl.NumberFormat('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1});
                         const nfNum = new Intl.NumberFormat('en-US', {maximumFractionDigits:0});
-                        const data = sumsCT.costura;
+                        const data = sumsCT.costura || {cant:0,defectos:0,total:0,a1:0};
+                        const citi1 = sumsCT.costura_1_14 || {cant:0,defectos:0,total:0,a1:0};
+                        const citis = sumsCT.costura_15_29 || {cant:0,defectos:0,total:0,a1:0};
                         const pctDef = (data.cant && data.cant>0) ? (data.defectos / data.cant * 100) : 0;
                         const pctBap = (data.total && data.total>0) ? (data.a1 / data.total * 100) : 0;
+                        const pctCiti1Def = (citi1.cant && citi1.cant>0) ? (citi1.defectos / citi1.cant * 100) : 0;
+                        const pctCitisDef = (citis.cant && citis.cant>0) ? (citis.defectos / citis.cant * 100) : 0;
+                        const pctCiti1Bap = (citi1.total && citi1.total>0) ? (citi1.a1 / citi1.total * 100) : 0;
+                        const pctCitisBap = (citis.total && citis.total>0) ? (citis.a1 / citis.total * 100) : 0;
                         const leftSVG = makeDonutSVG(pctDef,160,18,'#2b6cb0','#e6eef8');
                         const rightSVG = makeDonutSVG(pctBap,160,18,'#48bb78','#e6eef8');
-                        const html = `<div class="charts">
+                        const citi1DefSVG = makeDonutSVG(pctCiti1Def,80,12,'#2b6cb0','#e6eef8');
+                        const citisDefSVG = makeDonutSVG(pctCitisDef,80,12,'#2b6cb0','#e6eef8');
+                        const citi1BapSVG = makeDonutSVG(pctCiti1Bap,80,12,'#48bb78','#e6eef8');
+                        const citisBapSVG = makeDonutSVG(pctCitisBap,80,12,'#48bb78','#e6eef8');
+                        const html = `<div class="charts charts-ct">
                             <div class="group-charts">
                                 <h3>COSTURA (Equipos 1-29)</h3>
                                 <div class="donut-row">
@@ -1236,6 +1251,32 @@
                                         <div class="center" id="ctCosturaBapCenter" style="cursor:pointer" title="Ver %BAP por equipo (1-29)"><div class="mainPct">${nfBap.format(pctBap)}%</div><div class="sublabel">%BAP</div></div>
                                         <div class="small-label label-left"><span class="num-a1">${nfNum.format(data.a1)}</span> <span class="tag-a1">:A1</span></div>
                                         <div class="small-label label-right"><span class="num-taud">${nfNum.format(data.total)}</span> <span class="tag-aud">:T.Aud</span></div>
+                                    </div>
+                                </div>
+                                <div class="sub-row">
+                                    <div class="sub-left">
+                                        <div class="sub-donuts" aria-hidden>
+                                            <div class="donut small">
+                                                ${citi1DefSVG}
+                                                <div class="center click-center" data-def="${citi1.defectos}" data-cant="${citi1.cant}" data-title="COSTURA (Eq 1-14)"><div class="mainPct">${nfPct.format(pctCiti1Def)}%</div><div class="sublabel">CITI1</div></div>
+                                            </div>
+                                            <div class="donut small">
+                                                ${citisDefSVG}
+                                                <div class="center click-center" data-def="${citis.defectos}" data-cant="${citis.cant}" data-title="COSTURA (Eq 15-29)"><div class="mainPct">${nfPct.format(pctCitisDef)}%</div><div class="sublabel">Citis</div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="sub-right">
+                                        <div class="sub-donuts" aria-hidden>
+                                            <div class="donut small">
+                                                ${citi1BapSVG}
+                                                <div class="center click-center" data-taud="${citi1.total}" data-a1="${citi1.a1}" data-title="COSTURA (Eq 1-14)"><div class="mainPct">${nfBap.format(pctCiti1Bap)}%</div><div class="sublabel">CITI1</div></div>
+                                            </div>
+                                            <div class="donut small">
+                                                ${citisBapSVG}
+                                                <div class="center click-center" data-taud="${citis.total}" data-a1="${citis.a1}" data-title="COSTURA (Eq 15-29)"><div class="mainPct">${nfBap.format(pctCitisBap)}%</div><div class="sublabel">Citis</div></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1261,6 +1302,51 @@
                                 }
                             });
                         }
+                        // Tooltip for Cititex mini-donuts (same behavior as Cofaco)
+                        let tt = document.getElementById('miniTooltip');
+                        if(!tt){
+                            tt = document.createElement('div');
+                            tt.id = 'miniTooltip';
+                            tt.className = 'mini-tooltip';
+                            document.body.appendChild(tt);
+                        }
+                        function showMiniTooltipForElement(el){
+                            const nf = new Intl.NumberFormat('en-US', {maximumFractionDigits:0});
+                            const ds = el.dataset || {};
+                            const title = ds.title || '';
+                            let content = '';
+                            if(ds.taud !== undefined || ds.a1 !== undefined){
+                                const taud = Number(ds.taud||0);
+                                const a1 = Number(ds.a1||0);
+                                content = `<div style="font-weight:700;margin-bottom:6px">${title}</div><div>T.Aud: <b>${nf.format(taud)}</b></div><div>A1: <b>${nf.format(a1)}</b></div>`;
+                            } else {
+                                const def = Number(ds.def||0);
+                                const cant = Number(ds.cant||0);
+                                content = `<div style="font-weight:700;margin-bottom:6px">${title}</div><div>T.Def: <b>${nf.format(def)}</b></div><div>Cant.Muestra: <b>${nf.format(cant)}</b></div>`;
+                            }
+                            tt.innerHTML = content;
+                            tt.style.display = 'block';
+                            const r = el.getBoundingClientRect();
+                            const ttR = tt.getBoundingClientRect();
+                            let left = r.left + (r.width/2) - (ttR.width/2);
+                            let top = r.top - ttR.height - 8;
+                            if(top < 8) top = r.bottom + 8;
+                            if(left < 8) left = 8;
+                            if(left + ttR.width > window.innerWidth - 8) left = window.innerWidth - ttR.width - 8;
+                            tt.style.left = left + 'px';
+                            tt.style.top = top + 'px';
+                            function hideOnDocClick(ev){
+                                if(!tt.contains(ev.target) && !el.contains(ev.target)){
+                                    tt.style.display = 'none';
+                                    document.removeEventListener('click', hideOnDocClick);
+                                }
+                            }
+                            setTimeout(()=>document.addEventListener('click', hideOnDocClick), 0);
+                        }
+                        container.querySelectorAll('.click-center').forEach(cc => {
+                            cc.style.cursor = 'pointer';
+                            cc.addEventListener('click', function(ev){ ev.stopPropagation(); showMiniTooltipForElement(this); });
+                        });
                     }catch(e){console.warn('renderChartsCititex err', e)}
                 }
 
@@ -1492,7 +1578,9 @@
                 };
                 // Cititex sums (solo COSTURA Eq 1-29)
                 const sumsCT = {
-                    costura: {cant:0,defectos:0,total:0,a1:0}
+                    costura: {cant:0,defectos:0,total:0,a1:0},
+                    costura_1_14: {cant:0,defectos:0,total:0,a1:0},
+                    costura_15_29: {cant:0,defectos:0,total:0,a1:0}
                 };
 
                 // Build a mapping from expected defect column canonical names -> header (if present)
@@ -1715,10 +1803,25 @@
 
                     // --- CITITEX accumulation (solo COSTURA Eq 1-29) ---
                     if(isCititex && group === 'costura'){
-                        sumsCT.costura.cant += toNum(row[map.cant]);
-                        sumsCT.costura.defectos += toNum(row[map.defectos]);
-                        sumsCT.costura.total += toNum(row[map.total]);
-                        sumsCT.costura.a1 += toNum(row[map.a1]);
+                        const cant = toNum(row[map.cant]);
+                        const defectos = toNum(row[map.defectos]);
+                        const total = toNum(row[map.total]);
+                        const a1 = toNum(row[map.a1]);
+                        sumsCT.costura.cant += cant;
+                        sumsCT.costura.defectos += defectos;
+                        sumsCT.costura.total += total;
+                        sumsCT.costura.a1 += a1;
+                        if(equipoNum >= 1 && equipoNum <= 14){
+                            sumsCT.costura_1_14.cant += cant;
+                            sumsCT.costura_1_14.defectos += defectos;
+                            sumsCT.costura_1_14.total += total;
+                            sumsCT.costura_1_14.a1 += a1;
+                        } else if(equipoNum >= 15 && equipoNum <= 29){
+                            sumsCT.costura_15_29.cant += cant;
+                            sumsCT.costura_15_29.defectos += defectos;
+                            sumsCT.costura_15_29.total += total;
+                            sumsCT.costura_15_29.a1 += a1;
+                        }
                     }
 
                     // --- per-equipo accumulation (route by ubicación) ---
@@ -1851,16 +1954,20 @@
 
                 // --- Fill CITITEX table ---
                 const ctRow = document.getElementById('ct-costura-row');
-                if(ctRow){
-                    ctRow.cells[1].textContent = nfNum.format(sumsCT.costura.cant);
-                    ctRow.cells[2].textContent = nfNum.format(sumsCT.costura.defectos);
-                    const pctCT = (sumsCT.costura.cant && sumsCT.costura.cant>0) ? (sumsCT.costura.defectos / sumsCT.costura.cant * 100) : null;
-                    ctRow.cells[3].textContent = pctCT === null ? '–' : (nfPct.format(pctCT) + '%');
-                    ctRow.cells[4].textContent = nfNum.format(sumsCT.costura.total);
-                    ctRow.cells[5].textContent = nfNum.format(sumsCT.costura.a1);
-                    const bapCT = (sumsCT.costura.total && sumsCT.costura.total>0) ? (sumsCT.costura.a1 / sumsCT.costura.total * 100) : null;
-                    ctRow.cells[6].textContent = bapCT === null ? '–' : (nfBap.format(bapCT) + '%');
+                function fillCtRow(rowEl, data){
+                    if(!rowEl || !data) return;
+                    rowEl.cells[1].textContent = nfNum.format(data.cant);
+                    rowEl.cells[2].textContent = nfNum.format(data.defectos);
+                    const pct = (data.cant && data.cant>0) ? (data.defectos / data.cant * 100) : null;
+                    rowEl.cells[3].textContent = pct === null ? '–' : (nfPct.format(pct) + '%');
+                    rowEl.cells[4].textContent = nfNum.format(data.total);
+                    rowEl.cells[5].textContent = nfNum.format(data.a1);
+                    const bap = (data.total && data.total>0) ? (data.a1 / data.total * 100) : null;
+                    rowEl.cells[6].textContent = bap === null ? '–' : (nfBap.format(bap) + '%');
                 }
+                fillCtRow(ctRow, sumsCT.costura);
+                fillCtRow(document.getElementById('ct-costura-1-14-row'), sumsCT.costura_1_14);
+                fillCtRow(document.getElementById('ct-costura-15-29-row'), sumsCT.costura_15_29);
                 // Render Cititex charts
                 const chartsWrapperCT = document.getElementById('chartsWrapperCT');
                 if(chartsWrapperCT) chartsWrapperCT.style.display = 'block';

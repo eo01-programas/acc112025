@@ -7,8 +7,9 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
     <style>
-        body{font-family:Arial,Helvetica,sans-serif;padding:18px;background:#f7f9fc}
+        body{font-family:Arial,Helvetica,sans-serif;padding:8px 18px 18px;background:#f7f9fc}
         .card{max-width:900px;margin:18px auto;background:#fff;padding:18px;border-radius:8px;box-shadow:0 6px 20px rgba(10,20,40,0.08)}
+        .cofaco-card{padding-bottom:8px}
         h1{font-size:20px;margin-bottom:6px}
         table{width:100%;border-collapse:collapse;margin-top:12px}
         th,td{padding:4px 6px;border:1px solid #e6eef8;text-align:center}
@@ -46,8 +47,11 @@
         .print-btn:hover{background:#1e7535}
         .print-btn svg{width:18px;height:18px;display:block}
         /* Charts area */
-        .charts-wrapper{margin-top:18px;background:#fff;border-radius:8px;padding:18px;box-shadow:0 3px 12px rgba(10,20,40,0.04)}
+        .charts-wrapper{margin-top:18px;background:#fff;border-radius:8px;padding:18px 18px 8px;box-shadow:0 3px 12px rgba(10,20,40,0.04)}
+        #chartsWrapper{padding:14px 18px 0}
         .charts{display:flex;gap:24px;justify-content:space-between;align-items:flex-start}
+        .charts.charts-cofaco{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+        .charts-col{display:flex;flex-direction:column;gap:24px;min-width:0}
         .group-charts{flex:1;text-align:center}
         .group-charts h3{margin:0 0 8px 0;text-align:left;font-size:14px}
         .donut-row{display:flex;gap:20px;justify-content:center;align-items:center}
@@ -75,6 +79,19 @@
         .mini-tooltip b{color:#155724}
         .sub-row{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;padding:8px 12px;margin-top:6px}
         .sub-row .sub-left,.sub-row .sub-right{flex:1;display:flex;justify-content:center}
+        .charts.charts-cofaco .charts-col-left .sub-row{justify-content:flex-start;gap:8px;padding:4px 0 0 0;transform:translateX(-28px)}
+        .charts.charts-cofaco .charts-col-left .sub-row .sub-left,.charts.charts-cofaco .charts-col-left .sub-row .sub-right{flex:0;justify-content:flex-start}
+        .charts.charts-cofaco .charts-col-left .sub-donuts{gap:8px;margin-top:0}
+        .charts.charts-cofaco .charts-col-right .group-charts{width:100%;max-width:340px;margin:0 auto}
+        .charts.charts-cofaco .group-charts.group-acabados .donut-row{gap:14px}
+        .charts.charts-cofaco .group-charts.group-acabados .donut{width:112px;height:112px}
+        .charts.charts-cofaco .group-charts.group-acabados .donut .center{font-size:18px}
+        .charts.charts-cofaco .group-charts.group-acabados .donut .center .sublabel{font-size:10px;margin-top:4px}
+        .charts.charts-cofaco .group-charts.group-acabados .donut .small-label{font-size:11px}
+        .charts.charts-cofaco .group-charts.group-acabados .donut .small-label .tag{font-size:11px}
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-left{left:-2px;top:4px}
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-right{right:-18px;top:4px}
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-bottom{left:16%;bottom:8px}
         /* Cititex: compact spacing between mini-donut groups */
         .charts.charts-ct .sub-row{justify-content:center;gap:14px;padding:4px 0}
         .charts.charts-ct .sub-row .sub-left,.charts.charts-ct .sub-row .sub-right{flex:0}
@@ -90,12 +107,18 @@
         .modal table{width:100%;border-collapse:collapse;margin-top:8px}
         .modal th, .modal td{padding:4px 6px;border:1px solid #e6eef8;text-align:center;font-size:13px;vertical-align:middle}
         .modal th{background:#f1f7ff;font-weight:700}
+        .modal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+        .modal-toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        .excel-btn{padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer}
         /* Compact modal tables */
         .table-wrap{overflow:auto;max-height:72vh}
+        #modalDefects{padding:10px}
         #modalDefects table, #modalBap table{font-size:10px;table-layout:fixed;border-collapse:collapse}
         #modalDefects th, #modalDefects td, #modalBap th, #modalBap td{padding:4px 6px;font-size:10px}
         #modalDefects thead th, #modalBap thead th{position:sticky;top:0;background:#f1f7ff}
         #modalDefects td, #modalBap td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        #modalDefects tr.peor-equipo td{box-shadow:inset 0 0 0 1000px rgba(255,255,0,0.35)}
+        #modalBap tr.peor-equipo-bap td{box-shadow:inset 0 0 0 1000px rgba(255,255,0,0.35)}
         /* Info button left of title */
         .info-btn{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 8px;border-radius:50%;background:#eef3ff;color:#0b69c7;border:1px solid #d0d7e3;font-weight:700;cursor:pointer;margin-right:8px}
         .info-btn:hover{background:#e1ecff}
@@ -109,6 +132,9 @@
         /* Side-by-side cards layout */
         .cards-row{display:flex;gap:18px;max-width:1900px;margin:0 auto;align-items:flex-start}
         .cards-row .card{flex:1;max-width:none;margin:0}
+        @media (max-width: 1200px){
+            .charts.charts-cofaco{grid-template-columns:1fr}
+        }
         /* Print styles */
         @media print{
             body{padding:0;background:none;margin:0}
@@ -166,7 +192,7 @@
         </div>
     </div>
     <div class="cards-row">
-    <div class="card">
+    <div class="card cofaco-card">
         <div style="display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap">
             <button id="infoBtn" class="info-btn" title="Top 5 peores líneas" aria-label="Top 5 peores líneas">i</button>
             <h1 style="margin:0">COFACO</h1>
@@ -190,6 +216,7 @@
                     <tr id="costura-1-19-row"><td>COSTURA (Eq 1-19)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
                     <tr id="costura-20-29-row"><td>COSTURA (Eq 20-29)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
                     <tr id="acabados-row"><td>ACABADOS (Eq 30-40)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+                    <tr id="acabados-41-49-row"><td>ACABADOS (Eq 41-49)</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
                 </tbody>
             </table>
         </div>
@@ -403,6 +430,7 @@
                                 const nfNum = new Intl.NumberFormat('en-US', {maximumFractionDigits:0});
 
                                 function groupHtml(title, data){
+                                        const groupClass = title && title.toUpperCase().includes('ACABADOS') ? 'group-charts group-acabados' : 'group-charts';
                                         const pctDef = (data.cant && data.cant>0) ? (data.defectos / data.cant * 100) : 0;
                                         const pctBap = (data.total && data.total>0) ? (data.a1 / data.total * 100) : 0;
                                         const leftSVG = makeDonutSVG(pctDef,160,18,'#2b6cb0','#e6eef8');
@@ -451,7 +479,7 @@
                                         }
 
                                         return `
-                                                <div class="group-charts">
+                                                <div class="${groupClass}">
                                                     <h3>${title}</h3>
                                                     <div class="donut-row">
                                                         <div class="donut" aria-hidden>
@@ -474,7 +502,7 @@
                                                 </div>`;
                                 }
 
-                                const html = `<div class="charts">${groupHtml('COSTURA (Equipos 1-29)', sums.costura)}${groupHtml('ACABADOS (Equipos 30-40)', sums.acabados)}</div>`;
+                                const html = `<div class="charts charts-cofaco"><div class="charts-col charts-col-left">${groupHtml('COSTURA (Equipos 1-29)', sums.costura)}</div><div class="charts-col charts-col-right">${groupHtml('ACABADOS (Equipos 30-40)', sums.acabados)}${groupHtml('ACABADOS (Equipos 41-49)', sums.acabados_41_49 || {cant:0,defectos:0,total:0,a1:0})}</div></div>`;
                                 container.innerHTML = html;
 
                                 // expose clickable main COSTURA %Def. to open modal with per-equipo details
@@ -512,7 +540,7 @@
                                     }
                                 }catch(e){console.warn('attach costura click err', e)}
 
-                                // attach click for ACABADOS group (second .group-charts) to open modal for equipos 30-40
+                                // attach click for ACABADOS groups to open modal details
                                 try{
                                     const groups = container.querySelectorAll('.group-charts');
                                     if(groups && groups.length > 1){
@@ -539,6 +567,35 @@
                                                 ev.stopPropagation();
                                                 if(window.latestFilteredData && window.latestFilteredData.perEquipo){
                                                     showBapModal(window.latestFilteredData.perEquipo, 30, 40);
+                                                } else {
+                                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                                }
+                                            });
+                                        }
+                                    }
+                                    if(groups && groups.length > 2){
+                                        const acabadosGroup4149 = groups[2];
+                                        const leftCenterA4149 = acabadosGroup4149.querySelector('.donut-row .donut:first-child .center');
+                                        if(leftCenterA4149){
+                                            leftCenterA4149.style.cursor = 'pointer';
+                                            leftCenterA4149.setAttribute('title','Ver detalle por equipo (Equipos 41-49)');
+                                            leftCenterA4149.addEventListener('click', function(ev){
+                                                ev.stopPropagation();
+                                                if(window.latestFilteredData && window.latestFilteredData.perEquipo){
+                                                    showModalDefects(window.latestFilteredData.perEquipo, 41, 49);
+                                                } else {
+                                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                                }
+                                            });
+                                        }
+                                        const rightCenterA4149 = acabadosGroup4149.querySelector('.donut-row .donut:nth-child(2) .center');
+                                        if(rightCenterA4149){
+                                            rightCenterA4149.style.cursor = 'pointer';
+                                            rightCenterA4149.setAttribute('title','Ver %BAP por equipo (41-49)');
+                                            rightCenterA4149.addEventListener('click', function(ev){
+                                                ev.stopPropagation();
+                                                if(window.latestFilteredData && window.latestFilteredData.perEquipo){
+                                                    showBapModal(window.latestFilteredData.perEquipo, 41, 49);
                                                 } else {
                                                     alert('No hay datos detallados disponibles. Aplica el filtro primero.');
                                                 }
@@ -617,6 +674,35 @@
                                     }catch(e){ console.warn('export err', e); alert('Error al generar Excel: '+(e && e.message)); }
                                 }
 
+                                function ensureModalShell(overlayId, modalId){
+                                    let ol = document.getElementById(overlayId);
+                                    if(!ol){
+                                        ol = document.createElement('div');
+                                        ol.id = overlayId;
+                                        document.body.appendChild(ol);
+                                    }
+                                    ol.id = overlayId;
+                                    ol.className = 'modal-overlay';
+                                    let modal = document.getElementById(modalId);
+                                    if(!modal){
+                                        modal = document.createElement('div');
+                                        modal.id = modalId;
+                                    }
+                                    modal.id = modalId;
+                                    modal.className = 'modal';
+                                    // Reset the shell on every open so stale nodes or broken text never leak into the layout.
+                                    ol.replaceChildren(modal);
+                                    if(ol.parentElement !== document.body){
+                                        document.body.appendChild(ol);
+                                    }
+                                    return { ol, modal };
+                                }
+
+                                function buildModalHeaderHtml(title, closeButtonId, exportButtonId){
+                                    const exportHtml = exportButtonId ? `<button id="${exportButtonId}" class="excel-btn">Excel</button>` : '';
+                                    return `<div class="modal-toolbar"><h2>${title}</h2><div class="modal-toolbar-actions">${exportHtml}<button class="close-btn" id="${closeButtonId}">Cerrar</button></div></div>`;
+                                }
+
                                 // helper: show modal with per-equipo aggregated table
                                 // accepts optional range minEq..maxEq (default 1..29)
                                 function showModalDefects(perEquipo, minEq = 1, maxEq = 29, ubicLabel = 'COFACO'){
@@ -625,15 +711,7 @@
                                     const year = meta.filteredYear || FILTER_YEAR;
                                     const pType = meta.filteredPeriodType || PERIOD_TYPE;
                                     const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
-                                    // create overlay if not exists
-                                    let ol = document.getElementById('modalOverlayDef');
-                                    if(!ol){
-                                        ol = document.createElement('div'); ol.id = 'modalOverlayDef'; ol.className = 'modal-overlay';
-                                        const modal = document.createElement('div'); modal.className = 'modal'; modal.id = 'modalDefects';
-                                        ol.appendChild(modal);
-                                        document.body.appendChild(ol);
-                                    }
-                                    const modal = document.getElementById('modalDefects');
+                                    const { ol, modal } = ensureModalShell('modalOverlayDef', 'modalDefects');
                                     // build table HTML
                                     const cols = [
                                         'Eqp.','Cant. Auditada','Cant. Muestra','Tela','Huecos','Punt Salt','Punt Cort.','Hilos','Cost Defc','Oper Falta','Mnch Aceite','Mnch Sucie','Mnch Tinto','Acab','Med','Jalad','T.Def','%Def','A1','A2','A3','A4','Lot No Aprob','Total','Nivel Acep','C.Pds Rech.'
@@ -641,8 +719,7 @@
                                     let title = 'AUDITORIA LOTES DE PRODUCCION - ' + ubicLabel;
                                     title += ' — ' + year + ' / ' + (pType === 'Sem' ? ('Semana ' + pVal) : ('Mes ' + pVal));
                                     title += ' — Equipos ' + minEq + '-' + maxEq;
-                                    let html = '<style>#modalDefects table{font-size:5pt;border-collapse:collapse}#modalDefects th{padding:6px 8px;line-height:1.05;font-size:7pt}#modalDefects td{padding:3px 6px;line-height:1.05;font-size:7.5pt;font-weight:700}#modalDefects thead th{font-size:7pt;padding:6px 8px} .modal{padding:10px} #modalDefects tr.peor-equipo td{box-shadow:inset 0 0 0 1000px rgba(255,255,0,0.35)}</style>' +
-                                        '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button id="exportExcelDef" style="margin-right:8px;padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer">Excel</button><button class="close-btn" id="closeModalDef">Cerrar</button></div></div>';
+                                    let html = buildModalHeaderHtml(title, 'closeModalDef', 'exportExcelDef');
                                     // Build a three-row header: top row with DEFECTOS, middle row with groups (COSTURA, MANCHAS, APROBACION), bottom row with column titles
                                     const topGroups = [ {label:'DEFECTOS', start:'Tela', end:'Jalad'} ];
                                     const groups = [
@@ -700,7 +777,7 @@
                                         theadHtml += '<th style="text-align:center;background-color: rgb(35,88,137); color:#fff">'+cols[i]+'</th>';
                                     }
                                     theadHtml += '</tr>';
-                                    html += '<div class="table-wrap"><table style="font-size:9px;border-collapse:collapse;table-layout:fixed"><thead>' + theadHtml + '</thead><tbody>';
+                                    html += '<div class="table-wrap"><table><thead>' + theadHtml + '</thead><tbody>';
                                     const nf = new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
                                     const nfPctDef = new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});
                                     const nfPctNoDec = new Intl.NumberFormat('es-ES',{minimumFractionDigits:0,maximumFractionDigits:0});
@@ -1067,9 +1144,7 @@
                                         const ddStr = dd < 10 ? '0'+dd : String(dd);
                                         return ddStr + '/' + meses[d.getMonth()];
                                     }
-                                    let ol = document.getElementById('modalOverlayBap');
-                                    if(!ol){ ol = document.createElement('div'); ol.id='modalOverlayBap'; ol.className='modal-overlay'; const modal = document.createElement('div'); modal.className='modal'; modal.id='modalBap'; ol.appendChild(modal); document.body.appendChild(ol); }
-                                    const modal = document.getElementById('modalBap');
+                                    const { ol, modal } = ensureModalShell('modalOverlayBap', 'modalBap');
                                     const meta = window.latestFilteredData || {};
                                     const year = meta.filteredYear || FILTER_YEAR;
                                     const pType = meta.filteredPeriodType || PERIOD_TYPE;
@@ -1088,10 +1163,9 @@
                                         const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + i);
                                         dayLabels.push(days[i] + ' ' + formatDateShort(d));
                                     }
-                                    let html = '<style>#modalBap tr.peor-equipo-bap td{box-shadow:inset 0 0 0 1000px rgba(255,255,0,0.35)}</style>' +
-                                        '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button id="exportExcelBap" style="margin-right:8px;padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer">Excel</button><button class="close-btn" id="closeModalBap">Cerrar</button></div></div>';
+                                    let html = buildModalHeaderHtml(title, 'closeModalBap', 'exportExcelBap');
                                     // build table headers (with dates)
-                                    html += '<div class="table-wrap"><table style="font-size:9px;table-layout:fixed"><thead>';
+                                    html += '<div class="table-wrap"><table><thead>';
                                     html += '<tr><th rowspan="2">Equipo</th>';
                                     dayLabels.forEach(d=>{ html += '<th colspan="3">'+d+'</th>'; });
                                     // small separator column between last day and RES SEM
@@ -1574,7 +1648,8 @@
                     costura: {cant:0,defectos:0,total:0,a1:0},
                     costura_1_19: {cant:0,defectos:0,total:0,a1:0},
                     costura_20_29: {cant:0,defectos:0,total:0,a1:0},
-                    acabados: {cant:0,defectos:0,total:0,a1:0}
+                    acabados: {cant:0,defectos:0,total:0,a1:0},
+                    acabados_41_49: {cant:0,defectos:0,total:0,a1:0}
                 };
                 // Cititex sums (solo COSTURA Eq 1-29)
                 const sumsCT = {
@@ -1771,7 +1846,7 @@
                     // row passes filter
                     const equipoRaw = map.equipo ? row[map.equipo] : undefined;
                     const equipoNum = parseInt((equipoRaw||'').toString().replace(/[^0-9\-]/g,''),10);
-                    const group = (equipoNum>=1 && equipoNum<=29)?'costura':(equipoNum>=30 && equipoNum<=40)?'acabados':null;
+                    const group = (equipoNum>=1 && equipoNum<=29)?'costura':(equipoNum>=30 && equipoNum<=40)?'acabados':(equipoNum>=41 && equipoNum<=49)?'acabados_41_49':null;
                     if(!group) return;
 
                     // Determine ubicación
@@ -1781,7 +1856,7 @@
 
                     // --- COFACO accumulation ---
                     if(isCofaco){
-                        if(group==='costura') costuraRows++; else if(group==='acabados') acabadosRows++;
+                        if(group==='costura') costuraRows++; else if(group==='acabados' || group==='acabados_41_49') acabadosRows++;
                         sums[group].cant += toNum(row[map.cant]);
                         sums[group].defectos += toNum(row[map.defectos]);
                         sums[group].total += toNum(row[map.total]);
@@ -1893,6 +1968,7 @@
                 // Mostrar resultados
                 const cRow = document.getElementById('costura-row');
                 const aRow = document.getElementById('acabados-row');
+                const aRow4149 = document.getElementById('acabados-41-49-row');
                 const nfPct = new Intl.NumberFormat('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2});
                 const nfBap = new Intl.NumberFormat('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1});
                 const nfNum = new Intl.NumberFormat('en-US', {maximumFractionDigits:0}); // miles con comas
@@ -1940,6 +2016,19 @@
                 aRow.cells[3].textContent = pctAcab === null ? '–' : (nfPct.format(pctAcab) + '%');
                 aRow.cells[4].textContent = nfNum.format(sums.acabados.total);
                 aRow.cells[5].textContent = nfNum.format(sums.acabados.a1);
+                const bapAcab = (sums.acabados.total && sums.acabados.total > 0) ? (sums.acabados.a1 / sums.acabados.total * 100) : null;
+                aRow.cells[6].textContent = bapAcab === null ? '–' : (nfBap.format(bapAcab) + '%');
+
+                if(aRow4149){
+                    aRow4149.cells[1].textContent = nfNum.format(sums.acabados_41_49.cant);
+                    aRow4149.cells[2].textContent = nfNum.format(sums.acabados_41_49.defectos);
+                    const pctAcab4149 = (sums.acabados_41_49.cant && sums.acabados_41_49.cant > 0) ? (sums.acabados_41_49.defectos / sums.acabados_41_49.cant * 100) : null;
+                    aRow4149.cells[3].textContent = pctAcab4149 === null ? '–' : (nfPct.format(pctAcab4149) + '%');
+                    aRow4149.cells[4].textContent = nfNum.format(sums.acabados_41_49.total);
+                    aRow4149.cells[5].textContent = nfNum.format(sums.acabados_41_49.a1);
+                    const bapAcab4149 = (sums.acabados_41_49.total && sums.acabados_41_49.total > 0) ? (sums.acabados_41_49.a1 / sums.acabados_41_49.total * 100) : null;
+                    aRow4149.cells[6].textContent = bapAcab4149 === null ? '–' : (nfBap.format(bapAcab4149) + '%');
+                }
 
                 // render symmetric donut charts below the table
                 const chartsWrapper = document.getElementById('chartsWrapper');
@@ -1949,8 +2038,6 @@
                 // store latest filtered per-equipo data for modal use and render charts
                 window.latestFilteredData = { perEquipo: perEquipo, perEquipoCT: perEquipoCT, filteredYear: selectedYear, filteredPeriodType: PERIOD_TYPE, filteredPeriodValue: selectedVal };
                 renderCharts(sums);
-                const bapAcab = (sums.acabados.total && sums.acabados.total > 0) ? (sums.acabados.a1 / sums.acabados.total * 100) : null;
-                aRow.cells[6].textContent = bapAcab === null ? '–' : (nfBap.format(bapAcab) + '%');
 
                 // --- Fill CITITEX table ---
                 const ctRow = document.getElementById('ct-costura-row');
@@ -2118,7 +2205,7 @@
                 if(grupo === 'COSTURA') return num>=1 && num<=29;
                 if(grupo === 'COSTURA DIA') return num>=1 && num<=19;
                 if(grupo === 'COSTURA NOCHE') return num>=20 && num<=29;
-                if(grupo === 'ACABADOS') return num>=30 && num<=40;
+                if(grupo === 'ACABADOS') return num>=30 && num<=49;
                 return true;
             }
 
@@ -2246,11 +2333,37 @@
             window._perfChart = new Chart(ctx, cfg);
         }
 
+        function ensureGlobalModalShell(overlayId, modalId){
+            let ol = document.getElementById(overlayId);
+            if(!ol){
+                ol = document.createElement('div');
+                ol.id = overlayId;
+                document.body.appendChild(ol);
+            }
+            ol.id = overlayId;
+            ol.className = 'modal-overlay';
+            let modal = document.getElementById(modalId);
+            if(!modal){
+                modal = document.createElement('div');
+                modal.id = modalId;
+            }
+            modal.id = modalId;
+            modal.className = 'modal';
+            ol.replaceChildren(modal);
+            if(ol.parentElement !== document.body){
+                document.body.appendChild(ol);
+            }
+            return { ol, modal };
+        }
+
+        function buildGlobalModalHeaderHtml(title, closeButtonId, exportButtonId){
+            const exportHtml = exportButtonId ? `<button id="${exportButtonId}" class="excel-btn">Excel</button>` : '';
+            return `<div class="modal-toolbar"><h2>${title}</h2><div class="modal-toolbar-actions">${exportHtml}<button class="close-btn" id="${closeButtonId}">Cerrar</button></div></div>`;
+        }
+
         function buildPerformanceModal(){
             if(!window.sheetData) return alert('Los datos aún se están cargando. Intenta nuevamente en unos segundos.');
-            let ol = document.getElementById('perfModalOverlay');
-            if(!ol){ ol = document.createElement('div'); ol.id='perfModalOverlay'; ol.className='modal-overlay'; const modal = document.createElement('div'); modal.className='modal'; modal.id='perfModal'; ol.appendChild(modal); document.body.appendChild(ol); }
-            const modal = document.getElementById('perfModal');
+            const { ol, modal } = ensureGlobalModalShell('perfModalOverlay', 'perfModal');
             // build controls
             const ubicHdr = findHeaderByNormLike(['ubic','ubicaci','location','sede']);
             const uniqueUbics = new Set();
@@ -2333,11 +2446,9 @@
             const top = rows.slice(0,5);
 
             // build modal
-            let ol = document.getElementById('top5ModalOverlay');
-            if(!ol){ ol = document.createElement('div'); ol.id='top5ModalOverlay'; ol.className='modal-overlay'; const modal = document.createElement('div'); modal.className='modal'; modal.id='top5Modal'; ol.appendChild(modal); document.body.appendChild(ol); }
-            const modal = document.getElementById('top5Modal');
+            const { ol, modal } = ensureGlobalModalShell('top5ModalOverlay', 'top5Modal');
             let title = 'TOP 5 ↓Lineas ' + ubLabel + ' - ' + year + ' / ' + (pType==='Sem'?('Semana ' + pVal):('Mes ' + pVal));
-            let html = '<div style="display:flex;align-items:center;justify-content:space-between"><h2>'+title+'</h2><div><button class="close-btn" id="closeTop5">Cerrar</button></div></div>';
+            let html = buildGlobalModalHeaderHtml(title, 'closeTop5');
             html += '<div class="table-wrap"><table style="font-size:12px;table-layout:fixed"><thead><tr><th>Equipo</th><th>%BAP</th><th>%Def.</th></tr></thead><tbody>';
             if(top.length===0){ html += '<tr><td colspan="6" style="text-align:center;padding:18px;color:#666">No hay datos para el periodo seleccionado.</td></tr>'; }
                 else{

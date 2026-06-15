@@ -1,0 +1,783 @@
+/* views/auditoria-lotes.css - estilos del panel Auditoria Lotes de Produccion.
+   Cargado por el router solo cuando la vista esta activa.
+   La regla body se limita a body[data-view=auditoria-lotes]. */
+
+body[data-view="auditoria-lotes"] {
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 8px 18px 18px;
+            background: #f7f9fc;
+            overflow-x: hidden;
+        }
+
+        .card {
+            max-width: 900px;
+            margin: 18px auto;
+            background: #fff;
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(10, 20, 40, 0.08)
+        }
+
+        .cofaco-card {
+            padding-bottom: 8px
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .header-title h1 {
+            margin-bottom: 0;
+            flex: 1;
+            text-align: left;
+            color: #1a1a1a;
+            font-size: 28px;
+            font-weight: 700;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 6px
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px
+        }
+
+        th,
+        td {
+            padding: 4px 6px;
+            border: 1px solid #e6eef8;
+            text-align: center
+        }
+
+        th {
+            background: #eaf4ff;
+            font-weight: 700
+        }
+
+        .note {
+            font-size: 13px;
+            color: #444;
+            margin-top: 8px
+        }
+
+        .badge {
+            display: inline-block;
+            background: #dff5e6;
+            color: #1a7f3a;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            border: 1px solid #b8e6c7
+        }
+
+        .badge.small {
+            padding: 6px 10px;
+            font-size: 16px;
+            line-height: 1
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            background: var(--sc8-primary, #2f7a4f);
+            color: #ffffff;
+            border: 1px solid var(--sc8-primary-dark, #1e5c3a);
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+            box-shadow: 0 2px 6px rgba(47, 59, 47, .18);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .back-btn:hover {
+            background: #2a5298;
+            border-color: #1e3c72;
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(42, 82, 152, .35);
+        }
+
+        /* Circular performance button placed left of the back button */
+        .perf-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #0b69c7;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(10, 20, 40, 0.12);
+            margin-right: 6px;
+            padding: 0;
+        }
+
+        .perf-btn svg {
+            width: 18px;
+            height: 18px;
+            display: block
+        }
+
+        /* Print button styling */
+        .print-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #22863a;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(10, 20, 40, 0.12);
+            margin-right: 6px;
+            padding: 0;
+            transition: background 0.2s;
+        }
+
+        .print-btn:hover {
+            background: #1e7535
+        }
+
+        .print-btn svg {
+            width: 18px;
+            height: 18px;
+            display: block
+        }
+
+        /* Charts area */
+        .charts-wrapper {
+            margin-top: 18px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 18px 18px 8px;
+            box-shadow: 0 3px 12px rgba(10, 20, 40, 0.04)
+        }
+
+        #chartsWrapper {
+            padding: 14px 18px 0
+        }
+
+        .charts {
+            display: flex;
+            gap: 24px;
+            justify-content: space-between;
+            align-items: flex-start
+        }
+
+        .charts.charts-cofaco {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 24px;
+            align-items: start
+        }
+
+        .charts-col {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            min-width: 0
+        }
+
+        .group-charts {
+            flex: 1;
+            text-align: center
+        }
+
+        .group-charts h3 {
+            margin: 0 0 8px 0;
+            text-align: left;
+            font-size: 14px
+        }
+
+        .donut-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center
+        }
+
+        .donut {
+            position: relative;
+            width: 160px;
+            height: 160px
+        }
+
+        .donut svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg)
+        }
+
+        .donut .center {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 24px
+        }
+
+        .donut .center .sublabel {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px
+        }
+
+        .donut .small-label {
+            position: absolute;
+            font-size: 12px;
+            color: #333
+        }
+
+        .donut .small-label .tag {
+            font-weight: 600;
+            margin-right: 6px;
+            color: #333;
+            font-size: 12px
+        }
+
+        .donut .label-left {
+            left: -4px;
+            top: 6px;
+            color: #007acc
+        }
+
+        .donut .label-left .tag {
+            color: #007acc;
+            font-weight: 700
+        }
+
+        .donut .label-right {
+            right: -36px;
+            top: 6px
+        }
+
+        .donut .label-bottom {
+            left: 10%;
+            bottom: 12px;
+            top: auto;
+            transform: translateX(-50%);
+            color: #007acc
+        }
+
+        .donut .label-bottom .tag {
+            color: #007acc;
+            font-weight: 700
+        }
+
+        .tag-aud {
+            color: #155724;
+            font-weight: 700;
+            margin-left: 2px
+        }
+
+        .tag-a1 {
+            color: #155724;
+            font-weight: 700;
+            margin-left: 2px
+        }
+
+        .num-a1,
+        .num-taud {
+            color: #155724;
+            font-weight: 700
+        }
+
+        /* Small donut (half size) used for COSTURA 1-19 and 20-29 */
+        .donut.small {
+            width: 80px;
+            height: 80px
+        }
+
+        .donut.small svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg)
+        }
+
+        .donut.small .center {
+            font-size: 14px
+        }
+
+        .donut.small .center .sublabel {
+            font-size: 10px;
+            margin-top: 4px
+        }
+
+        .sub-donuts {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 8px
+        }
+
+        .mini-tooltip {
+            position: fixed;
+            display: none;
+            z-index: 9999;
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 8px 10px;
+            border-radius: 6px;
+            box-shadow: 0 6px 18px rgba(10, 20, 40, 0.12);
+            font-size: 13px;
+            color: #112
+        }
+
+        .mini-tooltip b {
+            color: #155724
+        }
+
+        .sub-row {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 12px;
+            margin-top: 6px
+        }
+
+        .sub-row .sub-left,
+        .sub-row .sub-right {
+            flex: 1;
+            display: flex;
+            justify-content: center
+        }
+
+        .charts.charts-cofaco .charts-col-left .sub-row {
+            justify-content: flex-start;
+            gap: 8px;
+            padding: 4px 0 0 0;
+            transform: translateX(-28px)
+        }
+
+        .charts.charts-cofaco .charts-col-left .sub-row .sub-left,
+        .charts.charts-cofaco .charts-col-left .sub-row .sub-right {
+            flex: 0;
+            justify-content: flex-start
+        }
+
+        .charts.charts-cofaco .charts-col-left .sub-donuts {
+            gap: 8px;
+            margin-top: 0
+        }
+
+        .charts.charts-cofaco .charts-col-right .group-charts {
+            width: 100%;
+            max-width: 340px;
+            margin: 0 auto
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut-row {
+            gap: 14px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut {
+            width: 112px;
+            height: 112px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .center {
+            font-size: 18px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .center .sublabel {
+            font-size: 10px;
+            margin-top: 4px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .small-label {
+            font-size: 11px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .small-label .tag {
+            font-size: 11px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-left {
+            left: -2px;
+            top: 4px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-right {
+            right: -18px;
+            top: 4px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-bottom {
+            left: 16%;
+            bottom: 8px
+        }
+
+        /* Cititex: compact spacing between mini-donut groups */
+        .charts.charts-ct .sub-row {
+            justify-content: center;
+            gap: 14px;
+            padding: 4px 0
+        }
+
+        .charts.charts-ct .sub-row .sub-left,
+        .charts.charts-ct .sub-row .sub-right {
+            flex: 0
+        }
+
+        /* Modal for defect table */
+        .modal-overlay {
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 8px;
+            max-width: none;
+            width: 95vw;
+            box-sizing: border-box;
+            max-height: 86vh;
+            overflow: auto;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25)
+        }
+
+        /* Modal específico para el gráfico: 70% del ancho anterior (95vw * 0.7 = 66.5vw) */
+        #perfModal {
+            width: 66.5vw
+        }
+
+        /* Modal específico para el Top 5 (botón "i"): 35% del ancho actual (95vw * 0.35 = 33.25vw) */
+        #top5Modal {
+            width: 33.25vw
+        }
+
+        .modal h2 {
+            margin: 0 0 12px 0;
+            font-size: 16px
+        }
+
+        .modal .close-btn {
+            float: right;
+            background: #e53e3e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer
+        }
+
+        .modal table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px
+        }
+
+        .modal th,
+        .modal td {
+            padding: 4px 6px;
+            border: 1px solid #e6eef8;
+            text-align: center;
+            font-size: 13px;
+            vertical-align: middle
+        }
+
+        .modal th {
+            background: #f1f7ff;
+            font-weight: 700
+        }
+
+        .modal-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .modal-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .excel-btn {
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: #2b6cb0;
+            color: #fff;
+            border: none;
+            cursor: pointer
+        }
+
+        /* Compact modal tables */
+        .table-wrap {
+            overflow: auto;
+            max-height: 72vh
+        }
+
+        #modalDefects {
+            padding: 10px
+        }
+
+        #modalDefects table,
+        #modalBap table {
+            font-size: 10px;
+            table-layout: fixed;
+            border-collapse: collapse
+        }
+
+        #modalDefects th,
+        #modalDefects td,
+        #modalBap th,
+        #modalBap td {
+            padding: 4px 6px;
+            font-size: 10px
+        }
+
+        #modalDefects thead th,
+        #modalBap thead th {
+            position: sticky;
+            top: 0;
+            background: #f1f7ff
+        }
+
+        #modalDefects td,
+        #modalBap td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        #modalDefects tr.peor-equipo td {
+            box-shadow: inset 0 0 0 1000px rgba(255, 255, 0, 0.35)
+        }
+
+        #modalBap tr.peor-equipo-bap td {
+            box-shadow: inset 0 0 0 1000px rgba(255, 255, 0, 0.35)
+        }
+
+        /* Info button left of title */
+        .info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 8px;
+            border-radius: 50%;
+            background: #eef3ff;
+            color: #0b69c7;
+            border: 1px solid #d0d7e3;
+            font-weight: 700;
+            cursor: pointer;
+            margin-right: 8px
+        }
+
+        .info-btn:hover {
+            background: #e1ecff
+        }
+
+        /* Loading modal styles */
+        .loading-overlay {
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000
+        }
+
+        .loading-overlay.active {
+            display: flex
+        }
+
+        .loading-spinner {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px 32px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            text-align: center
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 16px;
+            border: 4px solid #f0f0f0;
+            border-top-color: #0b69c7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+            margin-top: 8px
+        }
+
+        /* Side-by-side cards layout */
+        .cards-row {
+            display: flex;
+            gap: 18px;
+            max-width: 100%;
+            margin: 0 auto;
+            align-items: flex-start;
+            box-sizing: border-box;
+        }
+
+        .cards-row .card {
+            flex: 1;
+            max-width: none;
+            margin: 0
+        }
+
+        @media (max-width: 1200px) {
+            .charts.charts-cofaco {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* Print styles */
+        @media print {
+body[data-view="auditoria-lotes"] {
+                padding: 0;
+                background: none;
+                margin: 0
+            }
+
+            .page-header {
+                display: none
+            }
+
+            .card {
+                display: none
+            }
+
+            .charts-wrapper {
+                display: none
+            }
+
+            .loading-overlay {
+                display: none !important
+            }
+
+            .modal-overlay {
+                position: static;
+                display: block !important;
+                background: none;
+                align-items: unset;
+                justify-content: unset;
+                z-index: auto
+            }
+
+            .modal {
+                position: static;
+                display: block !important;
+                max-width: 100%;
+                width: 100%;
+                max-height: none;
+                overflow: visible;
+                padding: 0;
+                box-shadow: none;
+                border-radius: 0;
+                background: none;
+                margin: 0;
+                page-break-after: avoid
+            }
+
+            #perfModal {
+                width: 100%;
+                page-break-inside: avoid
+            }
+
+            #perfModal h2 {
+                margin: 0 0 12px 0;
+                font-size: 16px;
+                page-break-after: avoid
+            }
+
+            #perfModal fieldset {
+                page-break-inside: avoid;
+                margin: 0 0 12px 0
+            }
+
+            #perfModal #perfChartCanvas {
+                max-height: 800px;
+                page-break-inside: avoid
+            }
+
+            .modal .close-btn {
+                display: none
+            }
+
+            .print-btn {
+                display: none
+            }
+
+            /* Prefer landscape for the performance modal printout */
+            @page {
+                size: A4 landscape;
+                margin: 1.5cm
+            }
+
+            @page {
+                @bottom-center {
+                    content: "";
+                    display: none
+                }
+            }
+
+            body,
+            html {
+                margin: 0;
+                padding: 0
+            }
+
+            #perfModalOverlay {
+                position: static;
+                display: block !important;
+                margin: 0;
+                padding: 0
+            }
+        }

@@ -7,22 +7,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Estilos compartidos del shell (?v= para cache-busting durante validación) -->
-    <link rel="stylesheet" href="css/base.css?v=3" />
-    <link rel="stylesheet" href="css/components.css?v=3" />
-    <!-- Select2 (combos con búsqueda) usado por algunos paneles -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/base.css?v=40" />
+    <link rel="stylesheet" href="css/components.css?v=40" />
+    <!-- Librerías compartidas por casi todas las vistas: se cargan en el shell.
+         `defer`: no bloquean el primer pintado (el menú aparece de inmediato) y se
+         ejecutan ANTES de DOMContentLoaded; el router espera ese evento antes de
+         montar cualquier vista, así que window.Chart siempre existe al renderizar. -->
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.0/dist/chartjs-plugin-annotation.min.js"></script>
 
-    <!-- Librerías externas compartidas (CDN). Versiones unificadas para toda la app. -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.0/dist/chartjs-plugin-annotation.min.js"></script>
-    <!-- xlsx-js-style: superconjunto de SheetJS (soporta estilos); sirve para todos los export -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-    <!-- PapaParse: parseo CSV (Auditoría Lotes) -->
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-    <!-- jQuery + Select2 (Factory Code, Empaque) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- Librerías pesadas que solo usan algunos paneles (xlsx ~1MB, PapaParse, jQuery+Select2)
+         se cargan BAJO DEMANDA desde js/router.js (ver tabla LIBS y campo `libs` por ruta).
+         Antes se descargaban todas aquí y penalizaban el arranque con ~1.1 MB sin usar. -->
 </head>
 
 <body>
@@ -30,12 +27,12 @@
     <div id="view-root"></div>
 
     <!-- App: configuración, librerías compartidas y router (?v= para cache-busting) -->
-    <script src="js/config.js?v=3"></script>
-    <script src="js/lib/format.js?v=3"></script>
-    <script src="js/lib/dates.js?v=3"></script>
-    <script src="js/lib/sheets.js?v=3"></script>
-    <script src="js/lib/charts.js?v=3"></script>
-    <script src="js/router.js?v=3"></script>
+    <script src="js/config.js?v=40"></script>
+    <script src="js/lib/format.js?v=40"></script>
+    <script src="js/lib/dates.js?v=40"></script>
+    <script src="js/lib/sheets.js?v=40"></script>
+    <script src="js/lib/charts.js?v=40"></script>
+    <script src="js/router.js?v=40"></script>
 </body>
 
 </html>

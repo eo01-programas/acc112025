@@ -1,0 +1,2421 @@
+/* ============================================================
+   views/auditoria-lotes.js - Vista "Auditoria Lotes de Produccion" (SPA)
+   Migrado desde AUDITORIA LOTES DE PRODUCCION.html. Logica y marcado originales: el <script> se
+   ejecuta dentro de mount() (tras inyectar el template) para que el
+   DOM exista, igual que cuando el <script> estaba al final del body.
+   Arranques diferidos (DOMContentLoaded / ready) -> ejecucion inmediata.
+   ============================================================ */
+(function () {
+    var TEMPLATE = "    \u003c!-- Loading Modal --\u003e\r\n    \u003cdiv id=\"loadingModal\" class=\"loading-overlay\"\u003e\r\n        \u003cdiv class=\"loading-spinner\"\u003e\r\n            \u003cdiv class=\"spinner\"\u003e\u003c/div\u003e\r\n            \u003cdiv class=\"loading-text\"\u003eCargando datos...\u003c/div\u003e\r\n        \u003c/div\u003e\r\n    \u003c/div\u003e\r\n\r\n    \u003cdiv class=\"page-header\" style=\"max-width:100%;margin:0 auto 6px;padding:2px 12px;border-radius:4px;box-sizing:border-box;\"\u003e\r\n        \u003cdiv class=\"header-title\"\u003e\r\n            \u003ch1\u003eAUDITORIA LOTES DE PRODUCCION\u003c/h1\u003e\r\n            \u003cdiv style=\"display:flex;gap:12px;align-items:center;margin-left:auto\"\u003e\r\n                \u003clabel style=\"font-weight:600\"\u003eAño:\u003c/label\u003e\r\n                \u003cselect id=\"yearSelect\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\u003c/select\u003e\r\n                \u003clabel style=\"font-weight:600\"\u003ePeriodo:\u003c/label\u003e\r\n                \u003cselect id=\"periodType\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\r\n                    \u003coption value=\"Sem\"\u003eSem\u003c/option\u003e\r\n                    \u003coption value=\"Mes\"\u003eMes\u003c/option\u003e\r\n                \u003c/select\u003e\r\n                \u003cselect id=\"periodSelect\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\u003c/select\u003e\r\n                \u003cbutton id=\"perfBtn\" class=\"perf-btn\" title=\"Performance Auditorias\" aria-label=\"Performance Auditorias\"\r\n                    type=\"button\"\u003e\r\n                    \u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"\r\n                        focusable=\"false\"\u003e\r\n                        \u003crect x=\"3\" y=\"11\" width=\"4\" height=\"8\" rx=\"1\" fill=\"white\" /\u003e\r\n                        \u003crect x=\"9\" y=\"7\" width=\"4\" height=\"12\" rx=\"1\" fill=\"white\" /\u003e\r\n                        \u003crect x=\"15\" y=\"3\" width=\"4\" height=\"16\" rx=\"1\" fill=\"white\" /\u003e\r\n                    \u003c/svg\u003e\r\n                \u003c/button\u003e\r\n                \u003cspan id=\"statusBadge\" class=\"badge badge-loading\"\u003eCargando datos...\u003c/span\u003e\r\n            \u003c/div\u003e\r\n            \u003ca href=\"#/\" class=\"back-btn\" title=\"Inicio\"\u003e🏠\u003c/a\u003e\r\n        \u003c/div\u003e\r\n    \u003c/div\u003e\r\n    \u003cdiv class=\"plants-carousel\"\u003e\r\n        \u003cbutton id=\"plantPrev\" class=\"carousel-arrow left\" type=\"button\" title=\"Planta anterior\" aria-label=\"Planta anterior\"\u003e\u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\" focusable=\"false\"\u003e\u003cpath d=\"M15 6l-6 6 6 6\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/\u003e\u003c/svg\u003e\u003c/button\u003e\r\n        \u003cbutton id=\"plantNext\" class=\"carousel-arrow right\" type=\"button\" title=\"Planta siguiente\" aria-label=\"Planta siguiente\"\u003e\u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\" focusable=\"false\"\u003e\u003cpath d=\"M9 6l6 6-6 6\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/\u003e\u003c/svg\u003e\u003c/button\u003e\r\n        \u003cdiv class=\"carousel-viewport\"\u003e\r\n            \u003cdiv class=\"cards-row\" id=\"plantsTrack\"\u003e\r\n        \u003cdiv class=\"card cofaco-card\"\u003e\r\n            \u003cdiv style=\"display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap\"\u003e\r\n                \u003cbutton id=\"infoBtn\" class=\"info-btn\" title=\"Top 5 peores líneas\"\r\n                    aria-label=\"Top 5 peores líneas\"\u003ei\u003c/button\u003e\r\n                \u003ch1 style=\"margin:0\"\u003eCOFACO\u003c/h1\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"result\"\u003e\r\n                \u003ctable\u003e\r\n                    \u003cthead\u003e\r\n                        \u003ctr\u003e\r\n                            \u003cth\u003eGrupo\u003c/th\u003e\r\n                            \u003cth\u003eCant Muestra\u003c/th\u003e\r\n                            \u003cth\u003eTotal Defectos\u003c/th\u003e\r\n                            \u003cth\u003e%Def.\u003c/th\u003e\r\n                            \u003cth\u003eTotal\u003c/th\u003e\r\n                            \u003cth\u003eA 1\u003c/th\u003e\r\n                            \u003cth\u003e%BAP\u003c/th\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/thead\u003e\r\n                    \u003ctbody\u003e\r\n                        \u003ctr id=\"costura-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"costura-1-19-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-19)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"costura-20-29-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 20-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"acabados-row\"\u003e\r\n                            \u003ctd\u003eACABADOS (Eq 30-40)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"acabados-41-49-row\"\u003e\r\n                             \u003ctd\u003eCitis (Eq 41-49)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/tbody\u003e\r\n                \u003c/table\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"chartsWrapper\" class=\"charts-wrapper\" style=\"display:none;margin-top:8px\"\u003e\r\n                \u003cdiv id=\"chartsContainer\"\u003e\u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n\r\n        \u003cdiv class=\"card\"\u003e\r\n            \u003cdiv style=\"display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap\"\u003e\r\n                \u003cbutton id=\"infoBtnCT\" class=\"info-btn\" title=\"Top 5 peores líneas Cititex\"\r\n                    aria-label=\"Top 5 peores líneas Cititex\"\u003ei\u003c/button\u003e\r\n                \u003ch1 style=\"margin:0\"\u003eCITITEX\u003c/h1\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"resultCT\"\u003e\r\n                \u003ctable\u003e\r\n                    \u003cthead\u003e\r\n                        \u003ctr\u003e\r\n                            \u003cth\u003eGrupo\u003c/th\u003e\r\n                            \u003cth\u003eCant Muestra\u003c/th\u003e\r\n                            \u003cth\u003eTotal Defectos\u003c/th\u003e\r\n                            \u003cth\u003e%Def.\u003c/th\u003e\r\n                            \u003cth\u003eTotal\u003c/th\u003e\r\n                            \u003cth\u003eA 1\u003c/th\u003e\r\n                            \u003cth\u003e%BAP\u003c/th\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/thead\u003e\r\n                    \u003ctbody\u003e\r\n                        \u003ctr id=\"ct-costura-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"ct-costura-1-14-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-14)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"ct-costura-15-29-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 15-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/tbody\u003e\r\n                \u003c/table\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"chartsWrapperCT\" class=\"charts-wrapper\" style=\"display:none;margin-top:8px\"\u003e\r\n                \u003cdiv id=\"chartsContainerCT\"\u003e\u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv id=\"plantDots\" class=\"carousel-dots\"\u003e\u003c/div\u003e\r\n    \u003c/div\u003e\r\n";
+
+    function mount(root) {
+        root.innerHTML = TEMPLATE;
+        // Botón Inicio: ícono de casa en blanco (SVG, mismo estilo del resto de la app).
+        var _homeBtn = root.querySelector('.back-btn');
+        if (_homeBtn) _homeBtn.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/></svg>";
+        // ===== Carrusel de plantas (COFACO / CITITEX / futuras) =====
+        // La planta activa va centrada; las vecinas asoman por los lados
+        // reducidas y atenuadas. Navegacion circular: clones visuales (sin id,
+        // aria-hidden) en cabeza/cola de la pista, sincronizados con
+        // MutationObserver cuando las tarjetas reales se re-renderizan.
+        // Para agregar una planta nueva basta anadir su .card dentro de
+        // #plantsTrack (+ su logica de datos): el carrusel la detecta solo.
+        (function initPlantsCarousel() {
+            var track = root.querySelector('#plantsTrack');
+            var viewport = root.querySelector('.carousel-viewport');
+            var dotsBox = root.querySelector('#plantDots');
+            if (!track || !viewport) return;
+            var plants = [];
+            for (var ci = 0; ci < track.children.length; ci++) {
+                if (track.children[ci].classList.contains('card')) plants.push(track.children[ci]);
+            }
+            var n = plants.length;
+            if (n < 2) return;
+            var names = plants.map(function (c, i) {
+                var h = c.querySelector('h1');
+                return h ? h.textContent.trim() : ('Planta ' + (i + 1));
+            });
+            function stripIds(el) {
+                el.removeAttribute('id');
+                var withId = el.querySelectorAll('[id]');
+                for (var i = 0; i < withId.length; i++) withId[i].removeAttribute('id');
+            }
+            function makeClone(cardEl) {
+                var cl = cardEl.cloneNode(true);
+                cl.classList.add('carousel-clone');
+                cl.setAttribute('aria-hidden', 'true');
+                stripIds(cl);
+                return cl;
+            }
+            var headClone = makeClone(plants[n - 1]); // ultima planta: asoma a la izquierda
+            var tailClone = makeClone(plants[0]);     // primera planta: asoma a la derecha
+            track.insertBefore(headClone, plants[0]);
+            track.appendChild(tailClone);
+            // pista virtual: [cloneUltima, p0..pN-1, clonePrimera]
+            var slides = [headClone].concat(plants).concat([tailClone]);
+            var vIndex = 1; // arranca centrado en la primera planta real
+            var current = 0;
+            var animating = false;
+            function slideOffset(slide) {
+                return slide.offsetLeft - (viewport.clientWidth - slide.offsetWidth) / 2;
+            }
+            function position(animate) {
+                var slide = slides[vIndex];
+                if (!slide) return;
+                if (!animate) track.style.transition = 'none';
+                track.style.transform = 'translateX(' + (-slideOffset(slide)) + 'px)';
+                if (!animate) { void track.offsetWidth; track.style.transition = ''; }
+                current = (vIndex - 1 + n) % n;
+                for (var i = 0; i < slides.length; i++) slides[i].classList.toggle('active', i === vIndex);
+                renderDots();
+            }
+            function goTo(v) {
+                if (animating || v === vIndex) return;
+                animating = true;
+                vIndex = v;
+                position(true);
+                setTimeout(function () { animating = false; }, 700); // red de seguridad
+            }
+            track.addEventListener('transitionend', function (ev) {
+                if (ev.target !== track || ev.propertyName !== 'transform') return;
+                animating = false;
+                // al caer en un clon, saltar sin animacion a la planta real
+                if (vIndex === 0) { vIndex = n; position(false); }
+                else if (vIndex === slides.length - 1) { vIndex = 1; position(false); }
+            });
+            function renderDots() {
+                if (!dotsBox) return;
+                if (!dotsBox.childElementCount) {
+                    names.forEach(function (nm, i) {
+                        var b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'carousel-dot';
+                        b.textContent = nm;
+                        b.addEventListener('click', function () { if (i !== current) goTo(i + 1); });
+                        dotsBox.appendChild(b);
+                    });
+                }
+                for (var d = 0; d < dotsBox.children.length; d++) {
+                    dotsBox.children[d].classList.toggle('active', d === current);
+                }
+            }
+            var btnPrev = root.querySelector('#plantPrev');
+            var btnNext = root.querySelector('#plantNext');
+            if (btnPrev) btnPrev.addEventListener('click', function () { goTo(vIndex - 1); });
+            if (btnNext) btnNext.addEventListener('click', function () { goTo(vIndex + 1); });
+            // clic sobre una planta lateral: centrarla (sin activar sus controles)
+            track.addEventListener('click', function (ev) {
+                var el = ev.target;
+                while (el && el !== track && !(el.classList && el.classList.contains('card'))) el = el.parentElement;
+                if (!el || el === track || el.classList.contains('active')) return;
+                ev.preventDefault();
+                ev.stopPropagation();
+                goTo(slides.indexOf(el));
+            }, true);
+            // flechas del teclado (si no hay modal abierto ni foco en un control)
+            document.addEventListener('keydown', function onKey(ev) {
+                if (!document.body.contains(track)) { document.removeEventListener('keydown', onKey); return; }
+                if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+                var tg = ev.target;
+                if (tg && /^(select|input|textarea)$/i.test(tg.tagName)) return;
+                var overlays = document.querySelectorAll('.modal-overlay');
+                for (var o = 0; o < overlays.length; o++) {
+                    if (overlays[o].style.display === 'flex') return;
+                }
+                if (ev.key === 'ArrowLeft') goTo(vIndex - 1); else goTo(vIndex + 1);
+            });
+            // los clones copian el contenido cuando la planta real se re-renderiza
+            // (solo childList/characterData: observar atributos crearia un bucle
+            // con el toggle de la clase .active)
+            var syncTimer = null;
+            function syncClones() {
+                headClone.innerHTML = plants[n - 1].innerHTML;
+                tailClone.innerHTML = plants[0].innerHTML;
+                stripIds(headClone);
+                stripIds(tailClone);
+                position(false); // el tamano pudo cambiar: recentrar
+            }
+            var mo = new MutationObserver(function () {
+                clearTimeout(syncTimer);
+                syncTimer = setTimeout(syncClones, 150);
+            });
+            plants.forEach(function (c) { mo.observe(c, { childList: true, subtree: true, characterData: true }); });
+            window.addEventListener('resize', function onResize() {
+                if (!document.body.contains(track)) { window.removeEventListener('resize', onResize); return; }
+                position(false);
+            });
+            position(false);
+            // recentrar cuando el CSS de la vista termine de aplicarse
+            requestAnimationFrame(function () { position(false); });
+            setTimeout(function () { position(false); }, 350);
+        })();
+
+        var __ready = function (fn) { if (typeof fn === 'function') fn(); };
+
+        // ===== Script original del panel (relocado a mount) =====
+        // Config
+        const SHEET_ID = '1Xu3bN-RVzPYuIqcVyb0ZxvlFTUjl2_MWHnDJik6lZ4s';
+        const GID = '0'; // primer sheet; ajusta si tu sheet tiene otro gid
+        let TARGET_WEEK = 50;
+        let FILTER_YEAR = (new Date()).getFullYear();
+        let PERIOD_TYPE = 'Sem'; // 'Sem' or 'Mes'
+        let PERIOD_VALUE = null; // week number or month index (1-12)
+
+        // Util: calcula semana ISO (1-53)
+        function getISOWeek(d) {
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+        }
+
+        // Devuelve objeto con año-ISO y número de semana {year, week}
+        function getISOWeekYear(d) {
+            const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dayNum = date.getUTCDay() || 7;
+            date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+            const isoYear = date.getUTCFullYear();
+            const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+            const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+            return { year: isoYear, week: week };
+        }
+
+        function toNum(val) {
+            if (val == null || val === '') return 0;
+            if (typeof val === 'number') return val;
+            let s = String(val).trim();
+            if (s === '') return 0;
+            // remove non-breaking spaces
+            s = s.replace(/\u00A0/g, '');
+            // remove surrounding quotes
+            s = s.replace(/^"|"$/g, '');
+            // normalize spaces
+            s = s.replace(/\s+/g, '');
+            // If contains both dot and comma, decide which is decimal separator
+            if (s.indexOf('.') > -1 && s.indexOf(',') > -1) {
+                const lastDot = s.lastIndexOf('.');
+                const lastComma = s.lastIndexOf(',');
+                if (lastDot < lastComma) {
+                    // dot as thousands, comma as decimal: remove dots, replace comma with dot
+                    s = s.replace(/\./g, '').replace(/,/g, '.');
+                } else {
+                    // comma as thousands, dot as decimal: remove commas
+                    s = s.replace(/,/g, '');
+                }
+            } else if (s.indexOf(',') > -1) {
+                // only comma present — assume comma is decimal separator
+                s = s.replace(/,/g, '.');
+            }
+            // remove any remaining non-numeric (keep minus and dot)
+            s = s.replace(/[^0-9\-\.]/g, '');
+            const n = Number(s);
+            return isNaN(n) ? 0 : n;
+        }
+
+        // Normaliza y parsea distintos formatos recibidos desde Google Sheets
+        function parseFechaValue(raw) {
+            if (raw === null || raw === undefined || raw === '') return null;
+            // Si ya es Date
+            if (raw instanceof Date) return raw;
+            // Si es un objeto (gviz a veces devuelve objetos complejos)
+            if (typeof raw === 'object') {
+                // si es wrapper con .v
+                if ('v' in raw) return parseFechaValue(raw.v);
+                // si contiene propiedades de fecha explícitas
+                if (('year' in raw) && ('month' in raw) && ('day' in raw)) {
+                    const y = Number(raw.year);
+                    let m = Number(raw.month);
+                    const d = Number(raw.day || raw.date || raw.dayOfMonth || raw.dayOfMonth);
+                    if (m > 11) m = m - 1;
+                    return new Date(y, m, d);
+                }
+                // fallback: stringify
+                try { raw = String(raw); } catch (e) { return null; }
+            }
+
+            // Si es número -> serial Excel
+            if (typeof raw === 'number' || (/^[0-9]+$/.test(String(raw).trim()) && String(raw).length < 8)) {
+                const sNum = Number(raw);
+                if (!isNaN(sNum)) {
+                    const dt = new Date(Date.UTC(1899, 11, 30));
+                    dt.setUTCDate(dt.getUTCDate() + Math.floor(sNum));
+                    return dt;
+                }
+            }
+
+            // Normalizar cadenas: eliminar BOM, NBSP, ZWSP, y caracteres de control
+            let s = String(raw || '').replace(/^\uFEFF/, '').replace(/\u00A0/g, ' ').replace(/\u200B/g, '').replace(/\u202F/g, ' ').trim();
+            s = s.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+            // Quitar caracteres raros manteniendo dígitos, letras, '/', '-', ':' , comas y paréntesis
+            s = s.replace(/[^0-9A-Za-zÁÉÍÓÚáéíóúÑñ\/\-\s:\.,()]/g, '').trim();
+
+            // Formato GViz como string: Date(2025,11,13)
+            const gvizMatch = s.match(/Date\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)/i);
+            if (gvizMatch) {
+                const y = Number(gvizMatch[1]);
+                const m = Number(gvizMatch[2]);
+                const d = Number(gvizMatch[3]);
+                return new Date(y, m, d);
+            }
+
+            // Intentar Date.parse (maneja ISO y otros)
+            const d1 = new Date(s);
+            if (!isNaN(d1)) return d1;
+
+            // Intentar mm/dd/yyyy
+            if (s.indexOf('/') !== -1) {
+                const parts = s.split('/').map(x => x.trim());
+                if (parts.length === 3) {
+                    const mm = parseInt(parts[0], 10) - 1;
+                    const dd = parseInt(parts[1], 10);
+                    const yy = parseInt(parts[2], 10);
+                    const yyyy = yy < 1000 ? (yy < 50 ? 2000 + yy : 1900 + yy) : yy;
+                    const dt2 = new Date(yyyy, mm, dd);
+                    if (!isNaN(dt2)) return dt2;
+                }
+            }
+
+            // Intentar yyyy-mm-dd
+            if (s.indexOf('-') !== -1) {
+                const parts = s.split('-').map(x => x.trim());
+                if (parts.length === 3) {
+                    const yyyy = parseInt(parts[0], 10);
+                    const mm = parseInt(parts[1], 10) - 1;
+                    const dd = parseInt(parts[2], 10);
+                    const dt3 = new Date(yyyy, mm, dd);
+                    if (!isNaN(dt3)) return dt3;
+                }
+            }
+
+            return null;
+        }
+
+        // Normalizar nombre de header para mapear columnas
+        function norm(h) { return (h || '').toString().trim().toLowerCase().replace(/\s+/g, ' ') }
+
+        // Formatea fecha a 'D/mesAbrev/AAAA' en español (ej. 11/dic/2025)
+        function formatFecha(d) {
+            if (!d || !(d instanceof Date) || isNaN(d)) return '';
+            const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+            return d.getDate() + '/' + meses[d.getMonth()] + '/' + d.getFullYear();
+        }
+
+        // --- Donut chart helpers ---
+        function makeDonutSVG(percentage, size = 160, strokeWidth = 18, color = '#1e88e5', bgColor = '#e6eef8') {
+            const r = (size / 2) - (strokeWidth / 2);
+            const c = 2 * Math.PI * r;
+            const filled = Math.max(0, Math.min(100, percentage)) / 100 * c;
+            const empty = c - filled;
+            return `
+                                <svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${bgColor}" stroke-width="${strokeWidth}" />
+                                    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-dasharray="${filled} ${empty}" stroke-linecap="round" />
+                                </svg>`;
+        }
+
+        function renderCharts(sums) {
+            try {
+                const container = document.getElementById('chartsContainer');
+                if (!container) return;
+                const nfPct = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const nfBap = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                const nfNum = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
+                function groupHtml(title, data) {
+                    const tUp = (title || '').toUpperCase();
+                    const groupClass = tUp.includes('ACABADOS') ? 'group-charts group-acabados' : (tUp.includes('CITIS') ? 'group-charts group-citis' : 'group-charts');
+                    const pctDef = (data.cant && data.cant > 0) ? (data.defectos / data.cant * 100) : 0;
+                    const pctBap = (data.total && data.total > 0) ? (data.a1 / data.total * 100) : 0;
+                    const leftSVG = makeDonutSVG(pctDef, 160, 18, '#2b6cb0', '#e6eef8');
+                    const rightSVG = makeDonutSVG(pctBap, 160, 18, '#48bb78', '#e6eef8');
+
+                    // If group is COSTURA, render two extra small donuts (half size) under both the %Def and %BAP donuts
+                    let subDonutsHtmlLeft = '';
+                    let subDonutsHtmlRight = '';
+                    if (title && title.toUpperCase().includes('COSTURA')) {
+                        const s1 = sums.costura_1_19 || { cant: 0, defectos: 0, total: 0, a1: 0 };
+                        const s2 = sums.costura_20_29 || { cant: 0, defectos: 0, total: 0, a1: 0 };
+                        // %Def for subgroups
+                        const pct1_def = (s1.cant && s1.cant > 0) ? (s1.defectos / s1.cant * 100) : 0;
+                        const pct2_def = (s2.cant && s2.cant > 0) ? (s2.defectos / s2.cant * 100) : 0;
+                        const svg1_def = makeDonutSVG(pct1_def, 80, 12, '#2b6cb0', '#e6eef8');
+                        const svg2_def = makeDonutSVG(pct2_def, 80, 12, '#2b6cb0', '#e6eef8');
+                        subDonutsHtmlLeft = `
+                                                <div class="sub-donuts" aria-hidden>
+                                                    <div class="donut small">
+                                                        ${svg1_def}
+                                                        <div class="center click-center" data-def="${s1.defectos}" data-cant="${s1.cant}" data-title="Equipos 1-19"><div class="mainPct">${nfPct.format(pct1_def)}%</div><div class="sublabel">Dia</div></div>
+                                                    </div>
+                                                    <div class="donut small">
+                                                        ${svg2_def}
+                                                        <div class="center click-center" data-def="${s2.defectos}" data-cant="${s2.cant}" data-title="Equipos 20-29"><div class="mainPct">${nfPct.format(pct2_def)}%</div><div class="sublabel">Noche</div></div>
+                                                    </div>
+                                                </div>`;
+
+                        // %BAP for subgroups (a1/total)
+                        const pct1_bap = (s1.total && s1.total > 0) ? (s1.a1 / s1.total * 100) : 0;
+                        const pct2_bap = (s2.total && s2.total > 0) ? (s2.a1 / s2.total * 100) : 0;
+                        const svg1_bap = makeDonutSVG(pct1_bap, 80, 12, '#48bb78', '#e6eef8');
+                        const svg2_bap = makeDonutSVG(pct2_bap, 80, 12, '#48bb78', '#e6eef8');
+                        // For BAP mini-donuts store total/a1 (T.Aud / A1)
+                        subDonutsHtmlRight = `
+                                                <div class="sub-donuts" aria-hidden>
+                                                    <div class="donut small">
+                                                        ${svg1_bap}
+                                                        <div class="center click-center" data-taud="${s1.total}" data-a1="${s1.a1}" data-title="Equipos 1-19"><div class="mainPct">${nfBap.format(pct1_bap)}%</div><div class="sublabel">Dia</div></div>
+                                                    </div>
+                                                    <div class="donut small">
+                                                        ${svg2_bap}
+                                                        <div class="center click-center" data-taud="${s2.total}" data-a1="${s2.a1}" data-title="Equipos 20-29"><div class="mainPct">${nfBap.format(pct2_bap)}%</div><div class="sublabel">Noche</div></div>
+                                                    </div>
+                                                </div>`;
+                    }
+
+                    return `
+                                                <div class="${groupClass}">
+                                                    <h3>${title}</h3>
+                                                    <div class="donut-row">
+                                                        <div class="donut" aria-hidden>
+                                                            ${leftSVG}
+                                                            <div class="center"><div class="mainPct">${nfPct.format(pctDef)}%</div><div class="sublabel">%Def.</div></div>
+                                                            <div class="small-label label-left"><span class="tag">T.Def:</span>${nfNum.format(data.defectos)}</div>
+                                                            <div class="small-label label-bottom"><span class="tag">Cant.Muestra:</span>${nfNum.format(data.cant)}</div>
+                                                        </div>
+                                                        <div class="donut" aria-hidden>
+                                                            ${rightSVG}
+                                                            <div class="center"><div class="mainPct">${nfBap.format(pctBap)}%</div><div class="sublabel">%BAP</div></div>
+                                                            <div class="small-label label-left"><span class="num-a1">${nfNum.format(data.a1)}</span> <span class="tag-a1">:A1</span></div>
+                                                            <div class="small-label label-right"><span class="num-taud">${nfNum.format(data.total)}</span> <span class="tag-aud">:T.Aud</span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="sub-row">
+                                                        <div class="sub-left">${subDonutsHtmlLeft}</div>
+                                                        <div class="sub-right">${subDonutsHtmlRight}</div>
+                                                    </div>
+                                                </div>`;
+                }
+
+                const html = `<div class="charts charts-cofaco"><div class="charts-col charts-col-left">${groupHtml('COSTURA (Equipos 1-29)', sums.costura)}</div><div class="charts-col charts-col-right">${groupHtml('ACABADOS (Equipos 30-40)', sums.acabados)}${groupHtml('Citis(Equipos 41-49)', sums.acabados_41_49 || { cant: 0, defectos: 0, total: 0, a1: 0 })}</div></div>`;
+                container.innerHTML = html;
+
+                // expose clickable main COSTURA %Def. to open modal with per-equipo details
+                try {
+                    // costura is the first .group-charts generated
+                    const costuraGroup = container.querySelector('.group-charts');
+                    if (costuraGroup) {
+                        const leftCenter = costuraGroup.querySelector('.donut-row .donut:first-child .center');
+                        if (leftCenter) {
+                            leftCenter.style.cursor = 'pointer';
+                            leftCenter.setAttribute('title', 'Ver detalle por equipo');
+                            leftCenter.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                if (window.latestFilteredData && window.latestFilteredData.perEquipo) {
+                                    showModalDefects(window.latestFilteredData.perEquipo); // default 1-29
+                                } else {
+                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                }
+                            });
+                        }
+                        // attach click on right donut center (%BAP) to open BAP modal for Equipos 1-29
+                        const rightCenter = costuraGroup.querySelector('.donut-row .donut:nth-child(2) .center');
+                        if (rightCenter) {
+                            rightCenter.style.cursor = 'pointer';
+                            rightCenter.setAttribute('title', 'Ver %BAP por equipo (1-29)');
+                            rightCenter.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                if (window.latestFilteredData && window.latestFilteredData.perEquipo) {
+                                    showBapModal(window.latestFilteredData.perEquipo, 1, 29);
+                                } else {
+                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                }
+                            });
+                        }
+                    }
+                } catch (e) { console.warn('attach costura click err', e) }
+
+                // attach click for ACABADOS groups to open modal details
+                try {
+                    const groups = container.querySelectorAll('.group-charts');
+                    if (groups && groups.length > 1) {
+                        const acabadosGroup = groups[1];
+                        const leftCenterA = acabadosGroup.querySelector('.donut-row .donut:first-child .center');
+                        if (leftCenterA) {
+                            leftCenterA.style.cursor = 'pointer';
+                            leftCenterA.setAttribute('title', 'Ver detalle por equipo (Equipos 30-40)');
+                            leftCenterA.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                if (window.latestFilteredData && window.latestFilteredData.perEquipo) {
+                                    showModalDefects(window.latestFilteredData.perEquipo, 30, 40);
+                                } else {
+                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                }
+                            });
+                        }
+                        // attach click on right donut center (%BAP) to open BAP modal for Equipos 30-40
+                        const rightCenterA = acabadosGroup.querySelector('.donut-row .donut:nth-child(2) .center');
+                        if (rightCenterA) {
+                            rightCenterA.style.cursor = 'pointer';
+                            rightCenterA.setAttribute('title', 'Ver %BAP por equipo (30-40)');
+                            rightCenterA.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                if (window.latestFilteredData && window.latestFilteredData.perEquipo) {
+                                    showBapModal(window.latestFilteredData.perEquipo, 30, 40);
+                                } else {
+                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                }
+                            });
+                        }
+                    }
+                    if (groups && groups.length > 2) {
+                        const acabadosGroup4149 = groups[2];
+                        const leftCenterA4149 = acabadosGroup4149.querySelector('.donut-row .donut:first-child .center');
+                        if (leftCenterA4149) {
+                            leftCenterA4149.style.cursor = 'pointer';
+                            leftCenterA4149.setAttribute('title', 'Ver detalle por equipo (Equipos 41-49)');
+                            leftCenterA4149.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                if (window.latestFilteredData && window.latestFilteredData.perEquipo) {
+                                    showModalDefects(window.latestFilteredData.perEquipo, 41, 49);
+                                } else {
+                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                }
+                            });
+                        }
+                        const rightCenterA4149 = acabadosGroup4149.querySelector('.donut-row .donut:nth-child(2) .center');
+                        if (rightCenterA4149) {
+                            rightCenterA4149.style.cursor = 'pointer';
+                            rightCenterA4149.setAttribute('title', 'Ver %BAP por equipo (41-49)');
+                            rightCenterA4149.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                if (window.latestFilteredData && window.latestFilteredData.perEquipo) {
+                                    showBapModal(window.latestFilteredData.perEquipo, 41, 49);
+                                } else {
+                                    alert('No hay datos detallados disponibles. Aplica el filtro primero.');
+                                }
+                            });
+                        }
+                    }
+                } catch (e) { console.warn('attach acabados click err', e) }
+
+                // Tooltip creation and click handler for mini-donut centers
+                let tt = document.getElementById('miniTooltip');
+                if (!tt) {
+                    tt = document.createElement('div');
+                    tt.id = 'miniTooltip';
+                    tt.className = 'mini-tooltip';
+                    document.body.appendChild(tt);
+                }
+
+                // helper to show tooltip near element
+                function showMiniTooltipForElement(el) {
+                    const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+                    const ds = el.dataset || {};
+                    let content = '';
+                    const title = ds.title || '';
+                    // If contains taud/a1 show T.Aud and A1, otherwise show T.Def and Cant.Muestra
+                    if (ds.taud !== undefined || ds.a1 !== undefined) {
+                        const taud = Number(ds.taud || 0);
+                        const a1 = Number(ds.a1 || 0);
+                        content = `<div style="font-weight:700;margin-bottom:6px">${title}</div><div>T.Aud: <b>${nf.format(taud)}</b></div><div>A1: <b>${nf.format(a1)}</b></div>`;
+                    } else {
+                        const def = Number(ds.def || 0);
+                        const cant = Number(ds.cant || 0);
+                        content = `<div style="font-weight:700;margin-bottom:6px">${title}</div><div>T.Def: <b>${nf.format(def)}</b></div><div>Cant.Muestra: <b>${nf.format(cant)}</b></div>`;
+                    }
+                    tt.innerHTML = content;
+                    tt.style.display = 'block';
+                    // position centered above element
+                    const r = el.getBoundingClientRect();
+                    const ttR = tt.getBoundingClientRect();
+                    let left = r.left + (r.width / 2) - (ttR.width / 2);
+                    let top = r.top - ttR.height - 8;
+                    // if off-screen on top, place below
+                    if (top < 8) top = r.bottom + 8;
+                    if (left < 8) left = 8;
+                    if (left + ttR.width > window.innerWidth - 8) left = window.innerWidth - ttR.width - 8;
+                    tt.style.left = left + 'px';
+                    tt.style.top = top + 'px';
+
+                    // attach one-time outside click to hide
+                    function hideOnDocClick(ev) {
+                        if (!tt.contains(ev.target) && !el.contains(ev.target)) {
+                            tt.style.display = 'none';
+                            document.removeEventListener('click', hideOnDocClick);
+                        }
+                    }
+                    setTimeout(() => document.addEventListener('click', hideOnDocClick), 0);
+                }
+
+                // delegate clicks on centers
+                container.querySelectorAll('.click-center').forEach(cc => {
+                    cc.style.cursor = 'pointer';
+                    cc.addEventListener('click', function (ev) { ev.stopPropagation(); showMiniTooltipForElement(this); });
+                });
+
+                // helper: export modal table to Excel (HTML-based .xls to preserve inline styles)
+                function exportModalTableToExcel(modalId, filename) {
+                    try {
+                        const modal = document.getElementById(modalId);
+                        if (!modal) return alert('Tabla no encontrada');
+                        const table = modal.querySelector('table');
+                        if (!table) return alert('Tabla no encontrada');
+                        const preStyles = '<style>table{border-collapse:collapse} th,td{border:1px solid #e6eef8;padding:6px;font-size:10px;vertical-align:middle} th{background:#f1f7ff;font-weight:700}</style>';
+                        const html = '<!doctype html><html><head><meta charset="utf-8"/>' + preStyles + '</head><body>' + table.outerHTML + '</body></html>';
+                        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = filename || 'table.xls'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+                    } catch (e) { console.warn('export err', e); alert('Error al generar Excel: ' + (e && e.message)); }
+                }
+
+                function ensureModalShell(overlayId, modalId) {
+                    let ol = document.getElementById(overlayId);
+                    if (!ol) {
+                        ol = document.createElement('div');
+                        ol.id = overlayId;
+                        document.body.appendChild(ol);
+                    }
+                    ol.id = overlayId;
+                    ol.className = 'modal-overlay';
+                    let modal = document.getElementById(modalId);
+                    if (!modal) {
+                        modal = document.createElement('div');
+                        modal.id = modalId;
+                    }
+                    modal.id = modalId;
+                    modal.className = 'modal';
+                    // Reset the shell on every open so stale nodes or broken text never leak into the layout.
+                    ol.replaceChildren(modal);
+                    if (ol.parentElement !== document.body) {
+                        document.body.appendChild(ol);
+                    }
+                    return { ol, modal };
+                }
+
+                function buildModalHeaderHtml(title, closeButtonId, exportButtonId) {
+                    const exportHtml = exportButtonId ? `<button id="${exportButtonId}" class="excel-btn">Excel</button>` : '';
+                    return `<div class="modal-toolbar"><h2>${title}</h2><div class="modal-toolbar-actions">${exportHtml}<button class="close-btn" id="${closeButtonId}">Cerrar</button></div></div>`;
+                }
+
+                // helper: show modal with per-equipo aggregated table
+                // accepts optional range minEq..maxEq (default 1..29)
+                function showModalDefects(perEquipo, minEq = 1, maxEq = 29, ubicLabel = 'COFACO') {
+                    // ensure we only show equipos in provided range and include filter info
+                    const meta = window.latestFilteredData || {};
+                    const year = meta.filteredYear || FILTER_YEAR;
+                    const pType = meta.filteredPeriodType || PERIOD_TYPE;
+                    const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
+                    const { ol, modal } = ensureModalShell('modalOverlayDef', 'modalDefects');
+                    // build table HTML
+                    const cols = [
+                        'Eqp.', 'Cant. Auditada', 'Cant. Muestra', 'Tela', 'Huecos', 'Punt Salt', 'Punt Cort.', 'Hilos', 'Cost Defc', 'Oper Falta', 'Mnch Aceite', 'Mnch Sucie', 'Mnch Tinto', 'Acab', 'Med', 'Jalad', 'T.Def', '%Def', 'A1', 'A2', 'A3', 'A4', 'Lot No Aprob', 'Total', 'Nivel Acep', 'C.Pds Rech.'
+                    ];
+                    let title = 'AUDITORIA LOTES DE PRODUCCION - ' + ubicLabel;
+                    title += ' — ' + year + ' / ' + (pType === 'Sem' ? ('Semana ' + pVal) : ('Mes ' + pVal));
+                    title += ' — Equipos ' + minEq + '-' + maxEq;
+                    let html = buildModalHeaderHtml(title, 'closeModalDef', 'exportExcelDef');
+                    // Build a three-row header: top row with DEFECTOS, middle row with groups (COSTURA, MANCHAS, APROBACION), bottom row with column titles
+                    const topGroups = [{ label: 'DEFECTOS', start: 'Tela', end: 'Jalad' }];
+                    const groups = [
+                        { label: 'COSTURA', start: 'Huecos', end: 'Oper Falta' },
+                        { label: 'MANCHAS', start: 'Mnch Aceite', end: 'Mnch Tinto' },
+                        { label: 'APROBACION', start: 'A1', end: 'A4' }
+                    ];
+                    let theadHtml = '';
+                    // compute ranges for top groups and middle groups
+                    const topRanges = topGroups.map(tg => { const s = cols.indexOf(tg.start); const e = cols.indexOf(tg.end); return (s >= 0 && e >= s) ? { s, e, label: tg.label } : null }).filter(x => x);
+                    const midRanges = groups.map(g => { const s = cols.indexOf(g.start); const e = cols.indexOf(g.end); return (s >= 0 && e >= s) ? { s, e, label: g.label } : null }).filter(x => x);
+                    const skip = new Array(cols.length).fill(false);
+
+                    // top-most grouping row (e.g., DEFECTOS)
+                    theadHtml += '<tr>';
+                    for (let i = 0; i < cols.length; i++) {
+                        // if a top-group starts here, emit colspan
+                        const tg = topRanges.find(r => r.s === i);
+                        if (tg) {
+                            const span = tg.e - tg.s + 1;
+                            theadHtml += '<th colspan="' + span + '" style="text-align:center;background-color: rgb(35,88,137); color:#fff">' + tg.label + '</th>';
+                            i = tg.e; continue;
+                        }
+                        // if this column is part of any middle group, leave a placeholder (middle row will emit the group)
+                        const inMid = midRanges.some(r => i >= r.s && i <= r.e);
+                        if (inMid) { theadHtml += '<th style="background-color: rgb(35,88,137); color:#fff"></th>'; continue; }
+                        // standalone column -> occupy all three rows
+                        theadHtml += '<th rowspan="3" style="text-align:center;vertical-align:middle;background-color: rgb(35,88,137); color:#fff">' + cols[i] + '</th>';
+                        skip[i] = true;
+                    }
+                    theadHtml += '</tr>';
+
+                    // middle grouping row (COSTURA, MANCHAS, APROBACION)
+                    theadHtml += '<tr>';
+                    for (let i = 0; i < cols.length; i++) {
+                        if (skip[i]) continue; // already rendered with rowspan in top row
+                        const mg = midRanges.find(r => r.s === i);
+                        if (mg) {
+                            const span = mg.e - mg.s + 1;
+                            theadHtml += '<th colspan="' + span + '" style="text-align:center;background-color: rgb(35,88,137); color:#fff">' + mg.label + '</th>';
+                            i = mg.e; continue;
+                        }
+                        // if part of a top-group but not a middle-group (e.g., Tela, Acab, Med, Jalad), put placeholder so bottom row will render the actual column header
+                        const inTop = topRanges.some(r => i >= r.s && i <= r.e);
+                        if (inTop) { theadHtml += '<th style="background-color: rgb(35,88,137); color:#fff"></th>'; continue; }
+                        // otherwise (shouldn't happen) add empty
+                        theadHtml += '<th style="background-color: rgb(35,88,137); color:#fff"></th>';
+                    }
+                    theadHtml += '</tr>';
+
+                    // bottom row with actual column titles for columns not already rowspan'd
+                    theadHtml += '<tr>';
+                    for (let i = 0; i < cols.length; i++) {
+                        if (skip[i]) continue; // already printed as rowspan in top row
+                        theadHtml += '<th style="text-align:center;background-color: rgb(35,88,137); color:#fff">' + cols[i] + '</th>';
+                    }
+                    theadHtml += '</tr>';
+                    html += '<div class="table-wrap"><table><thead>' + theadHtml + '</thead><tbody>';
+                    const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+                    const nfPctDef = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                    const nfPctNoDec = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    // helper: devuelve estilo de celda según porcentaje de defecto
+                    function bgForPct(p) {
+                        const pct = Number(p) || 0;
+                        if (pct === 0) return 'background-color:#1f4e79;color:#fff';
+                        if (pct >= 0.1 && pct <= 2.5) return 'background-color:#c7f0c6;color:#000';
+                        if (pct >= 2.6 && pct <= 5.0) return 'background-color:#fff7b2;color:#000';
+                        if (pct >= 5.1) return 'background-color:#ff5c33;color:#fff';
+                        return 'background-color:#fff;color:#000';
+                    }
+                    function tdPct(p) { return '<td style="' + bgForPct(p) + '">' + nfPctDef.format(p) + '%</td>'; }
+                    // helper: Nivel Acep coloring (100, 99-85, 84-70, <=69)
+                    function bgNivel(p) {
+                        const pct = Math.round(Number(p)) || 0;
+                        if (pct === 100) return 'background-color:#1f4e79;color:#fff';
+                        if (pct >= 85 && pct <= 99) return 'background-color:#c7f0c6;color:#000';
+                        if (pct >= 70 && pct <= 84) return 'background-color:#fff7b2;color:#000';
+                        if (pct <= 69) return 'background-color:#ff5c33;color:#fff';
+                        return 'background-color:#fff;color:#000';
+                    }
+                    function tdNivel(p) { return '<td style="' + bgNivel(p) + '">' + nfPctNoDec.format(p) + '%</td>'; }
+                    // Pre-calcular %Def de cada equipo para identificar los 3 peores (mayor %Def)
+                    const equiposConPctDef = [];
+                    for (let eqPre = minEq; eqPre <= maxEq; eqPre++) {
+                        const keyPre = String(eqPre);
+                        const rowPre = (perEquipo && perEquipo[keyPre]) ? perEquipo[keyPre] : null;
+                        if (!rowPre) continue;
+                        const sumFieldsPre = (rowPre.cant_auditada || 0) + (rowPre.cant_muestra || 0) + (rowPre.tela || 0) + (rowPre.huecos || 0) + (rowPre.punt_saltadas || 0) + (rowPre.punt_cortadas || 0) + (rowPre.hilos || 0) + (rowPre.cost_defectuosas || 0) + (rowPre.operac_faltantes || 0) + (rowPre.mnch_aceite || 0) + (rowPre.mnch_suciedad || 0) + (rowPre.mnch_tinto || 0) + (rowPre.acabados || 0) + (rowPre.medidas || 0) + (rowPre.jaladuras || 0) + (rowPre.total_defec || 0) + (rowPre.a1 || 0) + (rowPre.a2 || 0) + (rowPre.a3 || 0) + (rowPre.a4 || 0) + (rowPre.lote_no_aprob || 0) + (rowPre.cant_prend_rech || 0);
+                        if (sumFieldsPre === 0) continue;
+                        const totalDefPre = rowPre.total_defec || 0;
+                        const cantMPre = rowPre.cant_muestra || 0;
+                        const pctDefPre = (cantMPre > 0) ? (totalDefPre / cantMPre * 100) : 0;
+                        equiposConPctDef.push({ eq: eqPre, pctDef: pctDefPre });
+                    }
+                    // Ordenar por %Def descendente y tomar los 3 peores
+                    equiposConPctDef.sort((a, b) => b.pctDef - a.pctDef);
+                    const peores3Def = equiposConPctDef.slice(0, 3).map(e => e.eq);
+                    // iterate equipos in the requested range and skip rows where all numeric fields are zero
+                    let visibleCount = 0;
+                    // acumuladores para fila de totales
+                    const totals = { cant_auditada: 0, cant_muestra: 0, tela: 0, huecos: 0, punt_saltadas: 0, punt_cortadas: 0, hilos: 0, cost_defectuosas: 0, operac_faltantes: 0, mnch_aceite: 0, mnch_suciedad: 0, mnch_tinto: 0, acabados: 0, medidas: 0, jaladuras: 0, total_defec: 0, a1: 0, a2: 0, a3: 0, a4: 0, lote_no_aprob: 0, totalA: 0, cant_prend_rech: 0 };
+                    for (let eq = minEq; eq <= maxEq; eq++) {
+                        const key = String(eq);
+                        const row = (perEquipo && perEquipo[key]) ? perEquipo[key] : { equipo: eq, cant_auditada: 0, cant_muestra: 0, tela: 0, huecos: 0, punt_saltadas: 0, punt_cortadas: 0, hilos: 0, cost_defectuosas: 0, operac_faltantes: 0, mnch_aceite: 0, mnch_suciedad: 0, mnch_tinto: 0, acabados: 0, medidas: 0, jaladuras: 0, total_defec: 0, a1: 0, a2: 0, a3: 0, a4: 0, lote_no_aprob: 0, cant_prend_rech: 0 };
+                        // compute a sum of all relevant numeric fields (excluding equipo)
+                        const sumFields = (row.cant_auditada || 0) + (row.cant_muestra || 0) + (row.tela || 0) + (row.huecos || 0) + (row.punt_saltadas || 0) + (row.punt_cortadas || 0) + (row.hilos || 0) + (row.cost_defectuosas || 0) + (row.operac_faltantes || 0) + (row.mnch_aceite || 0) + (row.mnch_suciedad || 0) + (row.mnch_tinto || 0) + (row.acabados || 0) + (row.medidas || 0) + (row.jaladuras || 0) + (row.total_defec || 0) + (row.a1 || 0) + (row.a2 || 0) + (row.a3 || 0) + (row.a4 || 0) + (row.lote_no_aprob || 0) + (row.cant_prend_rech || 0);
+                        if (sumFields === 0) continue; // skip empty row
+                        const totalDef = row.total_defec || 0;
+                        const cantM = row.cant_muestra || 0;
+                        const pctDef = (cantM > 0) ? (totalDef / cantM * 100) : 0;
+                        const totalA = (row.a1 || 0) + (row.a2 || 0) + (row.a3 || 0) + (row.a4 || 0) + (row.lote_no_aprob || 0);
+                        const nivelAcept = (totalA > 0) ? ((row.a1 || 0) / totalA * 100) : 0;
+                        // sumar para totales
+                        totals.cant_auditada += (row.cant_auditada || 0);
+                        totals.cant_muestra += (row.cant_muestra || 0);
+                        totals.tela += (row.tela || 0);
+                        totals.huecos += (row.huecos || 0);
+                        totals.punt_saltadas += (row.punt_saltadas || 0);
+                        totals.punt_cortadas += (row.punt_cortadas || 0);
+                        totals.hilos += (row.hilos || 0);
+                        totals.cost_defectuosas += (row.cost_defectuosas || 0);
+                        totals.operac_faltantes += (row.operac_faltantes || 0);
+                        totals.mnch_aceite += (row.mnch_aceite || 0);
+                        totals.mnch_suciedad += (row.mnch_suciedad || 0);
+                        totals.mnch_tinto += (row.mnch_tinto || 0);
+                        totals.acabados += (row.acabados || 0);
+                        totals.medidas += (row.medidas || 0);
+                        totals.jaladuras += (row.jaladuras || 0);
+                        totals.total_defec += (totalDef || 0);
+                        totals.a1 += (row.a1 || 0);
+                        totals.a2 += (row.a2 || 0);
+                        totals.a3 += (row.a3 || 0);
+                        totals.a4 += (row.a4 || 0);
+                        totals.lote_no_aprob += (row.lote_no_aprob || 0);
+                        totals.totalA += (totalA || 0);
+                        totals.cant_prend_rech += (row.cant_prend_rech || 0);
+
+                        // Verificar si el equipo está entre los 3 peores por %Def
+                        const esPeorDef = peores3Def.includes(eq);
+                        const rowClass = esPeorDef ? 'peor-equipo' : '';
+                        html += '<tr class="' + rowClass + '">' +
+                            '<td><a href="#" class="eq-link" data-eq="' + (row.equipo || '') + '">' + (row.equipo || '') + '</a></td>' +
+                            '<td>' + nf.format(row.cant_auditada || 0) + '</td>' +
+                            '<td style="background-color: rgb(238,236,225)">' + nf.format(row.cant_muestra || 0) + '</td>' +
+                            '<td>' + nf.format(row.tela || 0) + '</td>' +
+                            '<td style="background-color: rgb(216,228,188)">' + nf.format(row.huecos || 0) + '</td>' +
+                            '<td style="background-color: rgb(216,228,188)">' + nf.format(row.punt_saltadas || 0) + '</td>' +
+                            '<td style="background-color: rgb(216,228,188)">' + nf.format(row.punt_cortadas || 0) + '</td>' +
+                            '<td style="background-color: rgb(216,228,188)">' + nf.format(row.hilos || 0) + '</td>' +
+                            '<td style="background-color: rgb(216,228,188)">' + nf.format(row.cost_defectuosas || 0) + '</td>' +
+                            '<td style="background-color: rgb(216,228,188)">' + nf.format(row.operac_faltantes || 0) + '</td>' +
+                            '<td style="background-color: rgb(228,223,236)">' + nf.format(row.mnch_aceite || 0) + '</td>' +
+                            '<td style="background-color: rgb(228,223,236)">' + nf.format(row.mnch_suciedad || 0) + '</td>' +
+                            '<td style="background-color: rgb(228,223,236)">' + nf.format(row.mnch_tinto || 0) + '</td>' +
+                            '<td style="background-color: rgb(204,255,255)">' + nf.format(row.acabados || 0) + '</td>' +
+                            '<td style="background-color: rgb(204,255,255)">' + nf.format(row.medidas || 0) + '</td>' +
+                            '<td>' + nf.format(row.jaladuras || 0) + '</td>' +
+                            '<td style="background-color: rgb(238,236,225)">' + nf.format(totalDef) + '</td>' +
+                            '' + tdPct(pctDef) +
+                            '<td>' + nf.format(row.a1 || 0) + '</td>' +
+                            '<td>' + nf.format(row.a2 || 0) + '</td>' +
+                            '<td>' + nf.format(row.a3 || 0) + '</td>' +
+                            '<td>' + nf.format(row.a4 || 0) + '</td>' +
+                            '<td>' + nf.format(row.lote_no_aprob || 0) + '</td>' +
+                            '<td style="background-color: rgb(238,236,225)">' + nf.format(totalA) + '</td>' +
+                            '' + tdNivel(nivelAcept) +
+                            '<td>' + nf.format(row.cant_prend_rech || 0) + '</td>' +
+                            '</tr>';
+                        visibleCount++;
+                        if (eq === 19 && minEq <= 19 && maxEq >= 20) {
+                            // fila delgada en blanco como división entre equipo 19 y 20
+                            html += '<tr>' +
+                                '<td colspan="26" style="padding:0;background:#ffffff;height:6px;border:none"></td>' +
+                                '</tr>';
+                        }
+                    }
+                    if (visibleCount === 0) {
+                        html += '<tr><td colspan="26" style="text-align:center;padding:18px;color:#666">No hay datos para equipos ' + minEq + '-' + maxEq + ' con el filtro seleccionado.</td></tr>';
+                    } else {
+                        // insertar fila delgada en blanco entre la última fila de equipo visible y la fila de Totales
+                        html += '<tr>' +
+                            '<td colspan="26" style="padding:0;background:#ffffff;height:6px;border:none"></td>' +
+                            '</tr>';
+                        // fila de totales (no sumar columnas de porcentaje)
+                        html += '<tr style="font-weight:700;background:#f5f5f5">' +
+                            '<td>Total</td>' +
+                            '<td>' + nf.format(totals.cant_auditada) + '</td>' +
+                            '<td>' + nf.format(totals.cant_muestra) + '</td>' +
+                            '<td>' + nf.format(totals.tela) + '</td>' +
+                            '<td>' + nf.format(totals.huecos) + '</td>' +
+                            '<td>' + nf.format(totals.punt_saltadas) + '</td>' +
+                            '<td>' + nf.format(totals.punt_cortadas) + '</td>' +
+                            '<td>' + nf.format(totals.hilos) + '</td>' +
+                            '<td>' + nf.format(totals.cost_defectuosas) + '</td>' +
+                            '<td>' + nf.format(totals.operac_faltantes) + '</td>' +
+                            '<td>' + nf.format(totals.mnch_aceite) + '</td>' +
+                            '<td>' + nf.format(totals.mnch_suciedad) + '</td>' +
+                            '<td>' + nf.format(totals.mnch_tinto) + '</td>' +
+                            '<td>' + nf.format(totals.acabados) + '</td>' +
+                            '<td>' + nf.format(totals.medidas) + '</td>' +
+                            '<td>' + nf.format(totals.jaladuras) + '</td>' +
+                            '<td>' + nf.format(totals.total_defec) + '</td>' +
+                            '<td></td>' +
+                            '<td>' + nf.format(totals.a1) + '</td>' +
+                            '<td>' + nf.format(totals.a2) + '</td>' +
+                            '<td>' + nf.format(totals.a3) + '</td>' +
+                            '<td>' + nf.format(totals.a4) + '</td>' +
+                            '<td>' + nf.format(totals.lote_no_aprob) + '</td>' +
+                            '<td>' + nf.format(totals.totalA) + '</td>' +
+                            '' + tdNivel((totals.totalA && totals.totalA > 0) ? (totals.a1 / totals.totalA * 100) : 0) +
+                            '<td>' + nf.format(totals.cant_prend_rech) + '</td>' +
+                            '</tr>';
+
+                        // fila de porcentajes: para columnas de defectos calcular totalCol / C.Ms; para A1..A4 y Lot No Aprob calcular totalAx / TotalA
+                        const denomDefs = (totals.cant_muestra && totals.cant_muestra > 0) ? totals.cant_muestra : 0;
+                        const denomA = (totals.totalA && totals.totalA > 0) ? totals.totalA : 0;
+                        const denomAudit = (totals.cant_auditada && totals.cant_auditada > 0) ? totals.cant_auditada : 0;
+                        function pct(v, denom) { return denom > 0 ? nfPctDef.format((v / denom * 100)) + '%' : nfPctDef.format(0) + '%'; }
+
+                        html += '<tr style="font-weight:700;background:#fafafa">' +
+                            '<td colspan="3">%defectuoso</td>' +
+                            '<td>' + pct(totals.tela, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.huecos, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.punt_saltadas, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.punt_cortadas, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.hilos, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.cost_defectuosas, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.operac_faltantes, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.mnch_aceite, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.mnch_suciedad, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.mnch_tinto, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.acabados, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.medidas, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.jaladuras, denomDefs) + '</td>' +
+                            '<td>' + pct(totals.total_defec, denomDefs) + '</td>' +
+                            '<td></td>' +
+                            '' + tdNivel((denomA > 0) ? (totals.a1 / denomA * 100) : 0) +
+                            '<td>' + (denomA > 0 ? nfPctDef.format(totals.a2 / denomA * 100) + '%' : nfPctDef.format(0) + '%') + '</td>' +
+                            '<td>' + (denomA > 0 ? nfPctDef.format(totals.a3 / denomA * 100) + '%' : nfPctDef.format(0) + '%') + '</td>' +
+                            '<td>' + (denomA > 0 ? nfPctDef.format(totals.a4 / denomA * 100) + '%' : nfPctDef.format(0) + '%') + '</td>' +
+                            '<td>' + (denomA > 0 ? nfPctDef.format(totals.lote_no_aprob / denomA * 100) + '%' : nfPctDef.format(0) + '%') + '</td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td>' + (denomAudit > 0 ? nfPctDef.format(totals.cant_prend_rech / denomAudit * 100) + '%' : nfPctDef.format(0) + '%') + '</td>' +
+                            '</tr>';
+                        // fila de participacion: cada defecto sobre Total T.Def
+                        const denomPart = (totals.total_defec && totals.total_defec > 0) ? totals.total_defec : 0;
+                        function partPct(v) { return denomPart > 0 ? nfPctDef.format((v / denomPart * 100)) + '%' : nfPctDef.format(0) + '%'; }
+                        html += '<tr style="font-weight:700;background:#fffef0">' +
+                            '<td colspan="3">%Part.</td>' +
+                            '<td>' + partPct(totals.tela) + '</td>' +
+                            '<td>' + partPct(totals.huecos) + '</td>' +
+                            '<td>' + partPct(totals.punt_saltadas) + '</td>' +
+                            '<td>' + partPct(totals.punt_cortadas) + '</td>' +
+                            '<td>' + partPct(totals.hilos) + '</td>' +
+                            '<td>' + partPct(totals.cost_defectuosas) + '</td>' +
+                            '<td>' + partPct(totals.operac_faltantes) + '</td>' +
+                            '<td>' + partPct(totals.mnch_aceite) + '</td>' +
+                            '<td>' + partPct(totals.mnch_suciedad) + '</td>' +
+                            '<td>' + partPct(totals.mnch_tinto) + '</td>' +
+                            '<td>' + partPct(totals.acabados) + '</td>' +
+                            '<td>' + partPct(totals.medidas) + '</td>' +
+                            '<td>' + partPct(totals.jaladuras) + '</td>' +
+                            '<td>' + partPct(totals.total_defec) + '</td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '</tr>';
+                        // fila que suma las participaciones agrupadas solicitadas
+                        const sumaGrp1 = (totals.huecos || 0) + (totals.punt_saltadas || 0) + (totals.punt_cortadas || 0) + (totals.hilos || 0) + (totals.cost_defectuosas || 0) + (totals.operac_faltantes || 0);
+                        const sumaManch = (totals.mnch_aceite || 0) + (totals.mnch_suciedad || 0) + (totals.mnch_tinto || 0);
+                        const sumaAcab = (totals.acabados || 0) + (totals.medidas || 0);
+                        html += '<tr style="font-weight:700;background:#eef7ff">' +
+                            '<td colspan="3">Suma %Part.</td>' +
+                            '<td>' + partPct(totals.tela) + '</td>' +
+                            '<td colspan="6" style="background-color: rgb(216,228,188)">' + partPct(sumaGrp1) + '</td>' +
+                            '<td colspan="3" style="background-color: rgb(228,223,236)">' + partPct(sumaManch) + '</td>' +
+                            '<td colspan="2" style="background-color: rgb(204,255,255)">' + partPct(sumaAcab) + '</td>' +
+                            '<td>' + partPct(totals.jaladuras) + '</td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '<td></td>' +
+                            '</tr>';
+                    }
+                    html += '</tbody></table></div>';
+                    modal.innerHTML = html;
+                    ol.style.display = 'flex';
+                    // Attach small-chart tooltip for equipo links inside the modal
+                    (function () {
+                        // ensure tooltip container
+                        let chartTT = document.getElementById('chartTooltip');
+                        if (!chartTT) {
+                            chartTT = document.createElement('div');
+                            chartTT.id = 'chartTooltip';
+                            chartTT.className = 'mini-tooltip';
+                            chartTT.style.width = '320px';
+                            chartTT.style.padding = '8px';
+                            chartTT.style.display = 'none';
+                            // Ensure tooltip is positioned above modal overlays
+                            chartTT.style.position = 'fixed';
+                            chartTT.style.zIndex = '20000';
+                            chartTT.style.pointerEvents = 'auto';
+                            chartTT.innerHTML = '<div style="font-weight:700;margin-bottom:6px" id="chartTTTitle"></div><div style="height:160px"><canvas id="chartTTCanvas" width="300" height="150"></canvas></div>';
+                            document.body.appendChild(chartTT);
+                        }
+
+                        function hideChartTT() { try { if (window._eqTooltipChart) { window._eqTooltipChart.destroy(); window._eqTooltipChart = null; } } catch (e) { } chartTT.style.display = 'none'; }
+
+                        function showChartForEquipoLink(linkEl, eqNum) {
+                            const meta = window.latestFilteredData || {};
+                            const anchor = { year: Number(meta.filteredYear || FILTER_YEAR), value: Number(meta.filteredPeriodValue || PERIOD_VALUE), type: (meta.filteredPeriodType || PERIOD_TYPE) };
+                            // lastNPeriodsAnchored computes the last N periods ending BEFORE the provided anchor.
+                            // To include the selected period (ej. SEM52) in the displayed series, pass the NEXT period as anchor
+                            let anchorForSeries = anchor;
+                            try {
+                                if (anchor.type === 'Sem') {
+                                    const nextDate = dateOfISOWeek(anchor.value, anchor.year);
+                                    nextDate.setDate(nextDate.getDate() + 7);
+                                    const isoNext = getISOWeekYear(nextDate);
+                                    anchorForSeries = { year: isoNext.year, value: isoNext.week, type: 'Sem' };
+                                } else {
+                                    // Mes: move to first day of next month
+                                    let yy = Number(anchor.year); let mm = Number(anchor.value);
+                                    mm = mm + 1; if (mm > 12) { mm = 1; yy += 1; }
+                                    anchorForSeries = { year: yy, value: mm, type: 'Mes' };
+                                }
+                            } catch (e) { /* fallback: use anchor as-is */ }
+                            const res = computeSeriesForOptions({ type: anchor.type || PERIOD_TYPE, lastN: 8, equipo: Number(eqNum), anchor: anchorForSeries });
+                            // build short X labels like S45 S46 ... when period is weeks
+                            let labelsShort = res.labels || [];
+                            try {
+                                if ((anchorForSeries && anchorForSeries.type === 'Sem') || (anchor.type === 'Sem')) {
+                                    const periodsArr = lastNPeriodsAnchored('Sem', 8, anchorForSeries);
+                                    labelsShort = periodsArr.map(p => {
+                                        // p.key format: YYYY-Www
+                                        const m = (p.key || '').match(/-W(\d{1,2})$/);
+                                        if (m) return 'S' + String(Number(m[1]));
+                                        // fallback: try to parse from label 'Sem 52/2025'
+                                        const ml = (p.label || '').match(/(\d{1,2})/);
+                                        return ml ? ('S' + String(Number(ml[1]))) : (p.label || '');
+                                    });
+                                }
+                            } catch (e) { labelsShort = res.labels || []; }
+                            const hasData = (res && Array.isArray(res.pctDef) && res.pctDef.some(v => v > 0));
+                            const titleEl = document.getElementById('chartTTTitle');
+                            titleEl.textContent = 'Equipo ' + eqNum + ' — %Def. (últimas 8)';
+                            const canvas = document.getElementById('chartTTCanvas');
+                            if (!canvas) return;
+                            // destroy previous small chart
+                            try { if (window._eqTooltipChart) { window._eqTooltipChart.destroy(); window._eqTooltipChart = null; } } catch (e) { }
+                            const ctx = canvas.getContext('2d');
+                            if (!hasData) { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.font = '12px Arial'; ctx.fillStyle = '#333'; ctx.fillText('No hay datos históricos para este equipo', 8, 20); }
+                            else {
+                                window._eqTooltipChart = new Chart(ctx, {
+                                    type: 'bar',
+                                    data: {
+                                        labels: labelsShort, datasets: [
+                                            { type: 'bar', label: 'Nivel Acep', data: (res.pctNivel || []), yAxisID: 'yNivel', backgroundColor: 'rgba(75,192,192,0.6)', barPercentage: 0.6 },
+                                            { type: 'line', label: '%Def.', data: res.pctDef, yAxisID: 'yDef', borderColor: 'rgba(203,23,46,0.9)', backgroundColor: 'rgba(203,23,46,0.12)', tension: 0.2, pointRadius: 3, fill: true }
+                                        ]
+                                    },
+                                    options: {
+                                        responsive: false, maintainAspectRatio: false, scales: { x: { ticks: { autoSkip: false } }, yDef: { type: 'linear', position: 'left', ticks: { callback: v => v + '%' } }, yNivel: { type: 'linear', position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: v => v + '%' } } }, plugins: { legend: { display: false }, datalabels: { display: false } }
+                                    }
+                                });
+                            }
+                            // position tooltip near element
+                            chartTT.style.display = 'block';
+                            const r = linkEl.getBoundingClientRect(); const ttR = chartTT.getBoundingClientRect();
+                            let left = r.left + (r.width / 2) - (ttR.width / 2); let top = r.top - ttR.height - 8;
+                            if (top < 8) top = r.bottom + 8; if (left < 8) left = 8; if (left + ttR.width > window.innerWidth - 8) left = window.innerWidth - ttR.width - 8;
+                            chartTT.style.left = left + 'px'; chartTT.style.top = top + 'px';
+                            // outside click hide
+                            function hideOnDocClick(ev) { if (!chartTT.contains(ev.target) && !linkEl.contains(ev.target)) { hideChartTT(); document.removeEventListener('click', hideOnDocClick); } }
+                            setTimeout(() => document.addEventListener('click', hideOnDocClick), 0);
+                        }
+
+                        // attach click listeners on equipo links
+                        const modalRoot = document.getElementById('modalDefects');
+                        if (modalRoot) {
+                            modalRoot.querySelectorAll('.eq-link').forEach(a => {
+                                a.style.cursor = 'pointer';
+                                a.addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); const eq = this.dataset.eq || this.textContent || ''; showChartForEquipoLink(this, eq); });
+                            });
+                        }
+                    })();
+                    // attach export button
+                    const exportBtn = document.getElementById('exportExcelDef');
+                    if (exportBtn) { exportBtn.onclick = function () { const fname = 'AUDITORIA_DEFECTOS_' + year + '_' + (pType === 'Sem' ? ('SEM' + pVal) : ('MES' + pVal)) + '_EQ' + minEq + '-' + maxEq + '.xls'; exportModalTableToExcel('modalDefects', fname); }; }
+                    // close handlers (use onclick to avoid duplicates)
+                    const closeBtn = document.getElementById('closeModalDef');
+                    if (closeBtn) closeBtn.onclick = () => { ol.style.display = 'none'; };
+                    ol.onclick = (ev) => { if (ev.target === ol) ol.style.display = 'none'; };
+                }
+                // Show modal with %BAP per equipo and per day (Lun-Dom) plus weekly summary
+                function showBapModal(perEquipo, minEq = 1, maxEq = 29, ubicLabel = 'COFACO') {
+                    const days = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+                    function dateOfISOWeek(w, y) {
+                        const week = Number(w);
+                        const year = Number(y);
+                        // Algorithm: get a date in the target week, then compute Monday
+                        const simple = new Date(year, 0, 1 + (week - 1) * 7);
+                        const dow = simple.getDay(); // 0 Sun..6 Sat
+                        let ISOweekStart = new Date(simple);
+                        if (dow <= 4) { // Mon..Thu -> back to Monday
+                            ISOweekStart.setDate(simple.getDate() - (dow === 0 ? 6 : dow - 1));
+                        } else { // Fri..Sat -> forward to next Monday
+                            ISOweekStart.setDate(simple.getDate() + (8 - dow));
+                        }
+                        ISOweekStart.setHours(0, 0, 0, 0);
+                        return ISOweekStart;
+                    }
+                    function formatDateShort(d) {
+                        if (!d || !(d instanceof Date) || isNaN(d)) return '';
+                        const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                        const dd = d.getDate();
+                        const ddStr = dd < 10 ? '0' + dd : String(dd);
+                        return ddStr + '/' + meses[d.getMonth()];
+                    }
+                    const { ol, modal } = ensureModalShell('modalOverlayBap', 'modalBap');
+                    const meta = window.latestFilteredData || {};
+                    const year = meta.filteredYear || FILTER_YEAR;
+                    const pType = meta.filteredPeriodType || PERIOD_TYPE;
+                    const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
+                    let title = 'BIEN A LA PRIMERA - ' + ubicLabel + ' — ' + year + ' / ' + (pType === 'Sem' ? ('Semana ' + pVal) : ('Mes ' + pVal)) + ' — Equipos ' + minEq + '-' + maxEq;
+                    // compute header labels with dates (for week -> Monday..Sunday; for month -> first 7 days)
+                    let baseDate = new Date();
+                    if (pType === 'Sem') {
+                        baseDate = dateOfISOWeek(Number(pVal), Number(year));
+                    } else {
+                        // month: use first day of selected month
+                        baseDate = new Date(Number(year), Number(pVal) - 1, 1);
+                    }
+                    const dayLabels = [];
+                    for (let i = 0; i < 7; i++) {
+                        const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + i);
+                        dayLabels.push(days[i] + ' ' + formatDateShort(d));
+                    }
+                    let html = buildModalHeaderHtml(title, 'closeModalBap', 'exportExcelBap');
+                    // build table headers (with dates)
+                    html += '<div class="table-wrap"><table><thead>';
+                    html += '<tr><th rowspan="2">Equipo</th>';
+                    dayLabels.forEach(d => { html += '<th colspan="3">' + d + '</th>'; });
+                    // small separator column between last day and RES SEM
+                    html += '<th rowspan="2" style="width:12px;background:#ffffff;border:none"></th>';
+                    html += '<th colspan="3">RES SEM</th>';
+                    html += '</tr>';
+                    html += '<tr>';
+                    for (let i = 0; i < dayLabels.length; i++) { html += '<th>Aprob 1ra</th><th>Lotes Aud</th><th>%BAP</th>'; }
+                    // RES SEM subheaders (separator has rowspan=2)
+                    html += '<th>Aprob 1ra</th><th>Lotes Aud</th><th>%BAP</th>';
+                    html += '</tr></thead><tbody>';
+                    const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+                    const nfPct = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                    // Pre-calcular %BAP semanal de cada equipo para identificar los 3 peores (menor %BAP)
+                    const equiposConPctBap = [];
+                    for (let eq = minEq; eq <= maxEq; eq++) {
+                        const key = String(eq);
+                        const row = perEquipo && perEquipo[key] ? perEquipo[key] : null;
+                        if (!row) continue;
+                        const any = Object.values(row.daily || {}).some(d => (d.a1 || 0) + (d.total || 0) > 0);
+                        if (!any) continue;
+                        let wkA1 = 0, wkTotal = 0;
+                        for (let d = 0; d < 7; d++) {
+                            const val = (row.daily && row.daily[d]) ? row.daily[d] : { a1: 0, total: 0 };
+                            wkA1 += (val.a1 || 0);
+                            wkTotal += (val.total || 0);
+                        }
+                        const wkPct = wkTotal > 0 ? (wkA1 / wkTotal * 100) : 100; // Si no hay datos, asignar 100% para no considerarlo como peor
+                        equiposConPctBap.push({ eq: eq, pctBap: wkPct });
+                    }
+                    // Ordenar por %BAP ascendente y tomar los 3 peores (menor %BAP)
+                    equiposConPctBap.sort((a, b) => a.pctBap - b.pctBap);
+                    const peores3Bap = equiposConPctBap.slice(0, 3).map(e => e.eq);
+                    // Totals per day
+                    const dayTotals = []; for (let d = 0; d < 7; d++) dayTotals[d] = { a1: 0, total: 0 };
+                    let weeklyTotals = { a1: 0, total: 0 };
+                    let visible = 0;
+                    const totalCols = 1 + (dayLabels.length * 3) + 1 + 3; // Equipo + days*(Aprob/Lotes/%BAP) + sep + RES SEM(3)
+                    for (let eq = minEq; eq <= maxEq; eq++) {
+                        const key = String(eq);
+                        const row = perEquipo && perEquipo[key] ? perEquipo[key] : null;
+                        // skip entirely empty equipos
+                        if (!row) continue;
+                        // check whether any day has data
+                        const any = Object.values(row.daily || {}).some(d => (d.a1 || 0) + (d.total || 0) > 0);
+                        if (!any) continue;
+                        visible++;
+                        // Verificar si el equipo está entre los 3 peores por %BAP
+                        const esPeorBap = peores3Bap.includes(eq);
+                        const rowClassBap = esPeorBap ? 'peor-equipo-bap' : '';
+                        html += '<tr class="' + rowClassBap + '"><td style="font-weight:700">' + eq + '</td>';
+                        let wkA1 = 0, wkTotal = 0;
+                        for (let d = 0; d < 7; d++) {
+                            const val = (row.daily && row.daily[d]) ? row.daily[d] : { a1: 0, total: 0 };
+                            const a1 = val.a1 || 0; const tot = val.total || 0;
+                            const pct = tot > 0 ? (a1 / tot * 100) : 0;
+                            if (tot === 0) {
+                                html += '<td></td>';
+                                html += '<td></td>';
+                                html += '<td></td>';
+                            } else {
+                                html += '<td>' + nf.format(a1) + '</td>';
+                                html += '<td>' + nf.format(tot) + '</td>';
+                                html += '<td style="font-weight:700;background:rgb(235,241,222)">' + nfPct.format(pct) + '%</td>';
+                            }
+                            dayTotals[d].a1 += a1; dayTotals[d].total += tot;
+                            wkA1 += a1; wkTotal += tot;
+                        }
+                        weeklyTotals.a1 += wkA1; weeklyTotals.total += wkTotal;
+                        const wkPct = wkTotal > 0 ? (wkA1 / wkTotal * 100) : 0;
+                        // small separator before RES SEM
+                        html += '<td style="width:12px;background:#fff;border:none"></td>';
+                        if (wkTotal === 0) {
+                            html += '<td></td>';
+                            html += '<td></td>';
+                            html += '<td></td>';
+                        } else {
+                            html += '<td style="font-weight:700">' + nf.format(wkA1) + '</td>';
+                            html += '<td style="font-weight:700">' + nf.format(wkTotal) + '</td>';
+                            html += '<td style="font-weight:700;background:rgb(235,241,222)">' + nfPct.format(wkPct) + '%</td>';
+                        }
+                        html += '</tr>';
+                    }
+                    if (visible === 0) { html += '<tr><td colspan="' + totalCols + '" style="text-align:center;padding:18px;color:#666">No hay datos para equipos ' + minEq + '-' + maxEq + ' con el filtro seleccionado.</td></tr>'; }
+                    else {
+                        // totals row
+                        html += '<tr style="font-weight:700;background:#f5f5f5"><td>Total</td>';
+                        for (let d = 0; d < 7; d++) {
+                            const a1 = dayTotals[d].a1; const tot = dayTotals[d].total; const pct = tot > 0 ? (a1 / tot * 100) : 0;
+                            if (tot === 0) {
+                                html += '<td></td><td></td><td></td>';
+                            } else {
+                                html += '<td>' + nf.format(a1) + '</td><td>' + nf.format(tot) + '</td><td style="font-weight:700;background:rgb(255,255,0)">' + nfPct.format(pct) + '%</td>';
+                            }
+                        }
+                        // separator before RES SEM totals
+                        html += '<td style="width:12px;background:#fff;border:none"></td>';
+                        if (weeklyTotals.total === 0) {
+                            html += '<td></td><td></td><td></td>';
+                        } else {
+                            const totalPct = (weeklyTotals.total > 0) ? (weeklyTotals.a1 / weeklyTotals.total * 100) : 0;
+                            html += '<td>' + nf.format(weeklyTotals.a1) + '</td><td>' + nf.format(weeklyTotals.total) + '</td><td style="font-weight:700;background:rgb(255,255,0)">' + nfPct.format(totalPct) + '%</td>';
+                        }
+                        html += '</tr>';
+                    }
+                    html += '</tbody></table></div>';
+                    html += '<p style="font-style:italic;margin-top:8px">Los espacios en blanco indican que ese dia no hubo auditoria</p>';
+                    modal.innerHTML = html;
+                    ol.style.display = 'flex';
+                    // attach export button
+                    const exportBtnB = document.getElementById('exportExcelBap');
+                    if (exportBtnB) { exportBtnB.onclick = function () { const fname = 'AUDITORIA_BAP_' + year + '_' + (pType === 'Sem' ? ('SEM' + pVal) : ('MES' + pVal)) + '_EQ' + minEq + '-' + maxEq + '.xls'; exportModalTableToExcel('modalBap', fname); }; }
+                    const closeBtn = document.getElementById('closeModalBap'); if (closeBtn) closeBtn.onclick = () => { ol.style.display = 'none'; };
+                    ol.onclick = (ev) => { if (ev.target === ol) ol.style.display = 'none'; };
+                }
+                // Expose modal functions globally for Cititex chart handlers
+                window._showModalDefects = showModalDefects;
+                window._showBapModal = showBapModal;
+            } catch (e) { console.warn('renderCharts err', e) }
+        }
+
+        // --- Cititex chart rendering (COSTURA only, with sub-donuts for Eq 1-14 and 15-29) ---
+        function renderChartsCititex(sumsCT) {
+            try {
+                const container = document.getElementById('chartsContainerCT');
+                if (!container) return;
+                const nfPct = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const nfBap = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                const nfNum = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+                const data = sumsCT.costura || { cant: 0, defectos: 0, total: 0, a1: 0 };
+                const citi1 = sumsCT.costura_1_14 || { cant: 0, defectos: 0, total: 0, a1: 0 };
+                const citis = sumsCT.costura_15_29 || { cant: 0, defectos: 0, total: 0, a1: 0 };
+                const pctDef = (data.cant && data.cant > 0) ? (data.defectos / data.cant * 100) : 0;
+                const pctBap = (data.total && data.total > 0) ? (data.a1 / data.total * 100) : 0;
+                const pctCiti1Def = (citi1.cant && citi1.cant > 0) ? (citi1.defectos / citi1.cant * 100) : 0;
+                const pctCitisDef = (citis.cant && citis.cant > 0) ? (citis.defectos / citis.cant * 100) : 0;
+                const pctCiti1Bap = (citi1.total && citi1.total > 0) ? (citi1.a1 / citi1.total * 100) : 0;
+                const pctCitisBap = (citis.total && citis.total > 0) ? (citis.a1 / citis.total * 100) : 0;
+                const leftSVG = makeDonutSVG(pctDef, 160, 18, '#2b6cb0', '#e6eef8');
+                const rightSVG = makeDonutSVG(pctBap, 160, 18, '#48bb78', '#e6eef8');
+                const citi1DefSVG = makeDonutSVG(pctCiti1Def, 80, 12, '#2b6cb0', '#e6eef8');
+                const citisDefSVG = makeDonutSVG(pctCitisDef, 80, 12, '#2b6cb0', '#e6eef8');
+                const citi1BapSVG = makeDonutSVG(pctCiti1Bap, 80, 12, '#48bb78', '#e6eef8');
+                const citisBapSVG = makeDonutSVG(pctCitisBap, 80, 12, '#48bb78', '#e6eef8');
+                const html = `<div class="charts charts-ct">
+                            <div class="group-charts">
+                                <h3>COSTURA (Equipos 1-29)</h3>
+                                <div class="donut-row">
+                                    <div class="donut" aria-hidden>
+                                        ${leftSVG}
+                                        <div class="center" id="ctCosturaDefCenter" style="cursor:pointer" title="Ver detalle por equipo"><div class="mainPct">${nfPct.format(pctDef)}%</div><div class="sublabel">%Def.</div></div>
+                                        <div class="small-label label-left"><span class="tag">T.Def:</span>${nfNum.format(data.defectos)}</div>
+                                        <div class="small-label label-bottom"><span class="tag">Cant.Muestra:</span>${nfNum.format(data.cant)}</div>
+                                    </div>
+                                    <div class="donut" aria-hidden>
+                                        ${rightSVG}
+                                        <div class="center" id="ctCosturaBapCenter" style="cursor:pointer" title="Ver %BAP por equipo (1-29)"><div class="mainPct">${nfBap.format(pctBap)}%</div><div class="sublabel">%BAP</div></div>
+                                        <div class="small-label label-left"><span class="num-a1">${nfNum.format(data.a1)}</span> <span class="tag-a1">:A1</span></div>
+                                        <div class="small-label label-right"><span class="num-taud">${nfNum.format(data.total)}</span> <span class="tag-aud">:T.Aud</span></div>
+                                    </div>
+                                </div>
+                                <div class="sub-row">
+                                    <div class="sub-left">
+                                        <div class="sub-donuts" aria-hidden>
+                                            <div class="donut small">
+                                                ${citi1DefSVG}
+                                                <div class="center click-center" data-def="${citi1.defectos}" data-cant="${citi1.cant}" data-title="COSTURA (Eq 1-14)"><div class="mainPct">${nfPct.format(pctCiti1Def)}%</div><div class="sublabel">CITI1</div></div>
+                                            </div>
+                                            <div class="donut small">
+                                                ${citisDefSVG}
+                                                <div class="center click-center" data-def="${citis.defectos}" data-cant="${citis.cant}" data-title="COSTURA (Eq 15-29)"><div class="mainPct">${nfPct.format(pctCitisDef)}%</div><div class="sublabel">Citis</div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="sub-right">
+                                        <div class="sub-donuts" aria-hidden>
+                                            <div class="donut small">
+                                                ${citi1BapSVG}
+                                                <div class="center click-center" data-taud="${citi1.total}" data-a1="${citi1.a1}" data-title="COSTURA (Eq 1-14)"><div class="mainPct">${nfBap.format(pctCiti1Bap)}%</div><div class="sublabel">CITI1</div></div>
+                                            </div>
+                                            <div class="donut small">
+                                                ${citisBapSVG}
+                                                <div class="center click-center" data-taud="${citis.total}" data-a1="${citis.a1}" data-title="COSTURA (Eq 15-29)"><div class="mainPct">${nfBap.format(pctCitisBap)}%</div><div class="sublabel">Citis</div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                container.innerHTML = html;
+                // Click on %Def donut -> open defects modal for Cititex
+                const defCenter = document.getElementById('ctCosturaDefCenter');
+                if (defCenter) {
+                    defCenter.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        if (window.latestFilteredData && window.latestFilteredData.perEquipoCT && typeof window._showModalDefects === 'function') {
+                            window._showModalDefects(window.latestFilteredData.perEquipoCT, 1, 29, 'CITITEX');
+                        }
+                    });
+                }
+                // Click on %BAP donut -> open BAP modal for Cititex
+                const bapCenter = document.getElementById('ctCosturaBapCenter');
+                if (bapCenter) {
+                    bapCenter.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        if (window.latestFilteredData && window.latestFilteredData.perEquipoCT && typeof window._showBapModal === 'function') {
+                            window._showBapModal(window.latestFilteredData.perEquipoCT, 1, 29, 'CITITEX');
+                        }
+                    });
+                }
+                // Tooltip for Cititex mini-donuts (same behavior as Cofaco)
+                let tt = document.getElementById('miniTooltip');
+                if (!tt) {
+                    tt = document.createElement('div');
+                    tt.id = 'miniTooltip';
+                    tt.className = 'mini-tooltip';
+                    document.body.appendChild(tt);
+                }
+                function showMiniTooltipForElement(el) {
+                    const nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+                    const ds = el.dataset || {};
+                    const title = ds.title || '';
+                    let content = '';
+                    if (ds.taud !== undefined || ds.a1 !== undefined) {
+                        const taud = Number(ds.taud || 0);
+                        const a1 = Number(ds.a1 || 0);
+                        content = `<div style="font-weight:700;margin-bottom:6px">${title}</div><div>T.Aud: <b>${nf.format(taud)}</b></div><div>A1: <b>${nf.format(a1)}</b></div>`;
+                    } else {
+                        const def = Number(ds.def || 0);
+                        const cant = Number(ds.cant || 0);
+                        content = `<div style="font-weight:700;margin-bottom:6px">${title}</div><div>T.Def: <b>${nf.format(def)}</b></div><div>Cant.Muestra: <b>${nf.format(cant)}</b></div>`;
+                    }
+                    tt.innerHTML = content;
+                    tt.style.display = 'block';
+                    const r = el.getBoundingClientRect();
+                    const ttR = tt.getBoundingClientRect();
+                    let left = r.left + (r.width / 2) - (ttR.width / 2);
+                    let top = r.top - ttR.height - 8;
+                    if (top < 8) top = r.bottom + 8;
+                    if (left < 8) left = 8;
+                    if (left + ttR.width > window.innerWidth - 8) left = window.innerWidth - ttR.width - 8;
+                    tt.style.left = left + 'px';
+                    tt.style.top = top + 'px';
+                    function hideOnDocClick(ev) {
+                        if (!tt.contains(ev.target) && !el.contains(ev.target)) {
+                            tt.style.display = 'none';
+                            document.removeEventListener('click', hideOnDocClick);
+                        }
+                    }
+                    setTimeout(() => document.addEventListener('click', hideOnDocClick), 0);
+                }
+                container.querySelectorAll('.click-center').forEach(cc => {
+                    cc.style.cursor = 'pointer';
+                    cc.addEventListener('click', function (ev) { ev.stopPropagation(); showMiniTooltipForElement(this); });
+                });
+            } catch (e) { console.warn('renderChartsCititex err', e) }
+        }
+
+        // Convierte respuesta GViz (JSONP) a array de objetos [{col: value}]
+        // Descarga de datos GViz: la lógica vive en js/lib/sheets.js (App.lib.sheets).
+        // Se conservan estos wrappers (mismo nombre) para no tocar el resto del panel.
+        function gvizToObjects(resp) {
+            return App.lib.sheets.gvizToObjects(resp);
+        }
+
+        function loadSheetJSONP(sheetId, sheetName) {
+            return App.lib.sheets.loadSheetJSONP(sheetId, sheetName);
+        }
+
+        async function fetchText(url) {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('HTTP ' + res.status + ' from ' + url);
+            return await res.text();
+        }
+
+        function buildPubCsvFromPubUrl(pubUrl) {
+            try {
+                const u = new URL(pubUrl);
+                // If already has output=csv
+                if (u.searchParams.get('output') === 'csv') return pubUrl;
+                // If published URL like /pubhtml or /pub
+                if (u.pathname.includes('/pubhtml') || u.pathname.includes('/pub')) {
+                    // ensure path ends with /pub and set output=csv
+                    u.pathname = u.pathname.replace(/\/pubhtml?$/, '/pub');
+                    u.searchParams.set('output', 'csv');
+                    // keep gid if present; otherwise add default GID
+                    if (!u.searchParams.get('gid')) u.searchParams.set('gid', String(GID));
+                    return u.toString();
+                }
+            } catch (e) {
+                return null;
+            }
+            return null;
+        }
+
+        async function tryFetchVariants(pubUrl) {
+            const urls = [];
+            if (pubUrl) {
+                const csvPub = buildPubCsvFromPubUrl(pubUrl);
+                if (csvPub) urls.push(csvPub);
+            }
+            urls.push(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`);
+            urls.push(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`);
+            urls.push(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=data`);
+
+            let lastErr = null;
+            for (const u of urls) {
+                if (!u) continue;
+                try {
+                    console.log('Intentando: ' + u);
+                    const text = await fetchText(u);
+                    return { url: u, text };
+                } catch (e) {
+                    lastErr = e;
+                    console.warn('fetch failed', u, e);
+                }
+            }
+            throw lastErr || new Error('No se pudo obtener hoja');
+        }
+
+        // Helper functions to show/hide loading modal
+        function showLoading(text = 'Cargando datos...') {
+            const modal = document.getElementById('loadingModal');
+            if (modal) {
+                const loadingText = modal.querySelector('.loading-text');
+                if (loadingText) loadingText.textContent = text;
+                modal.classList.add('active');
+            }
+            setStatus(text, 'loading');
+        }
+        function hideLoading() {
+            const modal = document.getElementById('loadingModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        // Badge de estado del toast común (abajo-derecha): el router lo reubica
+        // en #app-toast al montar la vista (showStatusToast) y lo auto-oculta
+        // al quedar "ok" — mismo patrón que el #statusBadge de las demás vistas.
+        function setStatus(text, type = 'loading') {
+            const b = document.getElementById('statusBadge');
+            if (!b) return;
+            b.className = 'badge';
+            if (type === 'ok') {
+                b.classList.add('badge-ok');
+                b.innerHTML = 'Datos <span class="check">✓</span>';
+            } else if (type === 'error') {
+                b.classList.add('badge-error');
+                b.textContent = text || 'Error al cargar datos';
+            } else {
+                b.classList.add('badge-loading');
+                b.textContent = text || 'Cargando datos...';
+            }
+        }
+
+        async function loadAndCompute() {
+            console.log('Descargando hoja...');
+            try {
+                // Intentar primero cargar vía JSONP (Google Visualization) desde la hoja 'data'
+                let data = null;
+                try {
+                    console.log('Cargando via GViz JSONP (sheet:data)...');
+                    const jsonObjects = await loadSheetJSONP(SHEET_ID, 'data');
+                    if (jsonObjects && jsonObjects.length > 0) {
+                        data = jsonObjects;
+                    }
+                } catch (jerr) {
+                    console.warn('JSONP fallo:', jerr);
+                    // sigue al fallback de CSV
+                }
+
+                if (!data) {
+                    const result = await tryFetchVariants();
+                    let csv = result.text;
+                    // si es gviz JSON, deberá limpiarse y extraer los rows
+                    if (result.url.includes('out:json')) {
+                        // gviz returns: /*O_o*/\ngoogle.visualization.Query.setResponse(...) ;
+                        const match = csv.match(/setResponse\((.*)\);?\s*$/s);
+                        if (!match) throw new Error('Respuesta gviz inesperada');
+                        const json = JSON.parse(match[1]);
+                        // intentar convertir a CSV-like array
+                        const cols = json.table.cols.map(c => c.label || c.id || '');
+                        const rows = json.table.rows.map(r => r.c.map(cell => cell && cell.v !== undefined ? cell.v : ''));
+                        // construir CSV text
+                        const lines = [cols.join(',')].concat(rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')));
+                        csv = lines.join('\n');
+                    }
+                    const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
+                    data = parsed.data;
+                }
+
+                if (!data || data.length === 0) { console.log('No hay datos.'); return; }
+
+                // Identificar columnas
+                const headers = Object.keys(data[0]);
+                // Hacer accesibles los datos y headers para otros componentes (modal/gráfico)
+                window.sheetData = data;
+                window.sheetHeaders = headers;
+                const map = {};
+                headers.forEach(h => {
+                    const nh = norm(h);
+                    if (nh.includes('fecha')) map.fecha = h;
+                    if (nh.includes('ubic')) map.ubic = h;
+                    if (nh.includes('equipo')) map.equipo = h;
+                    if (nh.includes('defect')) map.defectos = h;
+                    // 'total' ambiguous: prefer exact 'total' that's not 'total defectos'
+                    if (nh === 'total') map.total = h;
+                    if (nh.startsWith('a 1') || nh === 'a 1' || nh === 'a1' || nh === 'a  1') map.a1 = h;
+                    // keep cant mapping for fallback, but prefer exact match later
+                    if (nh.includes('cant') || nh.includes('muestra')) map.cant = map.cant || h;
+                });
+
+                // Prefer exact header 'Cant Muestra' if present (normalized)
+                const exactCant = headers.find(h => norm(h) === 'cant muestra');
+                if (exactCant) map.cant = exactCant;
+                // Prefer exact header 'Total Defectos' if present
+                const exactDef = headers.find(h => norm(h) === 'total defectos');
+                if (exactDef) map.defectos = exactDef;
+
+                // Expose the detected map globally so other components reuse the same column choices
+                try { window.colMap = map; } catch (e) { }
+
+                // If fecha not detected, try to auto-detect by sampling columns
+                function detectDateColumn(data, headers) {
+                    const scores = {};
+                    const sampleN = Math.min(50, data.length);
+                    headers.forEach(h => scores[h] = 0);
+                    for (let i = 0; i < sampleN; i++) {
+                        const row = data[i];
+                        headers.forEach(h => {
+                            const v = row[h];
+                            if (v === null || v === undefined) return;
+                            if (parseFechaValue(v)) scores[h]++;
+                        });
+                    }
+                    const sorted = Object.keys(scores).sort((a, b) => scores[b] - scores[a]);
+                    if (scores[sorted[0]] > 0) return sorted[0];
+                    return null;
+                }
+
+                if (!map.fecha) {
+                    const auto = detectDateColumn(data, headers);
+                    if (auto) map.fecha = auto;
+                }
+
+                // Fallback: try to guess by partial names for total
+                if (!map.total) { headers.forEach(h => { if (!map.total && norm(h).includes(' total')) map.total = h; }); }
+
+                // Initialize sums and diagnostic counters
+                const sums = {
+                    costura: { cant: 0, defectos: 0, total: 0, a1: 0 },
+                    costura_1_19: { cant: 0, defectos: 0, total: 0, a1: 0 },
+                    costura_20_29: { cant: 0, defectos: 0, total: 0, a1: 0 },
+                    acabados: { cant: 0, defectos: 0, total: 0, a1: 0 },
+                    acabados_41_49: { cant: 0, defectos: 0, total: 0, a1: 0 }
+                };
+                // Cititex sums (solo COSTURA Eq 1-29)
+                const sumsCT = {
+                    costura: { cant: 0, defectos: 0, total: 0, a1: 0 },
+                    costura_1_14: { cant: 0, defectos: 0, total: 0, a1: 0 },
+                    costura_15_29: { cant: 0, defectos: 0, total: 0, a1: 0 }
+                };
+
+                // Build a mapping from expected defect column canonical names -> header (if present)
+                const targetCanonical = {
+                    cant_auditada: ['cant audit', 'cantidad audit', 'cant auditada'],
+                    cant_muestra: ['cant muestra', 'cant muestra', 'cantidad muestra', 'muestra', 'cantmuestra'],
+                    tela: ['tela'],
+                    huecos: ['huec', 'huecos'],
+                    punt_saltadas: ['punt salta', 'punt salt', 'punt saltadas', 'punt_saltadas', 'puntas saltadas'],
+                    punt_cortadas: ['punt cort', 'punt cortadas', 'punt_cortadas'],
+                    hilos: ['hilos'],
+                    cost_defectuosas: ['cost defect', 'cost defectuosa', 'cost_defectuosas', 'costuras defectuosas'],
+                    operac_faltantes: ['operac falt', 'operac faltantes', 'operaciones faltantes'],
+                    mnch_aceite: ['mnch aceite', 'manch aceite', 'mancha aceite', 'manch_aceite'],
+                    mnch_suciedad: ['mnch suciedad', 'manch suciedad', 'mancha suciedad', 'manch_suciedad'],
+                    mnch_tinto: ['mnch tinto', 'manch tinto', 'mancha tinto', 'manch_tinto', 'tinto'],
+                    acabados_c: ['acabados'],
+                    medidas: ['medid', 'medidas'],
+                    jaladuras: ['jaladur', 'jaladuras', 'jaladuras'],
+                    a1: ['a 1', 'a1', 'a_1'],
+                    a2: ['a 2', 'a2', 'a_2'],
+                    a3: ['a 3', 'a3', 'a_3'],
+                    a4: ['a 4', 'a4', 'a_4'],
+                    lote_no_aprob: ['lote no aprob', 'lote no aprob.', 'lote no aprobado', 'lote no aprobados'],
+                    cant_prend_rech: ['prend rech', 'prend. rech', 'prend rechaz', 'rechaz']
+                };
+                const colField = {};
+                headers.forEach(h => {
+                    const nh = norm(h);
+                    Object.keys(targetCanonical).forEach(key => {
+                        targetCanonical[key].forEach(pat => { if (nh.includes(pat) && !colField[key]) colField[key] = h; });
+                    });
+                });
+                // Ensure main known fields map to earlier detections
+                if (map.cant) colField.cant_muestra = map.cant;
+                if (map.defectos) colField.total_defec = map.defectos;
+                if (map.a1) colField.a1 = map.a1;
+                if (map.total) colField.total_aud = map.total;
+
+                // per-equipo aggregation container
+                const perEquipo = {};
+                const perEquipoCT = {};
+
+                // Preprocess: parse dates for all rows and collect available years/months/weeks
+                let totalRows = 0;
+                let parsedDates = 0;
+                let costuraRows = 0;
+                let acabadosRows = 0;
+                const sampleDates = [];
+                const calendarYearsSet = new Set(); // calendar year for months
+                const isoYearsSet = new Set(); // ISO week-year for weeks
+                const monthsByYear = {}; // calendarYear -> Set(monthIndex 1-12)
+                const weeksByYear = {}; // isoYear -> Set(weekNumber)
+
+                data.forEach(row => {
+                    totalRows++;
+                    const rawFecha = map.fecha ? row[map.fecha] : undefined;
+                    if (sampleDates.length < 10) {
+                        try { const parsedSample = parseFechaValue(rawFecha); const formatted = parsedSample ? formatFecha(parsedSample) : ''; sampleDates.push({ i: totalRows, type: typeof rawFecha, value: String(rawFecha).slice(0, 200), parsed: parsedSample ? parsedSample.toISOString() : null, formatted }); } catch (e) { sampleDates.push({ i: totalRows, type: typeof rawFecha, value: String(rawFecha) }); }
+                    }
+                    const dt = parseFechaValue(rawFecha);
+                    if (!dt || isNaN(dt)) return;
+                    parsedDates++;
+                    row._parsedFecha = dt;
+                    const calendarYear = dt.getFullYear();
+                    const m = dt.getMonth() + 1; // 1-12 (for month grouping we use calendar year)
+                    const iso = getISOWeekYear(dt);
+                    const isoYear = iso.year;
+                    const wk = iso.week;
+                    calendarYearsSet.add(calendarYear);
+                    isoYearsSet.add(isoYear);
+                    monthsByYear[calendarYear] = monthsByYear[calendarYear] || new Set(); monthsByYear[calendarYear].add(m);
+                    weeksByYear[isoYear] = weeksByYear[isoYear] || new Set(); weeksByYear[isoYear].add(wk);
+                });
+
+                // If no years found (maybe fecha detection failed), try auto-detect and re-run preprocess once
+                if (calendarYearsSet.size === 0 && isoYearsSet.size === 0) {
+                    const auto = detectDateColumn(data, headers);
+                    if (auto && auto !== map.fecha) {
+                        map.fecha = auto;
+                        // clear and redo
+                        Object.keys(monthsByYear).forEach(k => delete monthsByYear[k]);
+                        Object.keys(weeksByYear).forEach(k => delete weeksByYear[k]);
+                        calendarYearsSet.clear(); isoYearsSet.clear();
+                        totalRows = 0; parsedDates = 0;
+                        data.forEach(row => {
+                            totalRows++;
+                            const rawFecha2 = row[map.fecha];
+                            const dt2 = parseFechaValue(rawFecha2);
+                            if (!dt2 || isNaN(dt2)) return;
+                            parsedDates++;
+                            row._parsedFecha = dt2;
+                            const calendarYear2 = dt2.getFullYear();
+                            const m2 = dt2.getMonth() + 1;
+                            const iso2 = getISOWeekYear(dt2);
+                            const isoYear2 = iso2.year;
+                            const wk2 = iso2.week;
+                            calendarYearsSet.add(calendarYear2);
+                            isoYearsSet.add(isoYear2);
+                            monthsByYear[calendarYear2] = monthsByYear[calendarYear2] || new Set(); monthsByYear[calendarYear2].add(m2);
+                            weeksByYear[isoYear2] = weeksByYear[isoYear2] || new Set(); weeksByYear[isoYear2].add(wk2);
+                        });
+                    }
+                }
+
+                // Populate year/period selects based on parsed dates
+                const yearSelect = document.getElementById('yearSelect');
+                const periodTypeSel = document.getElementById('periodType');
+                const periodSelect = document.getElementById('periodSelect');
+                // clear
+                yearSelect.innerHTML = '';
+                // build union of calendar years and ISO-week years so the select shows relevant years for either period type
+                const yearsUnion = Array.from(new Set([...Array.from(calendarYearsSet || []), ...Array.from(isoYearsSet || [])])).sort((a, b) => b - a);
+                yearsUnion.forEach(y => { const opt = document.createElement('option'); opt.value = y; opt.textContent = y; yearSelect.appendChild(opt); });
+                const nowYear = (new Date()).getFullYear();
+                // If a year has already been selected by the user and is still available, preserve it.
+                // Otherwise prefer current calendar year if present, else most recent available year.
+                const preserved = (typeof FILTER_YEAR === 'number' && yearsUnion.includes(FILTER_YEAR)) ? FILTER_YEAR : null;
+                const defaultYear = preserved !== null ? preserved : (yearsUnion.includes(nowYear) ? nowYear : (yearsUnion.length ? yearsUnion[0] : nowYear));
+                FILTER_YEAR = defaultYear;
+                // set selected value on the select (preserve user's selection when possible)
+                yearSelect.value = String(FILTER_YEAR);
+
+                // helper to populate periodSelect (preserve current PERIOD_VALUE when possible)
+                function populatePeriodSelect(type, year) {
+                    periodSelect.innerHTML = '';
+                    if (type === 'Mes') {
+                        const months = monthsByYear[year] ? Array.from(monthsByYear[year]).sort((a, b) => a - b) : [];
+                        const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+                        months.forEach(m => { const opt = document.createElement('option'); opt.value = String(m); opt.textContent = meses[m - 1]; periodSelect.appendChild(opt); });
+                    } else {
+                        const weeks = weeksByYear[year] ? Array.from(weeksByYear[year]).sort((a, b) => a - b) : [];
+                        weeks.forEach(w => { const opt = document.createElement('option'); opt.value = String(w); opt.textContent = 'SEM' + w; periodSelect.appendChild(opt); });
+                    }
+                    // preserve previously selected period value if still available
+                    const want = (PERIOD_VALUE !== null && PERIOD_VALUE !== undefined) ? String(PERIOD_VALUE) : null;
+                    if (want) {
+                        let found = -1;
+                        for (let i = 0; i < periodSelect.options.length; i++) { if (periodSelect.options[i].value === want) { found = i; break; } }
+                        if (found >= 0) { periodSelect.selectedIndex = found; }
+                        else if (periodSelect.options.length > 0) { periodSelect.selectedIndex = periodSelect.options.length - 1; }
+                    } else {
+                        if (periodSelect.options.length > 0) periodSelect.selectedIndex = periodSelect.options.length - 1;
+                    }
+                    PERIOD_VALUE = periodSelect.value;
+                }
+
+                // initial population — preserve any existing period-type selection
+                const initialPeriodType = (periodTypeSel && periodTypeSel.value) ? periodTypeSel.value : (PERIOD_TYPE || 'Sem');
+                PERIOD_TYPE = initialPeriodType;
+                if (periodTypeSel) periodTypeSel.value = PERIOD_TYPE;
+                populatePeriodSelect(PERIOD_TYPE, FILTER_YEAR);
+
+                // Debounced reload when filters change so UI updates dynamically
+                let __loadTimer = null;
+                function scheduleLoad(delay = 250) {
+                    if (__loadTimer) clearTimeout(__loadTimer);
+                    __loadTimer = setTimeout(() => { try { showLoading('Aplicando filtros...'); loadAndCompute(); } catch (e) { console.warn('scheduleLoad err', e); hideLoading(); } __loadTimer = null; }, delay);
+                }
+
+                // attach change handlers
+                yearSelect.addEventListener('change', () => { FILTER_YEAR = parseInt(yearSelect.value, 10); populatePeriodSelect(PERIOD_TYPE, FILTER_YEAR); scheduleLoad(250); });
+                periodTypeSel.addEventListener('change', () => { PERIOD_TYPE = periodTypeSel.value; populatePeriodSelect(PERIOD_TYPE, FILTER_YEAR); scheduleLoad(250); });
+                periodSelect.addEventListener('change', () => { PERIOD_VALUE = periodSelect.value; scheduleLoad(200); });
+
+                // Apply filter immediately using current selections (default to last available value)
+                PERIOD_VALUE = periodSelect.value;
+
+                // Now compute sums using the selected filter
+                const selectedYear = Number(FILTER_YEAR);
+                const selectedVal = Number(PERIOD_VALUE);
+                data.forEach(row => {
+                    const dt = row._parsedFecha;
+                    if (!dt) return;
+                    if (PERIOD_TYPE === 'Sem') {
+                        const iso = getISOWeekYear(dt);
+                        if (iso.year !== selectedYear) return;
+                        if (iso.week !== selectedVal) return;
+                    } else {
+                        if (dt.getFullYear() !== selectedYear) return;
+                        if ((dt.getMonth() + 1) !== selectedVal) return;
+                    }
+
+                    // row passes filter
+                    const equipoRaw = map.equipo ? row[map.equipo] : undefined;
+                    const equipoNum = parseInt((equipoRaw || '').toString().replace(/[^0-9\-]/g, ''), 10);
+                    const group = (equipoNum >= 1 && equipoNum <= 29) ? 'costura' : (equipoNum >= 30 && equipoNum <= 40) ? 'acabados' : (equipoNum >= 41 && equipoNum <= 49) ? 'acabados_41_49' : null;
+                    if (!group) return;
+
+                    // Determine ubicación
+                    const ubicRaw = map.ubic ? (row[map.ubic] || '').toString().trim().toLowerCase() : '';
+                    const isCofaco = ubicRaw.includes('cofaco');
+                    const isCititex = ubicRaw.includes('cititex');
+
+                    // --- COFACO accumulation ---
+                    if (isCofaco) {
+                        if (group === 'costura') costuraRows++; else if (group === 'acabados' || group === 'acabados_41_49') acabadosRows++;
+                        sums[group].cant += toNum(row[map.cant]);
+                        sums[group].defectos += toNum(row[map.defectos]);
+                        sums[group].total += toNum(row[map.total]);
+                        sums[group].a1 += toNum(row[map.a1]);
+                        if (group === 'costura') {
+                            if (equipoNum >= 1 && equipoNum <= 19) {
+                                sums.costura_1_19.cant += toNum(row[map.cant]);
+                                sums.costura_1_19.defectos += toNum(row[map.defectos]);
+                                sums.costura_1_19.total += toNum(row[map.total]);
+                                sums.costura_1_19.a1 += toNum(row[map.a1]);
+                            } else if (equipoNum >= 20 && equipoNum <= 29) {
+                                sums.costura_20_29.cant += toNum(row[map.cant]);
+                                sums.costura_20_29.defectos += toNum(row[map.defectos]);
+                                sums.costura_20_29.total += toNum(row[map.total]);
+                                sums.costura_20_29.a1 += toNum(row[map.a1]);
+                            }
+                        }
+                    }
+
+                    // --- CITITEX accumulation (solo COSTURA Eq 1-29) ---
+                    if (isCititex && group === 'costura') {
+                        const cant = toNum(row[map.cant]);
+                        const defectos = toNum(row[map.defectos]);
+                        const total = toNum(row[map.total]);
+                        const a1 = toNum(row[map.a1]);
+                        sumsCT.costura.cant += cant;
+                        sumsCT.costura.defectos += defectos;
+                        sumsCT.costura.total += total;
+                        sumsCT.costura.a1 += a1;
+                        if (equipoNum >= 1 && equipoNum <= 14) {
+                            sumsCT.costura_1_14.cant += cant;
+                            sumsCT.costura_1_14.defectos += defectos;
+                            sumsCT.costura_1_14.total += total;
+                            sumsCT.costura_1_14.a1 += a1;
+                        } else if (equipoNum >= 15 && equipoNum <= 29) {
+                            sumsCT.costura_15_29.cant += cant;
+                            sumsCT.costura_15_29.defectos += defectos;
+                            sumsCT.costura_15_29.total += total;
+                            sumsCT.costura_15_29.a1 += a1;
+                        }
+                    }
+
+                    // --- per-equipo accumulation (route by ubicación) ---
+                    if (!isNaN(equipoNum)) {
+                        const targetPE = isCititex ? perEquipoCT : perEquipo;
+                        const k = String(equipoNum);
+                        if (!targetPE[k]) {
+                            const daily = {};
+                            for (let di = 0; di < 7; di++) daily[di] = { a1: 0, total: 0 };
+                            targetPE[k] = {
+                                equipo: equipoNum,
+                                cant_auditada: 0, cant_muestra: 0, tela: 0, huecos: 0, punt_saltadas: 0, punt_cortadas: 0, hilos: 0, cost_defectuosas: 0,
+                                operac_faltantes: 0, mnch_aceite: 0, mnch_suciedad: 0, mnch_tinto: 0, acabados: 0, medidas: 0, jaladuras: 0,
+                                total_defec: 0, a1: 0, a2: 0, a3: 0, a4: 0, lote_no_aprob: 0, cant_prend_rech: 0,
+                                daily: daily
+                            };
+                        }
+                        const pe = targetPE[k];
+                        // accumulate using discovered column headers (colField)
+                        if (colField.cant_auditada) pe.cant_auditada += toNum(row[colField.cant_auditada]);
+                        if (colField.cant_muestra) pe.cant_muestra += toNum(row[colField.cant_muestra]);
+                        if (colField.tela) pe.tela += toNum(row[colField.tela]);
+                        if (colField.huecos) pe.huecos += toNum(row[colField.huecos]);
+                        if (colField.punt_saltadas) pe.punt_saltadas += toNum(row[colField.punt_saltadas]);
+                        if (colField.punt_cortadas) pe.punt_cortadas += toNum(row[colField.punt_cortadas]);
+                        if (colField.hilos) pe.hilos += toNum(row[colField.hilos]);
+                        if (colField.cost_defectuosas) pe.cost_defectuosas += toNum(row[colField.cost_defectuosas]);
+                        if (colField.operac_faltantes) pe.operac_faltantes += toNum(row[colField.operac_faltantes]);
+                        if (colField.mnch_aceite) pe.mnch_aceite += toNum(row[colField.mnch_aceite]);
+                        if (colField.mnch_suciedad) pe.mnch_suciedad += toNum(row[colField.mnch_suciedad]);
+                        if (colField.mnch_tinto) pe.mnch_tinto += toNum(row[colField.mnch_tinto]);
+                        if (colField.acabados_c) pe.acabados += toNum(row[colField.acabados_c]);
+                        if (colField.medidas) pe.medidas += toNum(row[colField.medidas]);
+                        if (colField.jaladuras) pe.jaladuras += toNum(row[colField.jaladuras]);
+                        // total defects column (if found) otherwise try sum of known defect cols
+                        if (colField.total_defec) pe.total_defec += toNum(row[colField.total_defec]);
+                        else {
+                            // attempt to sum common defect cols
+                            pe.total_defec += toNum(row[colField.tela]) + toNum(row[colField.huecos]) + toNum(row[colField.punt_saltadas]) + toNum(row[colField.punt_cortadas]) + toNum(row[colField.hilos]) + toNum(row[colField.cost_defectuosas]) + toNum(row[colField.operac_faltantes] || 0);
+                        }
+                        if (colField.a1) pe.a1 += toNum(row[colField.a1]);
+                        if (colField.a2) pe.a2 += toNum(row[colField.a2]);
+                        if (colField.a3) pe.a3 += toNum(row[colField.a3]);
+                        if (colField.a4) pe.a4 += toNum(row[colField.a4]);
+                        if (colField.lote_no_aprob) pe.lote_no_aprob += toNum(row[colField.lote_no_aprob]);
+                        if (colField.cant_prend_rech) pe.cant_prend_rech += toNum(row[colField.cant_prend_rech]);
+
+                        // accumulate per-day A1 and Total for %BAP table (map to Mon..Sun index 0..6)
+                        try {
+                            const jsDay = (row._parsedFecha instanceof Date) ? row._parsedFecha.getDay() : (new Date()).getDay();
+                            const dayIdx = (jsDay + 6) % 7; // convert Sun(0)->6, Mon(1)->0 ...
+                            const dayA1 = toNum(row[colField.a1 || map.a1]);
+                            const dayTotal = toNum(row[colField.total_aud || map.total]);
+                            if (pe.daily && pe.daily[dayIdx]) {
+                                pe.daily[dayIdx].a1 += dayA1;
+                                pe.daily[dayIdx].total += dayTotal;
+                            }
+                        } catch (e) { }
+                    }
+                });
+
+                // Log diagnostics to console
+                try {
+                    const filterDesc = (PERIOD_TYPE === 'Sem') ? ('Semana ' + selectedVal + ' ' + selectedYear) : ('Mes ' + selectedVal + ' ' + selectedYear);
+                    const dbg = 'Headers: ' + headers.join(', ') + '\nMap: ' + JSON.stringify(map, null, 2) + '\nTotal rows: ' + totalRows + ' | Parsed dates: ' + parsedDates + ' | Rows matching ' + filterDesc + ': ' + (costuraRows + acabadosRows) + '\nCostura rows: ' + costuraRows + ' | Acabados rows: ' + acabadosRows + '\n\nSample Fecha Auditoria values (first ' + sampleDates.length + '):\n' + sampleDates.map(s => `#${s.i} [${s.type}] ${s.value}${s.formatted ? (' -> ' + s.formatted) : ''}${s.parsed ? (' (ISO:' + s.parsed + ')') : ''}`).join('\n');
+                    console.log(dbg);
+                } catch (e) { console.log('debug set error', e); }
+
+                // Mostrar resultados
+                const cRow = document.getElementById('costura-row');
+                const aRow = document.getElementById('acabados-row');
+                const aRow4149 = document.getElementById('acabados-41-49-row');
+                const nfPct = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const nfBap = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                const nfNum = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }); // miles con comas
+
+                cRow.cells[1].textContent = nfNum.format(sums.costura.cant);
+                cRow.cells[2].textContent = nfNum.format(sums.costura.defectos);
+                // %Def = Total Defectos / Cant Muestra
+                const pctCostura = (sums.costura.cant && sums.costura.cant > 0) ? (sums.costura.defectos / sums.costura.cant * 100) : null;
+                cRow.cells[3].textContent = pctCostura === null ? '–' : (nfPct.format(pctCostura) + '%');
+                cRow.cells[4].textContent = nfNum.format(sums.costura.total);
+                cRow.cells[5].textContent = nfNum.format(sums.costura.a1);
+                // %BAP = A1 / Total (display as percentage with 1 decimal)
+                const bapCost = (sums.costura.total && sums.costura.total > 0) ? (sums.costura.a1 / sums.costura.total * 100) : null;
+                cRow.cells[6].textContent = bapCost === null ? '–' : (nfBap.format(bapCost) + '%');
+
+                // Fill COSTURA 1-19 row
+                const cRow1 = document.getElementById('costura-1-19-row');
+                if (cRow1) {
+                    cRow1.cells[1].textContent = nfNum.format(sums.costura_1_19.cant);
+                    cRow1.cells[2].textContent = nfNum.format(sums.costura_1_19.defectos);
+                    const pctC1 = (sums.costura_1_19.cant && sums.costura_1_19.cant > 0) ? (sums.costura_1_19.defectos / sums.costura_1_19.cant * 100) : null;
+                    cRow1.cells[3].textContent = pctC1 === null ? '–' : (nfPct.format(pctC1) + '%');
+                    cRow1.cells[4].textContent = nfNum.format(sums.costura_1_19.total);
+                    cRow1.cells[5].textContent = nfNum.format(sums.costura_1_19.a1);
+                    const bapC1 = (sums.costura_1_19.total && sums.costura_1_19.total > 0) ? (sums.costura_1_19.a1 / sums.costura_1_19.total * 100) : null;
+                    cRow1.cells[6].textContent = bapC1 === null ? '–' : (nfBap.format(bapC1) + '%');
+                }
+
+                // Fill COSTURA 20-29 row
+                const cRow2 = document.getElementById('costura-20-29-row');
+                if (cRow2) {
+                    cRow2.cells[1].textContent = nfNum.format(sums.costura_20_29.cant);
+                    cRow2.cells[2].textContent = nfNum.format(sums.costura_20_29.defectos);
+                    const pctC2 = (sums.costura_20_29.cant && sums.costura_20_29.cant > 0) ? (sums.costura_20_29.defectos / sums.costura_20_29.cant * 100) : null;
+                    cRow2.cells[3].textContent = pctC2 === null ? '–' : (nfPct.format(pctC2) + '%');
+                    cRow2.cells[4].textContent = nfNum.format(sums.costura_20_29.total);
+                    cRow2.cells[5].textContent = nfNum.format(sums.costura_20_29.a1);
+                    const bapC2 = (sums.costura_20_29.total && sums.costura_20_29.total > 0) ? (sums.costura_20_29.a1 / sums.costura_20_29.total * 100) : null;
+                    cRow2.cells[6].textContent = bapC2 === null ? '–' : (nfBap.format(bapC2) + '%');
+                }
+
+                aRow.cells[1].textContent = nfNum.format(sums.acabados.cant);
+                aRow.cells[2].textContent = nfNum.format(sums.acabados.defectos);
+                const pctAcab = (sums.acabados.cant && sums.acabados.cant > 0) ? (sums.acabados.defectos / sums.acabados.cant * 100) : null;
+                aRow.cells[3].textContent = pctAcab === null ? '–' : (nfPct.format(pctAcab) + '%');
+                aRow.cells[4].textContent = nfNum.format(sums.acabados.total);
+                aRow.cells[5].textContent = nfNum.format(sums.acabados.a1);
+                const bapAcab = (sums.acabados.total && sums.acabados.total > 0) ? (sums.acabados.a1 / sums.acabados.total * 100) : null;
+                aRow.cells[6].textContent = bapAcab === null ? '–' : (nfBap.format(bapAcab) + '%');
+
+                if (aRow4149) {
+                    aRow4149.cells[1].textContent = nfNum.format(sums.acabados_41_49.cant);
+                    aRow4149.cells[2].textContent = nfNum.format(sums.acabados_41_49.defectos);
+                    const pctAcab4149 = (sums.acabados_41_49.cant && sums.acabados_41_49.cant > 0) ? (sums.acabados_41_49.defectos / sums.acabados_41_49.cant * 100) : null;
+                    aRow4149.cells[3].textContent = pctAcab4149 === null ? '–' : (nfPct.format(pctAcab4149) + '%');
+                    aRow4149.cells[4].textContent = nfNum.format(sums.acabados_41_49.total);
+                    aRow4149.cells[5].textContent = nfNum.format(sums.acabados_41_49.a1);
+                    const bapAcab4149 = (sums.acabados_41_49.total && sums.acabados_41_49.total > 0) ? (sums.acabados_41_49.a1 / sums.acabados_41_49.total * 100) : null;
+                    aRow4149.cells[6].textContent = bapAcab4149 === null ? '–' : (nfBap.format(bapAcab4149) + '%');
+                }
+
+                // render symmetric donut charts below the table
+                const chartsWrapper = document.getElementById('chartsWrapper');
+                if (chartsWrapper) {
+                    chartsWrapper.style.display = 'block';
+                }
+                // store latest filtered per-equipo data for modal use and render charts
+                window.latestFilteredData = { perEquipo: perEquipo, perEquipoCT: perEquipoCT, filteredYear: selectedYear, filteredPeriodType: PERIOD_TYPE, filteredPeriodValue: selectedVal };
+                renderCharts(sums);
+
+                // --- Fill CITITEX table ---
+                const ctRow = document.getElementById('ct-costura-row');
+                function fillCtRow(rowEl, data) {
+                    if (!rowEl || !data) return;
+                    rowEl.cells[1].textContent = nfNum.format(data.cant);
+                    rowEl.cells[2].textContent = nfNum.format(data.defectos);
+                    const pct = (data.cant && data.cant > 0) ? (data.defectos / data.cant * 100) : null;
+                    rowEl.cells[3].textContent = pct === null ? '–' : (nfPct.format(pct) + '%');
+                    rowEl.cells[4].textContent = nfNum.format(data.total);
+                    rowEl.cells[5].textContent = nfNum.format(data.a1);
+                    const bap = (data.total && data.total > 0) ? (data.a1 / data.total * 100) : null;
+                    rowEl.cells[6].textContent = bap === null ? '–' : (nfBap.format(bap) + '%');
+                }
+                fillCtRow(ctRow, sumsCT.costura);
+                fillCtRow(document.getElementById('ct-costura-1-14-row'), sumsCT.costura_1_14);
+                fillCtRow(document.getElementById('ct-costura-15-29-row'), sumsCT.costura_15_29);
+                // Render Cititex charts
+                const chartsWrapperCT = document.getElementById('chartsWrapperCT');
+                if (chartsWrapperCT) chartsWrapperCT.style.display = 'block';
+                renderChartsCititex(sumsCT);
+
+                const filterDesc = (PERIOD_TYPE === 'Sem') ? ('Semana ' + selectedVal + ' ' + selectedYear) : ('Mes ' + selectedVal + ' ' + selectedYear);
+                console.log('Listo. Datos filtrados por ' + filterDesc + '.');
+                setStatus('', 'ok');
+            } catch (err) {
+                console.error('Error: ' + err.message, err);
+                setStatus('Error al cargar datos', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        // Wire Apply filter button (safe: only attach if element exists)
+        (function () {
+            const applyBtn = document.getElementById('applyFilterBtn');
+            if (applyBtn) {
+                applyBtn.addEventListener('click', () => {
+                    const selType = document.getElementById('periodType').value;
+                    const selYear = Number(document.getElementById('yearSelect').value);
+                    const selVal = Number(document.getElementById('periodSelect').value);
+                    PERIOD_TYPE = selType; FILTER_YEAR = selYear; PERIOD_VALUE = selVal;
+                    showLoading('Aplicando filtros...');
+                    loadAndCompute();
+                });
+            }
+        })();
+
+        // --- Performance modal & chart helpers ---
+        function findHeaderByNormLike(patterns) {
+            if (!window.sheetHeaders || !Array.isArray(window.sheetHeaders)) return null;
+            const norm = h => (h || '').toString().trim().toLowerCase();
+            for (const p of patterns) {
+                const ph = window.sheetHeaders.find(h => norm(h).includes(p));
+                if (ph) return ph;
+            }
+            return null;
+        }
+
+        function periodKeyForDate(dt, type) {
+            if (!(dt instanceof Date)) return null;
+            if (type === 'Mes') {
+                const y = dt.getFullYear(); const m = dt.getMonth() + 1; return `${y}-${String(m).padStart(2, '0')}`;
+            }
+            // Sem
+            const iso = getISOWeekYear(dt); const wk = iso.week; const y = iso.year; return `${y}-W${String(wk).padStart(2, '0')}`;
+        }
+
+        function lastNPeriods(type, n) {
+            const out = [];
+            const now = new Date();
+            if (type === 'Mes') {
+                let y = now.getFullYear(); let m = now.getMonth() + 1;
+                for (let i = 0; i < n; i++) {
+                    out.push({ key: `${y}-${String(m).padStart(2, '0')}`, label: (new Date(y, m - 1, 1)).toLocaleString('es-ES', { month: 'short', year: 'numeric' }) });
+                    m--; if (m < 1) { m = 12; y--; }
+                }
+            } else {
+                // weeks: use ISO-week for labels and ISO-year
+                let d = new Date(now);
+                for (let i = 0; i < n; i++) {
+                    const iso = getISOWeekYear(d); const wk = iso.week; const y = iso.year; out.push({ key: `${y}-W${String(wk).padStart(2, '0')}`, label: `Sem ${wk}/${y}` });
+                    // step back 7 days
+                    d.setDate(d.getDate() - 7);
+                }
+            }
+            return out.reverse(); // oldest -> newest
+        }
+
+        // Returns Date (Monday) for given ISO week and year
+        function dateOfISOWeek(week, year) {
+            const w = Number(week); const y = Number(year);
+            // Find Thursday in that week to ensure correct ISO week-year
+            const simple = new Date(y, 0, 1 + (w - 1) * 7);
+            const dow = simple.getDay();
+            let ISOweekStart = new Date(simple);
+            if (dow <= 4) { // Mon..Thu -> back to Monday
+                ISOweekStart.setDate(simple.getDate() - (dow === 0 ? 6 : dow - 1));
+            } else {
+                ISOweekStart.setDate(simple.getDate() + (8 - dow));
+            }
+            ISOweekStart.setHours(0, 0, 0, 0);
+            return ISOweekStart;
+        }
+
+        // Compute last N periods ending immediately BEFORE the provided anchor (anchor = {type:'Sem'|'Mes', year, value})
+        function lastNPeriodsAnchored(type, n, anchor) {
+            if (!anchor) return lastNPeriods(type, n);
+            const out = [];
+            if (type === 'Mes') {
+                // anchor.value is month number 1-12, anchor.year is year
+                let y = Number(anchor.year); let m = Number(anchor.value) - 1; // make 0-based
+                // move to previous month (one before the anchor)
+                m -= 1; if (m < 0) { m = 11; y -= 1; }
+                for (let i = 0; i < n; i++) {
+                    out.push({ key: `${y}-${String(m + 1).padStart(2, '0')}`, label: (new Date(y, m, 1)).toLocaleString('es-ES', { month: 'short', year: 'numeric' }) });
+                    m -= 1; if (m < 0) { m = 11; y -= 1; }
+                }
+            } else {
+                // weeks: anchor.value is ISO week number, anchor.year is ISO year
+                let y = Number(anchor.year); let wk = Number(anchor.value);
+                // move to previous week
+                let baseDate = dateOfISOWeek(wk, y);
+                baseDate.setDate(baseDate.getDate() - 7);
+                for (let i = 0; i < n; i++) {
+                    const iso = getISOWeekYear(baseDate); const w = iso.week; const yy = iso.year;
+                    out.push({ key: `${yy}-W${String(w).padStart(2, '0')}`, label: `Sem ${w}/${yy}` });
+                    baseDate.setDate(baseDate.getDate() - 7);
+                }
+            }
+            return out.reverse();
+        }
+
+        function computeSeriesForOptions(opts) {
+            // opts: {type:'Sem'|'Mes', ubic:'Todos'|value, grupo:'Todos'|'COSTURA'|'COSTURA DIA'|'COSTURA NOCHE'|'ACABADOS', lastN:8, equipo:number, anchor:{year,value,type}}
+            const sheet = window.sheetData || [];
+            const periodo = opts.type || 'Sem'; const lastN = opts.lastN || 8;
+            const periods = opts.anchor ? lastNPeriodsAnchored(periodo, lastN, opts.anchor) : lastNPeriods(periodo, lastN);
+            const keys = periods.map(p => p.key);
+            // find relevant headers — prefer the same `map` discovered during loadAndCompute (keeps consistency with main table)
+            const cm = (window.colMap && typeof window.colMap === 'object') ? window.colMap : null;
+            const ubicHdr = (cm && cm.ubic) ? cm.ubic : findHeaderByNormLike(['ubic', 'ubicaci', 'location', 'sede']);
+            const equipoHdr = (cm && cm.equipo) ? cm.equipo : findHeaderByNormLike(['equipo', 'eqp', 'maq']);
+            const defHdr = (cm && cm.defectos) ? cm.defectos : findHeaderByNormLike(['defect', 'total defect', 'total_defec', 't.def', 't.defectos', 'total']);
+            const cantHdr = (cm && cm.cant) ? cm.cant : findHeaderByNormLike(['cant muestra', 'cant_muestra', 'muestra', 'cant']);
+            const a1Hdr = (cm && cm.a1) ? cm.a1 : findHeaderByNormLike(['a 1', 'a1', 'a_1']);
+            const totalAudHdr = (cm && cm.total) ? cm.total : findHeaderByNormLike(['total', 'total aud', 'total_aud']);
+            const a2Hdr = findHeaderByNormLike(['a 2', 'a2', 'a_2']);
+            const a3Hdr = findHeaderByNormLike(['a 3', 'a3', 'a_3']);
+            const a4Hdr = findHeaderByNormLike(['a 4', 'a4', 'a_4']);
+            const loteHdr = findHeaderByNormLike(['lote no aprob', 'lote_no_aprob', 'lote no aprobado', 'lote no aprobado']);
+            try { console.debug('perf series using headers', { ubicHdr, equipoHdr, defHdr, cantHdr, a1Hdr, totalAudHdr }); } catch (e) { }
+
+            // Prepare accumulators for each key
+            const acc = {};
+            keys.forEach(k => acc[k] = { def: 0, sample: 0, a1: 0, total: 0, a2: 0, a3: 0, a4: 0, lote: 0 });
+
+            function matchesGrupo(eqp, grupo, equipoExact) {
+                if (equipoExact !== undefined && equipoExact !== null) {
+                    const eqn = Number(String(eqp || '').replace(/[^0-9]/g, ''));
+                    return !isNaN(eqn) && eqn === Number(equipoExact);
+                }
+                if (!grupo || grupo === 'Todos') return true;
+                const num = Number(String(eqp || '').replace(/[^0-9]/g, ''));
+                if (isNaN(num)) return false;
+                if (grupo === 'COSTURA') return num >= 1 && num <= 29;
+                if (grupo === 'COSTURA DIA') return num >= 1 && num <= 19;
+                if (grupo === 'COSTURA NOCHE') return num >= 20 && num <= 29;
+                if (grupo === 'ACABADOS') return num >= 30 && num <= 49;
+                return true;
+            }
+
+            for (const row of sheet) {
+                const dt = row._parsedFecha instanceof Date ? row._parsedFecha : parseFechaValue(row[findHeaderByNormLike(['fecha', 'date'])] || row.fecha);
+                if (!dt) continue;
+                const k = periodKeyForDate(dt, periodo);
+                if (!acc[k]) continue; // outside range
+                // filter ubic
+                if (opts.ubic && opts.ubic !== 'Todos' && ubicHdr) { const v = (row[ubicHdr] || '').toString().trim(); if (v !== opts.ubic) continue; }
+                // filter grupo/equipo
+                if (opts.equipo !== undefined && opts.equipo !== null) {
+                    if (!matchesGrupo(row[equipoHdr], null, opts.equipo)) continue;
+                } else {
+                    if (!matchesGrupo(row[equipoHdr], opts.grupo)) continue;
+                }
+                // accumulate
+                const defVal = toNum(row[defHdr] || row[findHeaderByNormLike(['defectos', 'total defectos'])]);
+                const samp = toNum(row[cantHdr] || row[findHeaderByNormLike(['cant', 'muestra'])]);
+                const a1v = toNum(row[a1Hdr] || 0);
+                const a2v = toNum(row[a2Hdr] || 0);
+                const a3v = toNum(row[a3Hdr] || 0);
+                const a4v = toNum(row[a4Hdr] || 0);
+                const lotev = toNum(row[loteHdr] || 0);
+                const totAud = toNum(row[totalAudHdr] || 0);
+                acc[k].def += defVal;
+                acc[k].sample += samp;
+                acc[k].a1 += a1v;
+                acc[k].a2 += a2v;
+                acc[k].a3 += a3v;
+                acc[k].a4 += a4v;
+                acc[k].lote += lotev;
+                acc[k].total += totAud;
+            }
+
+            const labels = []; const pctDef = []; const pctBap = []; const pctNivel = [];
+            // DEBUG: mostrar acumuladores por periodo para inspección en consola
+            try { console.debug('computeSeriesForOptions - opts:', opts); console.debug('accumulators:', JSON.parse(JSON.stringify(acc))); } catch (e) { }
+
+            // Find the last period with data
+            let lastPeriodWithData = -1;
+            for (let i = periods.length - 1; i >= 0; i--) {
+                const v = acc[periods[i].key] || { def: 0, sample: 0, a1: 0, total: 0 };
+                if (v.sample > 0 || v.total > 0) {
+                    lastPeriodWithData = i;
+                    break;
+                }
+            }
+
+            // Only iterate up to the last period with data
+            const periodsToUse = lastPeriodWithData >= 0 ? periods.slice(0, lastPeriodWithData + 1) : periods;
+
+            periodsToUse.forEach(p => {
+                labels.push(p.label);
+                const v = acc[p.key] || { def: 0, sample: 0, a1: 0, total: 0 };
+                const defPct = (v.sample && v.sample > 0) ? (v.def / v.sample * 100) : 0;
+                const bapPct = (v.total && v.total > 0) ? (v.a1 / v.total * 100) : 0;
+                pctDef.push(Number(defPct.toFixed(2)));
+                pctBap.push(Number(bapPct.toFixed(2)));
+                const denomA = (v.a1 + v.a2 + v.a3 + v.a4 + v.lote);
+                const nivel = (denomA && denomA > 0) ? (v.a1 / denomA * 100) : 0;
+                pctNivel.push(Number(nivel.toFixed(2)));
+            });
+            return { labels, pctDef, pctBap, pctNivel };
+        }
+
+        // Chart instance holder
+        window._perfChart = null;
+        function renderPerfChartCanvas(ctx, labels, defArr, bapArr) {
+            if (window._perfChart) { window._perfChart.data.labels = labels; window._perfChart.data.datasets[0].data = bapArr; window._perfChart.data.datasets[1].data = defArr; window._perfChart.update(); return; }
+            // Formatos alineados con la tabla resumen: %BAP 1 decimal, %Def. 2
+            const nfBapLbl = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            const nfDefLbl = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const COLOR_BAP = '#5b8fd9';   // barras (azul) — par validado CVD con el rojo
+            const COLOR_DEF = '#d64550';   // línea (rojo)
+            // Etiquetas propias: UNA por punto. %BAP en blanco dentro del tope de
+            // la barra; %Def. sobre cada punto con halo blanco para que se lea
+            // aunque cruce por delante de una barra.
+            const dataLabelPlugin = {
+                id: 'dataLabelPlugin',
+                afterDatasetsDraw(chart) {
+                    const c = chart.ctx;
+                    c.save();
+                    c.textAlign = 'center';
+                    chart.data.datasets.forEach((dataset, di) => {
+                        const meta = chart.getDatasetMeta(di);
+                        if (!meta || !meta.data || meta.hidden) return;
+                        for (let i = 0; i < meta.data.length; i++) {
+                            const el = meta.data[i];
+                            const raw = dataset.data[i];
+                            if (raw === null || raw === undefined) continue;
+                            if (meta.type === 'bar') {
+                                c.font = '600 12px "Segoe UI", Calibri, sans-serif';
+                                const barH = (el.base || 0) - el.y;
+                                if (barH >= 26) {
+                                    c.textBaseline = 'top';
+                                    c.fillStyle = '#ffffff';
+                                    c.fillText(nfBapLbl.format(raw) + '%', el.x, el.y + 8);
+                                } else {
+                                    // barra muy corta: etiqueta encima, en tinta
+                                    c.textBaseline = 'bottom';
+                                    c.fillStyle = '#1f3a5f';
+                                    c.fillText(nfBapLbl.format(raw) + '%', el.x, el.y - 5);
+                                }
+                            } else {
+                                const txt = nfDefLbl.format(raw) + '%';
+                                c.font = '600 11px "Segoe UI", Calibri, sans-serif';
+                                c.textBaseline = 'bottom';
+                                c.lineWidth = 3;
+                                c.strokeStyle = 'rgba(255,255,255,0.9)';
+                                c.strokeText(txt, el.x, el.y - 9);
+                                c.fillStyle = COLOR_DEF;
+                                c.fillText(txt, el.x, el.y - 9);
+                            }
+                        }
+                    });
+                    c.restore();
+                }
+            };
+
+            const cfg = {
+                plugins: [dataLabelPlugin],
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'bar', label: '%BAP', data: bapArr, yAxisID: 'yBap',
+                            backgroundColor: 'rgba(91, 143, 217, 0.82)',
+                            hoverBackgroundColor: COLOR_BAP,
+                            borderRadius: 6, borderSkipped: 'bottom',
+                            maxBarThickness: 64, categoryPercentage: 0.72, barPercentage: 0.82
+                        },
+                        {
+                            type: 'line', label: '%Def.', data: defArr, yAxisID: 'yDef',
+                            borderColor: COLOR_DEF, backgroundColor: COLOR_DEF,
+                            borderWidth: 2.5, tension: 0.35,
+                            pointRadius: 4, pointHoverRadius: 6,
+                            pointBackgroundColor: COLOR_DEF, pointBorderColor: '#ffffff', pointBorderWidth: 2,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: { top: 6 } },
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            border: { display: false },
+                            ticks: { color: '#64748b', font: { size: 12 } }
+                        },
+                        yDef: {
+                            type: 'linear', position: 'left', beginAtZero: true, grace: '10%',
+                            title: { display: true, text: '%Def.', color: '#64748b', font: { size: 11 } },
+                            grid: { color: 'rgba(100, 116, 139, 0.12)' },
+                            border: { display: false },
+                            ticks: { color: '#64748b', font: { size: 11 }, callback: v => v + '%' }
+                        },
+                        yBap: {
+                            // Escala completa 0-100: %BAP es un porcentaje de aprobación
+                            // y así las barras quedan por debajo de la línea (sin choques
+                            // entre etiquetas)
+                            type: 'linear', position: 'right', beginAtZero: true, max: 100,
+                            title: { display: true, text: '%BAP', color: '#64748b', font: { size: 11 } },
+                            grid: { drawOnChartArea: false },
+                            border: { display: false },
+                            ticks: { color: '#64748b', font: { size: 11 }, stepSize: 20, callback: v => v + '%' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 10, boxHeight: 10, color: '#334155', font: { size: 12 } }
+                        },
+                        // El shell registra chartjs-plugin-datalabels de forma global;
+                        // sus etiquetas por defecto eran las grises duplicadas. Apagado aquí.
+                        datalabels: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                            padding: 10, cornerRadius: 8, boxPadding: 4,
+                            usePointStyle: true,
+                            callbacks: {
+                                label: (item) => {
+                                    const nf = (item.dataset.type === 'line') ? nfDefLbl : nfBapLbl;
+                                    return ' ' + item.dataset.label + ': ' + nf.format(item.parsed.y) + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            window._perfChart = new Chart(ctx, cfg);
+        }
+
+        function ensureGlobalModalShell(overlayId, modalId) {
+            let ol = document.getElementById(overlayId);
+            if (!ol) {
+                ol = document.createElement('div');
+                ol.id = overlayId;
+                document.body.appendChild(ol);
+            }
+            ol.id = overlayId;
+            ol.className = 'modal-overlay';
+            let modal = document.getElementById(modalId);
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = modalId;
+            }
+            modal.id = modalId;
+            modal.className = 'modal';
+            ol.replaceChildren(modal);
+            if (ol.parentElement !== document.body) {
+                document.body.appendChild(ol);
+            }
+            return { ol, modal };
+        }
+
+        function buildGlobalModalHeaderHtml(title, closeButtonId, exportButtonId) {
+            const exportHtml = exportButtonId ? `<button id="${exportButtonId}" class="excel-btn">Excel</button>` : '';
+            return `<div class="modal-toolbar"><h2>${title}</h2><div class="modal-toolbar-actions">${exportHtml}<button class="close-btn" id="${closeButtonId}">Cerrar</button></div></div>`;
+        }
+
+        function buildPerformanceModal() {
+            if (!window.sheetData) return alert('Los datos aún se están cargando. Intenta nuevamente en unos segundos.');
+            const { ol, modal } = ensureGlobalModalShell('perfModalOverlay', 'perfModal');
+            // build controls
+            const ubicHdr = findHeaderByNormLike(['ubic', 'ubicaci', 'location', 'sede']);
+            const uniqueUbics = new Set();
+            (window.sheetData || []).forEach(r => { if (ubicHdr) { const v = (r[ubicHdr] || '').toString().trim(); if (v) uniqueUbics.add(v); } });
+            const ubicOptions = ['Todos'].concat(Array.from(uniqueUbics).sort());
+
+            const html = `
+                <div style="display:flex;align-items:center;justify-content:space-between"><h2>Performance Auditorias Lotes Produccion</h2><div style="display:flex;gap:6px;align-items:center"><button class="print-btn" id="perfPrint" title="Imprimir"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v3h12V3z"/></svg></button><button class="close-btn" id="perfClose">Cerrar</button></div></div>
+                <fieldset style="border:1px solid #e6eef8;padding:10px;border-radius:8px;margin-top:10px"><legend style="font-weight:700">Controles</legend>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <label style="font-weight:700">Periodo:</label>
+                        <select id="perfPeriodType" style="padding:6px;border:1px solid #ccd;border-radius:6px"><option value="Sem">Sem</option><option value="Mes">Mes</option></select>
+                        <label style="font-weight:700">Ubicación:</label>
+                        <select id="perfUbic" style="padding:6px;border:1px solid #ccd;border-radius:6px">${ubicOptions.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+                        <label style="font-weight:700">Grupo:</label>
+                        <select id="perfGrupo" style="padding:6px;border:1px solid #ccd;border-radius:6px"><option value="Todos">Todos</option><option value="COSTURA">COSTURA (todos)</option><option value="COSTURA DIA">COSTURA DIA</option><option value="COSTURA NOCHE">COSTURA NOCHE</option><option value="ACABADOS">ACABADOS</option></select>
+                        <button id="perfApply" style="padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer">Aplicar</button>
+                    </div>
+                </fieldset>
+                <div style="margin-top:12px;height:360px"><canvas id="perfChartCanvas"></canvas></div>
+            `;
+            modal.innerHTML = html;
+            ol.style.display = 'flex';
+            document.getElementById('perfClose').onclick = () => {
+                try { if (window._perfChart) { window._perfChart.destroy(); } } catch (e) { }
+                window._perfChart = null;
+                ol.style.display = 'none';
+            };
+            ol.onclick = (ev) => {
+                if (ev.target === ol) {
+                    try { if (window._perfChart) { window._perfChart.destroy(); } } catch (e) { }
+                    window._perfChart = null;
+                    ol.style.display = 'none';
+                }
+            };
+            // function to apply filters dynamically
+            const applyFilters = () => { const type = document.getElementById('perfPeriodType').value; const ubic = document.getElementById('perfUbic').value; const grupo = document.getElementById('perfGrupo').value; const res = computeSeriesForOptions({ type, ubic, grupo, lastN: 8 }); const ctx = document.getElementById('perfChartCanvas').getContext('2d'); renderPerfChartCanvas(ctx, res.labels, res.pctDef, res.pctBap); };
+            // attach apply to button
+            document.getElementById('perfApply').onclick = applyFilters;
+            // attach change events to each filter for dynamic updates
+            document.getElementById('perfPeriodType').addEventListener('change', applyFilters);
+            document.getElementById('perfUbic').addEventListener('change', applyFilters);
+            document.getElementById('perfGrupo').addEventListener('change', applyFilters);
+            // attach print button event
+            document.getElementById('perfPrint').onclick = () => { window.print(); };
+            // initial apply
+            setTimeout(() => { applyFilters(); }, 50);
+        }
+
+        // wire the button
+        const perfBtnEl = document.getElementById('perfBtn');
+        if (perfBtnEl) { perfBtnEl.addEventListener('click', function () { try { buildPerformanceModal(); } catch (e) { alert('Error al mostrar modal: ' + (e && e.message)); } }); }
+
+        // Top 5 worst lines modal
+        function showTop5Modal(perEquipoOverride, ubicLabel) {
+            const meta = window.latestFilteredData || {};
+            const perEquipo = perEquipoOverride || meta.perEquipo || {};
+            const ubLabel = ubicLabel || 'COFACO';
+            const year = meta.filteredYear || FILTER_YEAR;
+            const pType = meta.filteredPeriodType || PERIOD_TYPE;
+            const pVal = meta.filteredPeriodValue || PERIOD_VALUE;
+            // build array of equipos
+            const rows = Object.keys(perEquipo).map(k => {
+                const r = perEquipo[k] || {};
+                const cantM = Number(r.cant_muestra || 0);
+                const totalA = (Number(r.a1 || 0) + Number(r.a2 || 0) + Number(r.a3 || 0) + Number(r.a4 || 0) + Number(r.lote_no_aprob || 0));
+                const bapPct = (Number(r.total || 0) > 0) ? (Number(r.a1 || 0) / Number(r.total || 0) * 100) : 0;
+                const nivel = (totalA > 0) ? (Number(r.a1 || 0) / totalA * 100) : 0;
+                const defPct = (cantM > 0) ? (Number(r.total_defec || 0) / cantM * 100) : 0;
+                return { equipo: Number(k), bapPct, nivel, defPct, raw: r };
+            }).filter(x => !isNaN(x.equipo));
+
+            // sort: ascending %BAP, ascending Nivel, descending %Def
+            rows.sort((a, b) => {
+                if (a.bapPct !== b.bapPct) return a.bapPct - b.bapPct;
+                if (a.nivel !== b.nivel) return a.nivel - b.nivel;
+                return b.defPct - a.defPct;
+            });
+
+            const top = rows.slice(0, 5);
+
+            // build modal
+            const { ol, modal } = ensureGlobalModalShell('top5ModalOverlay', 'top5Modal');
+            let title = 'TOP 5 ↓Lineas ' + ubLabel + ' - ' + year + ' / ' + (pType === 'Sem' ? ('Semana ' + pVal) : ('Mes ' + pVal));
+            let html = buildGlobalModalHeaderHtml(title, 'closeTop5');
+            html += '<div class="table-wrap"><table style="font-size:12px;table-layout:fixed"><thead><tr><th>Equipo</th><th>%BAP</th><th>%Def.</th></tr></thead><tbody>';
+            if (top.length === 0) { html += '<tr><td colspan="6" style="text-align:center;padding:18px;color:#666">No hay datos para el periodo seleccionado.</td></tr>'; }
+            else {
+                const nf = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+                top.forEach(t => {
+                    html += '<tr><td style="font-weight:700">' + t.equipo + '</td>' +
+                        '<td>' + nf.format(t.nivel) + '%</td>' +
+                        '<td style="font-weight:700;background:#fff2f0;color:#b40d0d">' + nf.format(t.defPct) + '%</td>' +
+                        '</tr>';
+                });
+            }
+            html += '</tbody></table></div>';
+            modal.innerHTML = html;
+            ol.style.display = 'flex';
+            const closeBtn = document.getElementById('closeTop5'); if (closeBtn) closeBtn.onclick = () => { ol.style.display = 'none'; };
+            ol.onclick = (ev) => { if (ev.target === ol) ol.style.display = 'none'; };
+        }
+
+        // bind info button (Cofaco)
+        const infoBtn = document.getElementById('infoBtn');
+        if (infoBtn) { infoBtn.addEventListener('click', () => { try { showTop5Modal(null, 'COFACO'); } catch (e) { alert('Error al mostrar Top5: ' + (e && e.message)); } }); }
+
+        // bind info button (Cititex)
+        const infoBtnCT = document.getElementById('infoBtnCT');
+        if (infoBtnCT) { infoBtnCT.addEventListener('click', () => { try { const meta = window.latestFilteredData || {}; showTop5Modal(meta.perEquipoCT, 'CITITEX'); } catch (e) { alert('Error al mostrar Top5: ' + (e && e.message)); } }); }
+
+        // Run once on load (will try non-published endpoints first)
+        showLoading('Inicializando datos...');
+        loadAndCompute();
+
+        // ===== Fin del script original =====
+
+        // Exponer en window las funciones usadas por handlers inline (si las hay)
+        [].forEach(function (__n) { try { window[__n] = eval(__n); } catch (__e) {} });
+    }
+
+    App.registerView('auditoria-lotes', { title: 'Auditoria Lotes de Produccion', mount: mount });
+})();

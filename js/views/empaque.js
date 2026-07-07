@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    views/empaque.js - Vista "Resultado Auditoria Empaque" (SPA)
    Migrado desde RESULTADO AUDITORIA EMPAQUE.html. Logica y marcado originales: el <script> se
    ejecuta dentro de mount() (tras inyectar el template) para que el
@@ -7,6 +7,13 @@
    ============================================================ */
 (function () {
     var TEMPLATE = "\r\n  \u003cdiv class=\"header-container\"\u003e\r\n    \u003ch1\u003eREPORTE DE AUDITORIAS DE EMPAQUE\u003c/h1\u003e\r\n    \u003ca href=\"#/\" class=\"btn-volver\" title=\"Inicio\"\u003e🏠\u003c/a\u003e\r\n  \u003c/div\u003e\r\n\r\n  \u003cdiv class=\"filter-section\"\u003e\r\n    \u003cdiv class=\"labelframe\" id=\"weekFieldset\"\u003e\r\n      \u003cspan class=\"labelframe-title\"\u003eFilter:\u003c/span\u003e\r\n      \u003cdiv class=\"labelframe-content\" style=\"display: flex; gap: 2px; align-items: flex-end; flex-wrap: wrap;\"\u003e\r\n        \u003cdiv class=\"control-group\" style=\"flex: 0 1 22%; min-width: 80px;\"\u003e\r\n          \u003clabel style=\"font-size: 11px; display:none;\"\u003eYear\u003c/label\u003e\r\n          \u003cselect id=\"yearSelect\" style=\"width: 100%; padding: 6px 8px; font-size: 11px;\"\u003e\r\n            \u003coption value=\"\"\u003eCargando...\u003c/option\u003e\r\n          \u003c/select\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv class=\"control-group\" style=\"flex: 0 1 21%; min-width: 80px;\"\u003e\r\n          \u003clabel style=\"font-size: 11px; display:none;\"\u003eSem/Mes\u003c/label\u003e\r\n          \u003cselect id=\"periodSelect\" style=\"width: 100%; padding: 6px 8px; font-size: 11px;\"\u003e\r\n            \u003coption value=\"\"\u003eCargando...\u003c/option\u003e\r\n          \u003c/select\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv class=\"control-group\" style=\"flex: 0 1 18%; min-width: 70px;\"\u003e\r\n          \u003clabel style=\"font-size: 11px; display:none;\"\u003eWeek\u003c/label\u003e\r\n          \u003cselect id=\"weekSelect\" disabled style=\"width: 100%; padding: 6px 8px; font-size: 11px;\"\u003e\r\n            \u003coption value=\"\"\u003eCargando...\u003c/option\u003e\r\n          \u003c/select\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv class=\"switch-group\" style=\"flex: 0 1 auto; align-items: center; gap: 2px;\"\u003e\r\n          \u003clabel class=\"switch\" style=\"transform: scale(0.85); margin: 0;\"\u003e\r\n            \u003cinput type=\"checkbox\" id=\"lastWeekSwitch\"\u003e\r\n            \u003cspan class=\"slider\"\u003e\u003c/span\u003e\r\n          \u003c/label\u003e\r\n          \u003cspan class=\"switch-label\" id=\"switchLabel\" style=\"font-size: 11px; white-space: nowrap;\"\u003eLast Week\u003c/span\u003e\r\n        \u003c/div\u003e\r\n      \u003c/div\u003e\r\n    \u003c/div\u003e\r\n\r\n    \u003cdiv class=\"labelframe\"\u003e\r\n      \u003cspan class=\"labelframe-title\"\u003eFactory Filters:\u003c/span\u003e\r\n      \u003cdiv class=\"labelframe-content\"\u003e\r\n        \u003cdiv class=\"switch-group\"\u003e\r\n          \u003clabel class=\"switch\"\u003e\r\n            \u003cinput type=\"checkbox\" id=\"filterCofaco\"\u003e\r\n            \u003cspan class=\"slider\"\u003e\u003c/span\u003e\r\n          \u003c/label\u003e\r\n          \u003cspan class=\"switch-label\"\u003eCofaco\u003c/span\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv class=\"switch-group\"\u003e\r\n          \u003clabel class=\"switch\"\u003e\r\n            \u003cinput type=\"checkbox\" id=\"filterCititex1\"\u003e\r\n            \u003cspan class=\"slider\"\u003e\u003c/span\u003e\r\n          \u003c/label\u003e\r\n          \u003cspan class=\"switch-label\"\u003eCititex 1\u003c/span\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv class=\"switch-group\"\u003e\r\n          \u003clabel class=\"switch\"\u003e\r\n            \u003cinput type=\"checkbox\" id=\"filterCititex2\"\u003e\r\n            \u003cspan class=\"slider\"\u003e\u003c/span\u003e\r\n          \u003c/label\u003e\r\n          \u003cspan class=\"switch-label\"\u003eCititex 2\u003c/span\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv class=\"switch-group\"\u003e\r\n          \u003clabel class=\"switch\"\u003e\r\n            \u003cinput type=\"checkbox\" id=\"filterCititexEstanos\"\u003e\r\n            \u003cspan class=\"slider\"\u003e\u003c/span\u003e\r\n          \u003c/label\u003e\r\n          \u003cspan class=\"switch-label\"\u003eCititex-Estaños\u003c/span\u003e\r\n        \u003c/div\u003e\r\n      \u003c/div\u003e\r\n    \u003c/div\u003e\r\n\r\n    \u003cdiv class=\"labelframe\"\u003e\r\n      \u003cspan class=\"labelframe-title\"\u003eCustomer Filter:\u003c/span\u003e\r\n      \u003cdiv class=\"labelframe-content\"\u003e\r\n        \u003cdiv class=\"customer-filter-wrapper\"\u003e\r\n          \u003cbutton class=\"customer-filter-button\" id=\"customerFilterBtn\" type=\"button\"\u003e\r\n            \u003cspan id=\"customerFilterLabel\"\u003eTodos\u003c/span\u003e\r\n            \u003cspan\u003e▼\u003c/span\u003e\r\n          \u003c/button\u003e\r\n          \u003cdiv class=\"customer-dropdown\" id=\"customerDropdown\"\u003e\r\n            \u003c!-- Opciones se llenarán dinámicamente --\u003e\r\n          \u003c/div\u003e\r\n        \u003c/div\u003e\r\n      \u003c/div\u003e\r\n    \u003c/div\u003e\r\n\r\n    \u003cdiv class=\"right-controls\"\u003e\r\n      \u003cbutton id=\"btnExport\" disabled\u003eDescargar Excel\u003c/button\u003e\r\n      \u003cbutton id=\"btnChart\" class=\"btn-chart\" disabled style=\"margin-left:8px\"\u003e📊 Gráficos\u003c/button\u003e\r\n      \u003cspan id=\"status\" class=\"badge loading\" style=\"margin-left:12px\"\u003eCargando datos desde Google Sheets…\u003c/span\u003e\r\n    \u003c/div\u003e\r\n  \u003c/div\u003e\r\n\r\n  \u003cdiv class=\"content-container\"\u003e\r\n    \u003cdiv class=\"wrap\"\u003e\r\n      \u003cdiv class=\"table-scroll\"\u003e\r\n        \u003ctable id=\"summaryTable\"\u003e\r\n          \u003cthead\u003e\r\n            \u003ctr\u003e\r\n              \u003cth style=\"width:12%\"\u003eFactory Code\u003c/th\u003e\r\n              \u003cth style=\"width:10%\"\u003eCustomer\u003c/th\u003e\r\n              \u003cth style=\"width:5%\"\u003eLot Box\u003c/th\u003e\r\n              \u003cth style=\"width:5%\"\u003eTotal Cajas\u003c/th\u003e\r\n              \u003cth style=\"width:8%\"\u003eCtd Incorrecta\u003c/th\u003e\r\n              \u003cth style=\"width:6%\"\u003exAvios\u003c/th\u003e\r\n              \u003cth style=\"width:6%\"\u003exRotulo\u003c/th\u003e\r\n              \u003cth style=\"width:6%\"\u003exTalla\u003c/th\u003e\r\n              \u003cth style=\"width:6%\"\u003es/sticker bolsa\u003c/th\u003e\r\n              \u003cth style=\"width:6%\"\u003ePeso exc.\u003c/th\u003e\r\n              \u003cth style=\"width:7%\"\u003eObjetos extraños\u003c/th\u003e\r\n              \u003cth style=\"width:5%\"\u003eTot. Def.\u003c/th\u003e\r\n              \u003cth style=\"width:5.5%\"\u003e%Def.\u003c/th\u003e\r\n              \u003cth style=\"width:2.5%\"\u003eA1\u003c/th\u003e\r\n              \u003cth style=\"width:2.5%\"\u003eA2\u003c/th\u003e\r\n              \u003cth style=\"width:2.5%\"\u003eA3\u003c/th\u003e\r\n              \u003cth style=\"width:2.5%\"\u003eA4\u003c/th\u003e\r\n              \u003cth style=\"width:2.5%\"\u003eTT\u003c/th\u003e\r\n            \u003c/tr\u003e\r\n          \u003c/thead\u003e\r\n          \u003ctbody id=\"tbody\"\u003e\r\n            \u003ctr\u003e\u003ctd colspan=\"18\" style=\"padding:16px;text-align:center;color:#777\"\u003eSin datos\u003c/td\u003e\u003c/tr\u003e\r\n          \u003c/tbody\u003e\r\n        \u003c/table\u003e\r\n      \u003c/div\u003e\r\n    \u003c/div\u003e\r\n\r\n    \u003c!-- Charts removed per request --\u003e\r\n    \u003c!-- Modal para Gráficos --\u003e\r\n    \u003cdiv id=\"chartModal\" class=\"modal\" aria-hidden=\"true\"\u003e\r\n      \u003cdiv class=\"modal-content\"\u003e\r\n        \u003cspan class=\"close\" id=\"closeChartModal\"\u003e\u0026times;\u003c/span\u003e\r\n        \u003ch2 style=\"text-align:center; margin-top:0;\"\u003ePerformance Auditorias Empaque\u003c/h2\u003e\r\n        \u003cdiv class=\"modal-filters\" role=\"region\" aria-label=\"Filtros del gráfico\"\u003e\r\n            \u003cdiv class=\"filter-item row\" style=\"min-width:200px;\"\u003e\r\n              \u003clabel for=\"chartCustomerBtn\"\u003eCustomer:\u003c/label\u003e\r\n              \u003cdiv class=\"customer-filter-wrapper\"\u003e\r\n                \u003cbutton class=\"customer-filter-button\" id=\"chartCustomerBtn\" type=\"button\"\u003e\r\n                  \u003cspan id=\"chartCustomerLabel\"\u003eTodos\u003c/span\u003e\r\n                  \u003cspan\u003e▼\u003c/span\u003e\r\n                \u003c/button\u003e\r\n                \u003cdiv class=\"customer-dropdown\" id=\"chartCustomerDropdown\"\u003e\u003c/div\u003e\r\n              \u003c/div\u003e\r\n            \u003c/div\u003e\r\n\r\n          \u003cdiv class=\"filter-item row\" style=\"min-width:140px;\"\u003e\r\n            \u003clabel for=\"chartFactoryFilter\"\u003eFactory Code:\u003c/label\u003e\r\n            \u003cselect id=\"chartFactoryFilter\" class=\"short-select\"\u003e\u003coption value=\"all\"\u003eTodos los Factory Codes\u003c/option\u003e\u003c/select\u003e\r\n          \u003c/div\u003e\r\n\r\n          \u003cdiv class=\"filter-item row\" style=\"min-width:120px;\"\u003e\r\n            \u003clabel for=\"weekFromFilter\"\u003eDesde:\u003c/label\u003e\r\n            \u003cselect id=\"weekFromFilter\" class=\"short-select\"\u003e\r\n              \u003coption value=\"46\"\u003eSEM46\u003c/option\u003e\r\n              \u003coption value=\"47\"\u003eSEM47\u003c/option\u003e\r\n              \u003coption value=\"48\"\u003eSEM48\u003c/option\u003e\r\n              \u003coption value=\"49\"\u003eSEM49\u003c/option\u003e\r\n              \u003coption value=\"50\"\u003eSEM50\u003c/option\u003e\r\n              \u003coption value=\"51\" selected\u003eSEM51\u003c/option\u003e\r\n            \u003c/select\u003e\r\n          \u003c/div\u003e\r\n\r\n          \u003cdiv class=\"filter-item row\" style=\"min-width:120px;\"\u003e\r\n            \u003clabel for=\"weekToFilter\"\u003eHasta:\u003c/label\u003e\r\n            \u003cselect id=\"weekToFilter\" class=\"short-select\"\u003e\r\n              \u003coption value=\"46\"\u003eSEM46\u003c/option\u003e\r\n              \u003coption value=\"47\"\u003eSEM47\u003c/option\u003e\r\n              \u003coption value=\"48\"\u003eSEM48\u003c/option\u003e\r\n              \u003coption value=\"49\"\u003eSEM49\u003c/option\u003e\r\n              \u003coption value=\"50\"\u003eSEM50\u003c/option\u003e\r\n              \u003coption value=\"51\" selected\u003eSEM51\u003c/option\u003e\r\n            \u003c/select\u003e\r\n          \u003c/div\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv class=\"chart-container\"\u003e\r\n          \u003ccanvas id=\"trendsChart\"\u003e\u003c/canvas\u003e\r\n        \u003c/div\u003e\r\n      \u003c/div\u003e\r\n    \u003c/div\u003e\r\n  \u003c/div\u003e\r\n\r\n  \r\n\r\n";
+
+    // Caché de datos entre visitas (el IIFE persiste aunque mount() se re-ejecute
+    // y su estado interno se pierda) y clave de persistencia de filtros.
+    // Mismo patrón que el resto de paneles: TTL 5 min + botón ⟳.
+    var DATA_TTL_MS = 5 * 60 * 1000;
+    var _dataCache = { rows: null, loadedAt: 0 };
+    var FILTERS_STORE_KEY = 'empaque.filters';
 
     function mount(root) {
         root.innerHTML = TEMPLATE;
@@ -37,16 +44,44 @@
         if (_hdr && _fs && _homeBtn) {
             while (_fs.firstElementChild) { _hdr.insertBefore(_fs.firstElementChild, _homeBtn); }
             _fs.remove();
-            _hdr.style.flexWrap = 'wrap';
-            _hdr.style.gap = '6px 10px';
+            // UNA sola fila: título + filtros + botones (sin envolver). El título
+            // se compacta a 22px (ya va en 2 líneas de texto) para que quepa a ~1366px.
+            _hdr.style.flexWrap = 'nowrap';
+            _hdr.style.gap = '4px 8px';
             _hdr.style.justifyContent = 'flex-start';
             var _h1e = _hdr.querySelector('h1');
             if (_h1e) {
                 _h1e.innerHTML = 'REPORTE DE<br>AUDITORIAS DE EMPAQUE';
-                _h1e.style.fontSize = '26px'; _h1e.style.whiteSpace = 'normal';
+                _h1e.style.fontSize = '22px'; _h1e.style.whiteSpace = 'normal';
                 _h1e.style.lineHeight = '1.1'; _h1e.style.letterSpacing = '0.03em';
+                _h1e.style.flexShrink = '0';
+            }
+            // Agrupar Excel + Gráficos + ⟳ + Inicio para que no se separen.
+            var _rc = _hdr.querySelector('.right-controls');
+            if (_rc) {
+                _rc.style.display = 'flex'; _rc.style.alignItems = 'center';
+                _rc.style.flexWrap = 'nowrap'; _rc.style.flexShrink = '0'; _rc.style.gap = '6px';
+                // Botón ⟳ (#btnRefresh): el script del panel ya lo cablea a init()
+                // si existe (const btnRefresh + addEventListener); basta crearlo
+                // aquí, ANTES de que ese script corra. Fuerza recarga (salta caché).
+                if (!root.querySelector('#btnRefresh')) {
+                    var _rb = document.createElement('button');
+                    _rb.id = 'btnRefresh';
+                    _rb.type = 'button';
+                    var _statusEl = _rc.querySelector('#status');
+                    _rc.insertBefore(_rb, _statusEl || null);
+                }
+                _rc.appendChild(_homeBtn);
             }
         }
+        _iconBtn('#btnRefresh', "<svg width='20' height='20' viewBox='0 0 24 24' fill='#fff'><path d='M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L13 11h7V4l-2.35 2.35z'/></svg>", 'var(--sc8-primary)', 'var(--sc8-primary-dark)', 'Actualizar datos desde Google Sheets');
+        var _rbCursor = root.querySelector('#btnRefresh');
+        if (_rbCursor) _rbCursor.style.cursor = 'pointer';
+        // Botones a 36px (los 4) para asegurar la fila única a ~1366px de ancho.
+        ['#btnExport', '#btnChart', '#btnRefresh', '.btn-volver'].forEach(function (s) {
+            var b = root.querySelector(s);
+            if (b) { b.style.width = '36px'; b.style.height = '36px'; b.style.minWidth = '36px'; b.style.minHeight = '36px'; }
+        });
         // "Last Week"/"Last Month" (id switchLabel, lo reescribe el panel según el modo)
         // en 2 líneas por ancho máximo, para que sobreviva a los cambios de texto.
         var _lw = root.querySelector('#switchLabel');
@@ -747,7 +782,88 @@
       .replaceAll("'","&#039;");
   }
 
+  // Guarda los filtros activos (sessionStorage) y los refleja en la URL para
+  // poder compartirla o recargar con F5 sin perder la selección. replaceState
+  // no dispara hashchange, así que el router no vuelve a montar la vista.
+  // El filtro de Customer no se persiste (se reinicia a "todos los visibles"
+  // en cada repoblado por diseño del panel).
+  function persistFilters(){
+    const state = {
+      year: yearSelect ? (yearSelect.value || '') : '',
+      period: periodSelect ? (periodSelect.value || 'sem') : 'sem',
+      week: weekSelect ? (weekSelect.value || '') : '',
+      cofaco: !!(filterCofaco && filterCofaco.checked),
+      c1: !!(filterCititex1 && filterCititex1.checked),
+      c2: !!(filterCititex2 && filterCititex2.checked),
+      est: !!(filterCititexEstanos && filterCititexEstanos.checked)
+    };
+    try{ sessionStorage.setItem(FILTERS_STORE_KEY, JSON.stringify(state)); }catch(e){}
+    if(location.hash.indexOf('#/empaque') !== 0) return;
+    const params = new URLSearchParams();
+    if(state.year) params.set('year', state.year);
+    params.set('per', state.period);
+    if(state.week) params.set('w', state.week);
+    if(state.cofaco) params.set('cofaco', '1');
+    if(state.c1) params.set('c1', '1');
+    if(state.c2) params.set('c2', '1');
+    if(state.est) params.set('est', '1');
+    try{ history.replaceState(null, '', '#/empaque?' + params.toString()); }catch(e){}
+  }
+
+  // Última selección: primero los parámetros de la URL (compartible), luego
+  // lo guardado en la sesión.
+  function readSavedFilters(){
+    const qIdx = location.hash.indexOf('?');
+    if(qIdx > -1 && location.hash.indexOf('#/empaque') === 0){
+      const params = new URLSearchParams(location.hash.slice(qIdx + 1));
+      if(params.get('year') || params.get('per') || params.get('w')){
+        return {
+          year: params.get('year') || '',
+          period: params.get('per') === 'mes' ? 'mes' : 'sem',
+          week: params.get('w') || '',
+          cofaco: params.get('cofaco') === '1',
+          c1: params.get('c1') === '1',
+          c2: params.get('c2') === '1',
+          est: params.get('est') === '1'
+        };
+      }
+    }
+    try{
+      const raw = sessionStorage.getItem(FILTERS_STORE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return null;
+  }
+
+  function hasOption(sel, value){
+    if(!sel) return false;
+    return Array.prototype.some.call(sel.options, o => o.value === String(value));
+  }
+
+  // Restaura la última selección de filtros; false si no había nada guardado.
+  function restoreSavedFilters(){
+    const saved = readSavedFilters();
+    if(!saved) return false;
+    try{
+      if(saved.year && hasOption(yearSelect, saved.year)) yearSelect.value = saved.year;
+      if(saved.period === 'sem' || saved.period === 'mes') periodSelect.value = saved.period;
+      populateWeekSelectByPeriod();
+      updateSwitchLabel(); // también resetea el switch Last Week/Month
+      if(saved.week && hasOption(weekSelect, saved.week)) weekSelect.value = saved.week;
+      filterCofaco.checked = !!saved.cofaco;
+      filterCititex1.checked = !!saved.c1;
+      filterCititex2.checked = !!saved.c2;
+      filterCititexEstanos.checked = !!saved.est;
+      populateCustomerFilter();
+      onWeekChange();
+    }catch(e){
+      return false;
+    }
+    return true;
+  }
+
   function onWeekChange(){
+    persistFilters();
     const w = weekSelect.value;
     const periodType = getPeriodType();
     
@@ -1142,7 +1258,10 @@
       chartCustomerBtn.addEventListener('click', function(ev){ ev.stopPropagation(); chartCustomerDropdown.classList.toggle('show'); });
     }
     // click outside to close modal dropdown
-    document.addEventListener('click', function(e){ if(chartCustomerDropdown && !chartCustomerBtn.contains(e.target) && !chartCustomerDropdown.contains(e.target)) chartCustomerDropdown.classList.remove('show'); });
+    // Handler en App para no acumular un listener de document por montaje (leak).
+    if (App._empChartDropClose) document.removeEventListener('click', App._empChartDropClose);
+    App._empChartDropClose = function(e){ if(chartCustomerDropdown && !chartCustomerBtn.contains(e.target) && !chartCustomerDropdown.contains(e.target)) chartCustomerDropdown.classList.remove('show'); };
+    document.addEventListener('click', App._empChartDropClose);
   }
 
   function updateChartCustomerLabel(){
@@ -1218,7 +1337,11 @@
   }
   if(closeChartModal){ closeChartModal.addEventListener('click', hideChartModal); }
   // click fuera del modal para cerrar
-  window.addEventListener('click', function(e){ if(e.target === chartModal) hideChartModal(); });
+  // Cerrar modal al clicar fuera. Handler guardado en App para quitar el del
+  // montaje anterior (antes se acumulaba un listener de window por visita).
+  if (App._empModalWinClick) window.removeEventListener('click', App._empModalWinClick);
+  App._empModalWinClick = function(e){ if(e.target === chartModal) hideChartModal(); };
+  window.addEventListener('click', App._empModalWinClick);
 
   // actualizar gráfica cuando cambian filtros dentro del modal
   function updateChartFromModal(){
@@ -1249,14 +1372,19 @@
   // =========================================================
   // INIT: cargar datos
   // =========================================================
-  async function init(){
+  // `forceReload`: el click del botón ⟳ pasa el Event (truthy) y fuerza la
+  // recarga; la carga inicial (__ready) llama sin argumentos y usa el caché.
+  async function init(forceReload){
+    const cacheValido = !forceReload && _dataCache.rows && (Date.now() - _dataCache.loadedAt) < DATA_TTL_MS;
+
     setStatus("Cargando datos desde Google Sheets…", "loading");
     weekSelect.disabled = true;
     if(btnRefresh) btnRefresh.disabled = true;
     btnExport.disabled = true;
 
     try{
-      const raw = await loadSheetJSONP(SHEET_ID, SHEET_NAME);
+      const raw = cacheValido ? _dataCache.rows : await loadSheetJSONP(SHEET_ID, SHEET_NAME);
+      if(!cacheValido) _dataCache = { rows: raw, loadedAt: Date.now() };
 
       // Detectar dinámicamente columnas de defectos entre "Total Cajas" y "Tot. Def." en la hoja
       const headers = raw && raw.length ? Object.keys(raw[0]) : [];
@@ -1324,8 +1452,12 @@
       populateWeekSelectByPeriod(); // ya selecciona la semana actual (o última disponible ≤52)
 
       if(weeks.length){
-        populateCustomerFilter();
-        onWeekChange();
+        // Restaurar la última selección de filtros; si no hay o ya no es
+        // válida, se queda el default recién aplicado (semana actual/última).
+        if(!restoreSavedFilters()){
+          populateCustomerFilter();
+          onWeekChange();
+        }
       }else{
         renderSummary([]);
       }
@@ -1515,19 +1647,19 @@
     });
   }
 
-  // Cerrar dropdown al hacer click fuera
-  document.addEventListener('click', function(e){
+  // Cerrar dropdown al hacer click fuera. Handler guardado en App para quitar
+  // el del montaje anterior (antes se acumulaba uno por visita).
+  if (App._empCustDropClose) document.removeEventListener('click', App._empCustDropClose);
+  App._empCustDropClose = function(e){
     if(!customerFilterBtn.contains(e.target) && !customerDropdown.contains(e.target)){
       customerDropdown.classList.remove('show');
     }
-  });
+  };
+  document.addEventListener('click', App._empCustDropClose);
 
-  weekSelect.addEventListener("change", function(){
-    lastWeekSwitch.checked = false; // reset switch al cambiar manual
-    populateCustomerFilter();
-    onWeekChange();
-  });
-  
+  // (listener de weekSelect duplicado eliminado: ya está conectado más arriba;
+  // ejecutaba populateCustomerFilter + onWeekChange dos veces por cambio)
+
   if(btnRefresh) btnRefresh.addEventListener("click", init);
   btnExport.addEventListener("click", exportExcel);
 

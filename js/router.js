@@ -123,7 +123,7 @@ window.App = window.App || {};
 
     // Cache-busting: subir este número al cambiar archivos de vistas/CSS para que
     // el navegador no use versiones cacheadas (evita tener que hacer Ctrl+F5).
-    const ASSET_VERSION = '49';
+    const ASSET_VERSION = '50';
     const bust = (url) => url + (url.indexOf('?') === -1 ? '?' : '&') + 'v=' + ASSET_VERSION;
 
     // ---- Librerías externas bajo demanda (no en el shell) -------------------

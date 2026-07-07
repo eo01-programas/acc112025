@@ -1,0 +1,961 @@
+/* views/auditoria-lotes.css - estilos del panel Auditoria Lotes de Produccion.
+   Cargado por el router solo cuando la vista esta activa.
+   La regla body se limita a body[data-view=auditoria-lotes]. */
+
+body[data-view="auditoria-lotes"] {
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 6px 14px 6px;
+            background: #f7f9fc;
+            overflow-x: hidden;
+            /* border-box: el padding no se suma al min-height:100vh del body
+               (evita la barra de scroll vertical "fantasma") */
+            box-sizing: border-box;
+        }
+
+        /* Escala fit-to-screen: reproduce al 100% de zoom del navegador el
+           aspecto aprobado al 80%, para que ambos paneles (tabla + donuts)
+           quepan sin scroll vertical en Chrome (mismo patrón que factory-code).
+           Se aplica solo al contenido principal: los modales, tooltips y
+           overlays cuelgan de <body> y conservan su tamaño y coordenadas. */
+        body[data-view="auditoria-lotes"] .page-header,
+        body[data-view="auditoria-lotes"] .plants-carousel {
+            zoom: 0.8;
+        }
+
+        .card {
+            max-width: 900px;
+            margin: 18px auto;
+            background: #fff;
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(10, 20, 40, 0.08)
+        }
+
+        .cofaco-card {
+            padding-bottom: 8px
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .header-title h1 {
+            margin-bottom: 0;
+            flex: 1;
+            text-align: left;
+            color: #1a1a1a;
+            font-size: 28px;
+            font-weight: 700;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 6px
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px
+        }
+
+        /* Tabla resumen de cada planta: mas angosta y centrada, con aire
+           lateral respecto a los bordes de la tarjeta */
+        .cards-row .card table {
+            width: 70%;
+            margin: 12px auto 0;
+        }
+
+        th,
+        td {
+            padding: 4px 6px;
+            border: 1px solid #e6eef8;
+            text-align: center
+        }
+
+        th {
+            background: #eaf4ff;
+            font-weight: 700
+        }
+
+        .note {
+            font-size: 13px;
+            color: #444;
+            margin-top: 8px
+        }
+
+        .badge {
+            display: inline-block;
+            background: #dff5e6;
+            color: #1a7f3a;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            border: 1px solid #b8e6c7
+        }
+
+        .badge.small {
+            padding: 6px 10px;
+            font-size: 16px;
+            line-height: 1
+        }
+
+        /* Estados del badge de carga (se muestra en el toast "Datos ✓"
+           común del router, abajo a la derecha) */
+        .badge-loading,
+        .badge-ok,
+        .badge-error {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .badge-loading {
+            background: #fff7e6;
+            color: #8a6d3b;
+            border: 1px solid #ffecb5;
+        }
+
+        .badge-ok {
+            background: #e6ffed;
+            color: #1f7a3a;
+            border: 1px solid #b7f7c2;
+        }
+
+        .badge-error {
+            background: #ffe6e6;
+            color: #a94442;
+            border: 1px solid #f5c6cb;
+        }
+
+        .badge .check {
+            display: inline-block;
+            color: #16a34a;
+            font-weight: 700;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            background: var(--sc8-primary, #2f7a4f);
+            color: #ffffff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+            box-shadow: 0 2px 8px rgba(79, 143, 98, .25);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .back-btn svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .back-btn:hover {
+            background: var(--sc8-primary-dark);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(79, 143, 98, .35);
+        }
+
+        /* Circular performance button placed left of the back button */
+        .perf-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--btn-chart-bg, #29b6f6);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(10, 20, 40, 0.12);
+            margin-right: 6px;
+            padding: 0;
+            transition: background 0.2s ease;
+        }
+
+        .perf-btn:hover {
+            background: var(--btn-chart-bg-hover, #0d47a1);
+        }
+
+        .perf-btn svg {
+            width: 18px;
+            height: 18px;
+            display: block
+        }
+
+        /* Print button styling */
+        .print-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #22863a;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(10, 20, 40, 0.12);
+            margin-right: 6px;
+            padding: 0;
+            transition: background 0.2s;
+        }
+
+        .print-btn:hover {
+            background: #1e7535
+        }
+
+        .print-btn svg {
+            width: 18px;
+            height: 18px;
+            display: block
+        }
+
+        /* Charts area */
+        .charts-wrapper {
+            margin-top: 18px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 18px 18px 8px;
+            box-shadow: 0 3px 12px rgba(10, 20, 40, 0.04)
+        }
+
+        #chartsWrapper,
+        #chartsWrapperCT {
+            padding: 8px 18px 0
+        }
+
+        .charts {
+            display: flex;
+            gap: 24px;
+            justify-content: space-between;
+            align-items: flex-start
+        }
+
+        .charts.charts-cofaco {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 24px;
+            align-items: start
+        }
+
+        .charts-col {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 0
+        }
+
+        .group-charts {
+            flex: 1;
+            text-align: center
+        }
+
+        .group-charts h3 {
+            margin: 0 0 8px 0;
+            text-align: left;
+            font-size: 14px
+        }
+
+        .donut-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center
+        }
+
+        .donut {
+            position: relative;
+            width: 160px;
+            height: 160px
+        }
+
+        .donut svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg)
+        }
+
+        .donut .center {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 24px
+        }
+
+        .donut .center .sublabel {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px
+        }
+
+        .donut .small-label {
+            position: absolute;
+            font-size: 12px;
+            color: #333
+        }
+
+        .donut .small-label .tag {
+            font-weight: 600;
+            margin-right: 6px;
+            color: #333;
+            font-size: 12px
+        }
+
+        .donut .label-left {
+            left: -4px;
+            top: 6px;
+            color: #007acc
+        }
+
+        .donut .label-left .tag {
+            color: #007acc;
+            font-weight: 700
+        }
+
+        .donut .label-right {
+            right: -36px;
+            top: 6px
+        }
+
+        .donut .label-bottom {
+            left: 10%;
+            bottom: 12px;
+            top: auto;
+            transform: translateX(-50%);
+            color: #007acc
+        }
+
+        .donut .label-bottom .tag {
+            color: #007acc;
+            font-weight: 700
+        }
+
+        .tag-aud {
+            color: #155724;
+            font-weight: 700;
+            margin-left: 2px
+        }
+
+        .tag-a1 {
+            color: #155724;
+            font-weight: 700;
+            margin-left: 2px
+        }
+
+        .num-a1,
+        .num-taud {
+            color: #155724;
+            font-weight: 700
+        }
+
+        /* Small donut (half size) used for COSTURA 1-19 and 20-29 */
+        .donut.small {
+            width: 80px;
+            height: 80px
+        }
+
+        .donut.small svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg)
+        }
+
+        .donut.small .center {
+            font-size: 14px
+        }
+
+        .donut.small .center .sublabel {
+            font-size: 10px;
+            margin-top: 4px
+        }
+
+        .sub-donuts {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 8px
+        }
+
+        .mini-tooltip {
+            position: fixed;
+            display: none;
+            z-index: 9999;
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 8px 10px;
+            border-radius: 6px;
+            box-shadow: 0 6px 18px rgba(10, 20, 40, 0.12);
+            font-size: 13px;
+            color: #112
+        }
+
+        .mini-tooltip b {
+            color: #155724
+        }
+
+        .sub-row {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 4px 12px;
+            margin-top: 4px
+        }
+
+        .sub-row .sub-left,
+        .sub-row .sub-right {
+            flex: 1;
+            display: flex;
+            justify-content: center
+        }
+
+        .charts.charts-cofaco .charts-col-left .sub-row {
+            justify-content: center;
+            gap: 14px;
+            padding: 4px 0 0 0
+        }
+
+        .charts.charts-cofaco .charts-col-left .sub-row .sub-left,
+        .charts.charts-cofaco .charts-col-left .sub-row .sub-right {
+            flex: 0;
+            justify-content: center
+        }
+
+        .charts.charts-cofaco .charts-col-left .sub-donuts {
+            gap: 8px;
+            margin-top: 0
+        }
+
+        .charts.charts-cofaco .charts-col-right .group-charts {
+            width: 100%;
+            max-width: 340px;
+            margin: 0 auto
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut-row,
+        .charts.charts-cofaco .group-charts.group-citis .donut-row {
+            gap: 14px
+        }
+
+        /* ACABADOS: donas medianas-grandes; Citis: donas compactas */
+        .charts.charts-cofaco .group-charts.group-acabados .donut {
+            width: 132px;
+            height: 132px
+        }
+
+        .charts.charts-cofaco .group-charts.group-citis .donut {
+            width: 116px;
+            height: 116px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .center {
+            font-size: 20px
+        }
+
+        .charts.charts-cofaco .group-charts.group-citis .donut .center {
+            font-size: 16px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .center .sublabel,
+        .charts.charts-cofaco .group-charts.group-citis .donut .center .sublabel {
+            font-size: 10px;
+            margin-top: 4px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .small-label,
+        .charts.charts-cofaco .group-charts.group-citis .donut .small-label {
+            font-size: 11px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .small-label .tag,
+        .charts.charts-cofaco .group-charts.group-citis .donut .small-label .tag {
+            font-size: 11px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-left,
+        .charts.charts-cofaco .group-charts.group-citis .donut .label-left {
+            left: -2px;
+            top: 4px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-right,
+        .charts.charts-cofaco .group-charts.group-citis .donut .label-right {
+            right: -18px;
+            top: 4px
+        }
+
+        .charts.charts-cofaco .group-charts.group-acabados .donut .label-bottom,
+        .charts.charts-cofaco .group-charts.group-citis .donut .label-bottom {
+            left: 16%;
+            bottom: 8px
+        }
+
+        /* Cititex: compact spacing between mini-donut groups */
+        .charts.charts-ct .sub-row {
+            justify-content: center;
+            gap: 14px;
+            padding: 4px 0
+        }
+
+        .charts.charts-ct .sub-row .sub-left,
+        .charts.charts-ct .sub-row .sub-right {
+            flex: 0
+        }
+
+        /* Modal for defect table */
+        .modal-overlay {
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 8px;
+            max-width: none;
+            width: 95vw;
+            box-sizing: border-box;
+            max-height: 86vh;
+            overflow: auto;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25)
+        }
+
+        /* Modal específico para el gráfico: 70% del ancho anterior (95vw * 0.7 = 66.5vw) */
+        #perfModal {
+            width: 66.5vw
+        }
+
+        /* Modal específico para el Top 5 (botón "i"): 35% del ancho actual (95vw * 0.35 = 33.25vw) */
+        #top5Modal {
+            width: 33.25vw
+        }
+
+        .modal h2 {
+            margin: 0 0 12px 0;
+            font-size: 16px
+        }
+
+        .modal .close-btn {
+            float: right;
+            background: #e53e3e;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer
+        }
+
+        .modal table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px
+        }
+
+        .modal th,
+        .modal td {
+            padding: 4px 6px;
+            border: 1px solid #e6eef8;
+            text-align: center;
+            font-size: 13px;
+            vertical-align: middle
+        }
+
+        .modal th {
+            background: #f1f7ff;
+            font-weight: 700
+        }
+
+        .modal-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .modal-toolbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .excel-btn {
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: var(--btn-excel-bg, #f78e6d);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .excel-btn:hover {
+            background: var(--btn-excel-bg-hover, #d1603e);
+        }
+
+        /* Compact modal tables */
+        .table-wrap {
+            overflow: auto;
+            max-height: 72vh
+        }
+
+        #modalDefects {
+            padding: 10px
+        }
+
+        #modalDefects table,
+        #modalBap table {
+            font-size: 10px;
+            table-layout: fixed;
+            border-collapse: collapse
+        }
+
+        #modalDefects th,
+        #modalDefects td,
+        #modalBap th,
+        #modalBap td {
+            padding: 4px 6px;
+            font-size: 10px
+        }
+
+        #modalDefects thead th,
+        #modalBap thead th {
+            position: sticky;
+            top: 0;
+            background: #f1f7ff
+        }
+
+        #modalDefects td,
+        #modalBap td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        #modalDefects tr.peor-equipo td {
+            box-shadow: inset 0 0 0 1000px rgba(255, 255, 0, 0.35)
+        }
+
+        #modalBap tr.peor-equipo-bap td {
+            box-shadow: inset 0 0 0 1000px rgba(255, 255, 0, 0.35)
+        }
+
+        /* Info button left of title */
+        .info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 8px;
+            border-radius: 50%;
+            background: #eef3ff;
+            color: #0b69c7;
+            border: 1px solid #d0d7e3;
+            font-weight: 700;
+            cursor: pointer;
+            margin-right: 8px
+        }
+
+        .info-btn:hover {
+            background: #e1ecff
+        }
+
+        /* Loading modal styles */
+        .loading-overlay {
+            position: fixed;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000
+        }
+
+        .loading-overlay.active {
+            display: flex
+        }
+
+        .loading-spinner {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px 32px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            text-align: center
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 16px;
+            border: 4px solid #f0f0f0;
+            border-top-color: #0b69c7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+            margin-top: 8px
+        }
+
+        /* ===== Carrusel de plantas =====
+           #plantsTrack (.cards-row) es la pista: el JS la desplaza con
+           translateX para centrar la planta activa; las vecinas asoman por
+           los lados reducidas y atenuadas (efecto profundidad). */
+        .plants-carousel {
+            position: relative;
+        }
+
+        .carousel-viewport {
+            overflow: hidden;
+            max-width: 2000px;
+            margin: 0 auto;
+        }
+
+        .cards-row {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+            box-sizing: border-box;
+            will-change: transform;
+            transition: transform .45s ease;
+        }
+
+        .cards-row .card {
+            flex: 0 0 70%;
+            max-width: none;
+            margin: 0;
+            transform: scale(.92);
+            opacity: .55;
+            cursor: pointer;
+            transition: transform .4s ease, opacity .4s ease;
+        }
+
+        .cards-row .card.active {
+            transform: none;
+            opacity: 1;
+            cursor: auto;
+        }
+
+        /* Flechas flotantes de navegacion */
+        .carousel-arrow {
+            position: absolute;
+            top: 50%;
+            z-index: 20;
+            width: 46px;
+            height: 46px;
+            border: none;
+            border-radius: 50%;
+            background: #fff;
+            color: var(--sc8-primary, #2f7a4f);
+            box-shadow: 0 4px 14px rgba(10, 20, 40, .22);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transform: translateY(-50%);
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+
+        .carousel-arrow:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 6px 18px rgba(10, 20, 40, .3);
+        }
+
+        .carousel-arrow.left {
+            left: 14px;
+        }
+
+        .carousel-arrow.right {
+            right: 14px;
+        }
+
+        .carousel-arrow svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* Puntos de navegacion con el nombre de cada planta */
+        .carousel-dots {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 6px;
+        }
+
+        .carousel-dot {
+            border: 1px solid #c8d8bd;
+            background: #fff;
+            color: #556;
+            border-radius: 999px;
+            padding: 4px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .carousel-dot.active {
+            background: var(--sc8-primary, #2f7a4f);
+            border-color: var(--sc8-primary, #2f7a4f);
+            color: #fff;
+            cursor: default;
+        }
+
+        @media (max-width: 1200px) {
+            .charts.charts-cofaco {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* Print styles */
+        @media print {
+body[data-view="auditoria-lotes"] {
+                padding: 0;
+                background: none;
+                margin: 0
+            }
+
+            .page-header {
+                display: none
+            }
+
+            .card {
+                display: none
+            }
+
+            .carousel-arrow,
+            .carousel-dots {
+                display: none
+            }
+
+            .charts-wrapper {
+                display: none
+            }
+
+            .loading-overlay {
+                display: none !important
+            }
+
+            .modal-overlay {
+                position: static;
+                display: block !important;
+                background: none;
+                align-items: unset;
+                justify-content: unset;
+                z-index: auto
+            }
+
+            .modal {
+                position: static;
+                display: block !important;
+                max-width: 100%;
+                width: 100%;
+                max-height: none;
+                overflow: visible;
+                padding: 0;
+                box-shadow: none;
+                border-radius: 0;
+                background: none;
+                margin: 0;
+                page-break-after: avoid
+            }
+
+            #perfModal {
+                width: 100%;
+                page-break-inside: avoid
+            }
+
+            #perfModal h2 {
+                margin: 0 0 12px 0;
+                font-size: 16px;
+                page-break-after: avoid
+            }
+
+            #perfModal fieldset {
+                page-break-inside: avoid;
+                margin: 0 0 12px 0
+            }
+
+            #perfModal #perfChartCanvas {
+                max-height: 800px;
+                page-break-inside: avoid
+            }
+
+            .modal .close-btn {
+                display: none
+            }
+
+            .print-btn {
+                display: none
+            }
+
+            /* Prefer landscape for the performance modal printout */
+            @page {
+                size: A4 landscape;
+                margin: 1.5cm
+            }
+
+            @page {
+                @bottom-center {
+                    content: "";
+                    display: none
+                }
+            }
+
+            body,
+            html {
+                margin: 0;
+                padding: 0
+            }
+
+            #perfModalOverlay {
+                position: static;
+                display: block !important;
+                margin: 0;
+                padding: 0
+            }
+        }

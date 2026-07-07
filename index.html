@@ -6,33 +6,33 @@
     <title>Aseguramiento Calidad Confecciones</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Estilos compartidos del shell (?v= para cache-busting durante validación) -->
-    <link rel="stylesheet" href="css/base.css?v=40" />
-    <link rel="stylesheet" href="css/components.css?v=40" />
-    <!-- Librerías compartidas por casi todas las vistas: se cargan en el shell.
-         `defer`: no bloquean el primer pintado (el menú aparece de inmediato) y se
+    <!-- Estilos compartidos del shell (?v= para cache-busting durante validaciÃ³n) -->
+    <link rel="stylesheet" href="css/base.css?v=49" />
+    <link rel="stylesheet" href="css/components.css?v=49" />
+    <!-- LibrerÃ­as compartidas por casi todas las vistas: se cargan en el shell.
+         `defer`: no bloquean el primer pintado (el menÃº aparece de inmediato) y se
          ejecutan ANTES de DOMContentLoaded; el router espera ese evento antes de
-         montar cualquier vista, así que window.Chart siempre existe al renderizar. -->
+         montar cualquier vista, asÃ­ que window.Chart siempre existe al renderizar. -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.0/dist/chartjs-plugin-annotation.min.js"></script>
 
-    <!-- Librerías pesadas que solo usan algunos paneles (xlsx ~1MB, PapaParse, jQuery+Select2)
+    <!-- LibrerÃ­as pesadas que solo usan algunos paneles (xlsx ~1MB, PapaParse, jQuery+Select2)
          se cargan BAJO DEMANDA desde js/router.js (ver tabla LIBS y campo `libs` por ruta).
-         Antes se descargaban todas aquí y penalizaban el arranque con ~1.1 MB sin usar. -->
+         Antes se descargaban todas aquÃ­ y penalizaban el arranque con ~1.1 MB sin usar. -->
 </head>
 
 <body>
-    <!-- El router monta aquí la vista activa (menú o panel) -->
+    <!-- El router monta aquÃ­ la vista activa (menÃº o panel) -->
     <div id="view-root"></div>
 
-    <!-- App: configuración, librerías compartidas y router (?v= para cache-busting) -->
-    <script src="js/config.js?v=40"></script>
-    <script src="js/lib/format.js?v=40"></script>
-    <script src="js/lib/dates.js?v=40"></script>
-    <script src="js/lib/sheets.js?v=40"></script>
-    <script src="js/lib/charts.js?v=40"></script>
-    <script src="js/router.js?v=40"></script>
+    <!-- App: configuraciÃ³n, librerÃ­as compartidas y router (?v= para cache-busting) -->
+    <script src="js/config.js?v=49"></script>
+    <script src="js/lib/format.js?v=49"></script>
+    <script src="js/lib/dates.js?v=49"></script>
+    <script src="js/lib/sheets.js?v=49"></script>
+    <script src="js/lib/charts.js?v=49"></script>
+    <script src="js/router.js?v=49"></script>
 </body>
 
 </html>

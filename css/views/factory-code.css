@@ -595,9 +595,9 @@ body[data-view="factory-code"] {
             background-color: var(--sc8-header);
         }
 
-        /* Tot. Def. (col 5) y Fabric (col 6): solo compactamos padding. */
-        th:nth-child(5),
-        th:nth-child(6) {
+        /* Tot. Def. (col 6) y Fabric (col 7): solo compactamos padding. */
+        th:nth-child(6),
+        th:nth-child(7) {
             padding-left: 2px !important;
             padding-right: 2px !important;
         }
@@ -610,8 +610,8 @@ body[data-view="factory-code"] {
             word-wrap: break-word;
         }
 
-        td:nth-child(5),
-        td:nth-child(6) {
+        td:nth-child(6),
+        td:nth-child(7) {
             padding-left: 2px !important;
             padding-right: 2px !important;
         }

@@ -13,10 +13,11 @@
     // original overall footprint so the table still looks like the current design.
     var FACTORY_CODE_TABLE_LAYOUTS = {
         interna: {
-            baseWidthPx: 1660,
+            baseWidthPx: 1730,
             columns: [
                 { label: 'Factory Code', widthPct: 6 },
                 { label: 'Customer', widthPct: 7 },
+                { label: 'OP', widthPct: 5 },
                 { label: 'Lot Size', widthPct: 5 },
                 { label: 'Sample Size', widthPct: 6 },
                 { label: 'Tot. Def.', widthPct: 5 },
@@ -43,10 +44,11 @@
             ]
         },
         cliente: {
-            baseWidthPx: 1520,
+            baseWidthPx: 1590,
             columns: [
                 { label: 'Factory Code', widthPct: 6 },
                 { label: 'Customer', widthPct: 7 },
+                { label: 'OP', widthPct: 5 },
                 { label: 'Lot Size', widthPct: 5 },
                 { label: 'Sample Size', widthPct: 6 },
                 { label: 'Tot. Def.', widthPct: 5 },
@@ -82,24 +84,72 @@
         return colgroup;
     }
 
-    function applyFactoryCodeTableLayout(root, tableId, layoutKey) {
+    // Columna extra que solo aparece en la búsqueda por OP (una OP puede estar
+    // registrada en varias semanas, por eso hay que mostrar de cuál viene la fila).
+    var FACTORY_CODE_WEEK_COLUMN = { label: 'Semana', widthPct: 5 };
+    // Ensanche mínimo al agregar "Semana": el wrapper escala la tabla a 0.78, así
+    // que pasarse hace que la última columna (A4) quede fuera de pantalla a 1366px.
+    var FACTORY_CODE_WEEK_COLUMN_PX = 50;
+
+    function applyFactoryCodeTableLayout(root, tableId, layoutKey, includeWeek) {
         var table = root.querySelector('#' + tableId);
         var layout = FACTORY_CODE_TABLE_LAYOUTS[layoutKey];
         if (!table || !layout) return;
 
+        var columns = includeWeek ? [FACTORY_CODE_WEEK_COLUMN].concat(layout.columns) : layout.columns;
+        var widthPx = layout.baseWidthPx + (includeWeek ? FACTORY_CODE_WEEK_COLUMN_PX : 0);
+
         var existingColgroup = table.querySelector('colgroup');
         if (existingColgroup) existingColgroup.remove();
-        table.insertBefore(buildFactoryCodeColgroup(layout.columns), table.firstChild);
+        table.insertBefore(buildFactoryCodeColgroup(columns), table.firstChild);
 
-        table.style.width = layout.baseWidthPx + 'px';
-        table.style.minWidth = layout.baseWidthPx + 'px';
+        table.style.width = widthPx + 'px';
+        table.style.minWidth = widthPx + 'px';
         table.style.maxWidth = 'none';
         table.setAttribute('data-column-layout', layoutKey);
     }
 
-    function applyFactoryCodeTableLayouts(root) {
-        applyFactoryCodeTableLayout(root, 'internaTable', 'interna');
-        applyFactoryCodeTableLayout(root, 'clienteTable', 'cliente');
+    function applyFactoryCodeTableLayouts(root, includeWeek) {
+        applyFactoryCodeTableLayout(root, 'internaTable', 'interna', includeWeek);
+        applyFactoryCodeTableLayout(root, 'clienteTable', 'cliente', includeWeek);
+    }
+
+    // El template original no incluye OP. La insertamos entre Customer y Lot Size
+    // en ambas tablas antes de construir sus colgroups.
+    function ensureFactoryCodeOpColumn(root) {
+        ['internaTable', 'clienteTable'].forEach(function (tableId) {
+            var headRow = root.querySelector('#' + tableId + ' thead tr');
+            if (!headRow || headRow.querySelector('th[data-op-col="1"]')) return;
+
+            var lotSizeHeader = Array.prototype.find.call(headRow.cells, function (cell) {
+                return (cell.textContent || '').trim() === 'Lot Size';
+            });
+            if (!lotSizeHeader) return;
+
+            var th = document.createElement('th');
+            th.textContent = 'OP';
+            th.setAttribute('data-op-col', '1');
+            headRow.insertBefore(th, lotSizeHeader);
+        });
+    }
+
+    // Agrega/quita el <th>Semana</th> al inicio de ambas tablas y reajusta el
+    // colgroup para que coincida con el nuevo número de columnas.
+    function setFactoryCodeWeekColumn(root, visible) {
+        ['internaTable', 'clienteTable'].forEach(function (tableId) {
+            var headRow = root.querySelector('#' + tableId + ' thead tr');
+            if (!headRow) return;
+            var existing = headRow.querySelector('th[data-week-col="1"]');
+            if (visible && !existing) {
+                var th = document.createElement('th');
+                th.textContent = 'Semana';
+                th.setAttribute('data-week-col', '1');
+                headRow.insertBefore(th, headRow.firstChild);
+            } else if (!visible && existing) {
+                existing.remove();
+            }
+        });
+        applyFactoryCodeTableLayouts(root, visible);
     }
 
     function normalizeFactoryCodeTemplateText(root) {
@@ -138,6 +188,7 @@
     function mount(root) {
         root.innerHTML = TEMPLATE;
         normalizeFactoryCodeTemplateText(root);
+        ensureFactoryCodeOpColumn(root);
         applyFactoryCodeTableLayouts(root);
         // Bot�n Inicio: �cono de casa en blanco (SVG, mismo estilo del resto de la app).
         var _homeBtn = root.querySelector('.back-btn-h1');
@@ -324,6 +375,9 @@
             _wrap.appendChild(_btn); _wrap.appendChild(_drop);
             _sel.parentNode.insertBefore(_wrap, _sel);
 
+            // Volver a "(Todos)" sin disparar un re-render (lo hace quien llama).
+            _sel._resetVals = function () { _vals = []; _updateBtn(); };
+
             // Cuando populateCustomerFilter agrega opciones al <select>, filtrar _vals y actualizar bot�n.
             var _rebTimer = null;
             new MutationObserver(function () {
@@ -336,6 +390,70 @@
                 }, 60);
             }).observe(_sel, { childList: true });
         })();
+        // Búsqueda por OP: caja "OP:" al final de los filtros, con botón de lupa
+        // (o Enter) y botón ✕ para limpiar. runOpSearch/clearOpSearch se declaran
+        // más abajo dentro de mount (hoisting de function declarations).
+        var opInput = null;
+        var opClearBtn = null;
+        var opFrame = null;
+        (function () {
+            var _left = root.querySelector('.controls-left');
+            if (!_left) return;
+
+            opFrame = document.createElement('div');
+            opFrame.className = 'labelframe';
+            opFrame.id = 'opSearchFrame';
+            opFrame.style.paddingLeft = '6px';
+            opFrame.style.paddingRight = '6px';
+
+            var _title = document.createElement('span');
+            _title.className = 'labelframe-title';
+            _title.textContent = 'OP:';
+            opFrame.appendChild(_title);
+
+            var _content = document.createElement('div');
+            _content.className = 'labelframe-content';
+            _content.style.gap = '3px';
+            _content.style.flexWrap = 'nowrap';
+            opFrame.appendChild(_content);
+
+            opInput = document.createElement('input');
+            opInput.type = 'text';
+            opInput.id = 'opSearchInput';
+            opInput.placeholder = 'N° OP';
+            opInput.autocomplete = 'off';
+            opInput.style.cssText = 'width:72px;height:28px;padding:0 5px;font-size:11px;border:1px solid #bbb;border-radius:4px;background:#fff;box-sizing:border-box;outline:none;';
+            _content.appendChild(opInput);
+
+            function _miniBtn(html, title, bg) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.innerHTML = html;
+                b.title = title;
+                b.style.cssText = 'width:24px;height:24px;min-width:24px;padding:0;border:none;border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;background:' + bg + ';box-shadow:0 1px 4px rgba(47,59,47,.22);';
+                _content.appendChild(b);
+                return b;
+            }
+
+            var _searchBtn = _miniBtn(
+                "<svg width='14' height='14' viewBox='0 0 24 24' fill='#fff'><path d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/></svg>",
+                'Buscar OP', 'var(--sc8-primary, #4caf50)');
+            _searchBtn.addEventListener('click', function () { runOpSearch(); });
+
+            opClearBtn = _miniBtn(
+                "<svg width='14' height='14' viewBox='0 0 24 24' fill='#fff'><path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/></svg>",
+                'Limpiar búsqueda por OP', '#9e9e9e');
+            opClearBtn.style.display = 'none';
+            opClearBtn.addEventListener('click', function () { clearOpSearch(); });
+
+            opInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); runOpSearch(); }
+                else if (e.key === 'Escape') { e.preventDefault(); clearOpSearch(); }
+            });
+
+            _left.appendChild(opFrame);
+        })();
+
         var __ready = function (fn) { if (typeof fn === 'function') fn(); };
 
         // ===== Script original del panel (relocado a mount) =====
@@ -376,6 +494,7 @@
         let currentInternaData = [];
         let currentClienteData = [];
         let prevWeekSelection = null; // guarda la semana activa antes de activar "Last Week"
+        let opSearchTerm = '';        // OP buscada; '' = modo normal (por Week/Mes)
 
         // Helpers para manejar la columna 'Audit Date'
         function parseDateFromString(s) {
@@ -704,6 +823,17 @@
             return num.toLocaleString('es-PE', { maximumFractionDigits: 0 });
         }
 
+        // Conserva solo el primer bloque numérico de la OP. Los sufijos después
+        // de guiones, guiones bajos, espacios o comas corresponden a variantes
+        // de la misma orden y no deben crear OP distintas en el resumen.
+        function normalizeFactoryOp(value) {
+            if (value === null || value === undefined) return '';
+            const raw = String(value).trim();
+            if (!raw) return '';
+            const firstNumber = raw.match(/\d+/);
+            return firstNumber ? firstNumber[0] : raw;
+        }
+
         function processSheetData(jsonData) {
             gridData = jsonData.map(row => {
                     // Funci�n helper para obtener valor num�rico
@@ -726,7 +856,7 @@
                         Customer: getStr('Customer'),
                         AQL: getStr('AQL'),
                         'N� Report': getStr('N� Report'),
-                        OP: getStr('OP'),
+                        OP: normalizeFactoryOp(getStr('OP')),
                         Style: getStr('Style'),
                         Season: getStr('Season'),
                         'Lot # P.O. #': getStr('Lot # P.O. #'),
@@ -838,6 +968,9 @@
             try { if (weekSelect) weekSelect.disabled = false; } catch(e) {}
             try { if (yearSelect) yearSelect.disabled = false; } catch(e) {}
             try { if (btnDownload) btnDownload.disabled = !weekSelect.value; } catch(e) {}
+            // Si hay una b�squeda por OP activa (p.ej. tras pulsar ⟳), rehacerla
+            // sobre los datos reci�n cargados conservando Factory/Customer.
+            if (opSearchTerm) { try { renderOpResults(false); } catch(e) { console.error(e); } }
             console.log('[processSheetData] Initialization complete');
         }        function getCurrentWeekNumber() {
             const today = new Date();
@@ -1021,6 +1154,8 @@
         }
 
         function handleWeekChange() {
+            // Con una búsqueda por OP activa las tablas las manda la OP, no la Week.
+            if (opSearchTerm) return;
             persistFilters();
             const selectedValue = weekSelect.value;
             if (!selectedValue) {
@@ -1082,6 +1217,121 @@
             const anyCustomerSelected = getSelectedCustomers().length > 0;
             if (cofacoToggle.checked || cititex1Toggle.checked || cititex2Toggle.checked || anyCustomerSelected) {
                 applyFactoryFilters();
+            }
+        }
+
+        // ===== Búsqueda por OP =====
+        // Una OP puede aparecer en varias semanas, así que el resultado ignora el
+        // filtro de Week/Mes y agrega la columna "Semana" al inicio de las tablas.
+        // Los filtros de Factory y Customer se siguen aplicando sobre el resultado.
+
+        function getRowWeekInfo(row) {
+            const dt = row._parsedAuditDate || parseDateFromString(row['Audit Date']);
+            if (dt && !isNaN(dt.getTime())) {
+                return { year: dt.getFullYear(), week: getISOWeek(dt) };
+            }
+            const wk = parseInt(row.Week, 10);
+            if (!isNaN(wk)) return { year: 0, week: wk };
+            return null;
+        }
+
+        function pad(n, len) {
+            let s = String(n);
+            while (s.length < len) s = '0' + s;
+            return s;
+        }
+
+        // Activa/desactiva los controles de Week mientras la búsqueda por OP manda,
+        // y sincroniza la columna "Semana" de las tablas.
+        function setOpSearchUiState(active) {
+            setFactoryCodeWeekColumn(root, active);
+
+            if (yearSelect) yearSelect.disabled = active || yearSelect.options.length <= 1;
+            if (periodSelect) periodSelect.disabled = active;
+            if (weekSelect) weekSelect.disabled = active || weekSelect.options.length <= 1;
+            if (lastWeekToggle) lastWeekToggle.disabled = active;
+
+            const weekFrame = root.querySelector('#weekFieldset');
+            if (weekFrame) weekFrame.style.opacity = active ? '0.45' : '';
+            if (opClearBtn) opClearBtn.style.display = active ? 'inline-flex' : 'none';
+            if (opFrame) {
+                opFrame.style.borderColor = active ? 'var(--sc8-primary, #4caf50)' : '';
+                opFrame.style.borderWidth = active ? '2px' : '';
+            }
+        }
+
+        // Rehace las tablas con la OP guardada en opSearchTerm. `resetFilters`
+        // deja Factory/Customer en "todos" (búsqueda nueva); en un refresco de
+        // datos se conservan los filtros que el usuario ya tenía puestos.
+        function renderOpResults(resetFilters) {
+            const needle = opSearchTerm.toUpperCase();
+            const matches = gridData.filter(function (r) {
+                return String(r.OP || '').trim().toUpperCase().indexOf(needle) > -1;
+            });
+
+            setOpSearchUiState(true);
+
+            if (matches.length === 0) {
+                currentInternaData = [];
+                currentClienteData = [];
+                internaBody.innerHTML = '';
+                clienteBody.innerHTML = '';
+                tablesContainer.classList.add('hidden');
+                noDataMessage.textContent = 'No se encontraron auditorías para la OP "' + opSearchTerm + '"';
+                noDataMessage.classList.remove('hidden');
+                btnDownload.disabled = true;
+                return;
+            }
+
+            // Clave ordenable (año+semana) y etiqueta de la columna "Semana".
+            matches.forEach(function (r) {
+                const info = getRowWeekInfo(r);
+                r._opWeekKey = info ? pad(info.year, 4) + '-' + pad(info.week, 2) : 'zzzz';
+                r._opWeekLabel = info ? 'SEM' + info.week : 'S/D';
+            });
+
+            noDataMessage.classList.add('hidden');
+            tablesContainer.classList.remove('hidden');
+
+            currentInternaData = matches.filter(r => r.Validez === 'Interna' || r.Validez === 'Interna , Cliente');
+            currentClienteData = matches.filter(r => r.Validez === 'Cliente' || r.Validez === 'Interna , Cliente');
+
+            if (resetFilters) {
+                cofacoToggle.checked = false;
+                cititex1Toggle.checked = false;
+                cititex2Toggle.checked = false;
+                if (typeof customerFilter._resetVals === 'function') customerFilter._resetVals();
+            }
+
+            populateCustomerFilter(currentInternaData, currentClienteData);
+
+            // applyFactoryFilters re-renderiza respetando Factory/Customer activos.
+            applyFactoryFilters();
+            btnDownload.disabled = false;
+        }
+
+        function runOpSearch() {
+            const term = (opInput && opInput.value ? opInput.value : '').trim();
+            if (!term) { clearOpSearch(); return; }
+            opSearchTerm = normalizeFactoryOp(term);
+            if (opInput) opInput.value = opSearchTerm;
+            renderOpResults(true);
+        }
+
+        function clearOpSearch() {
+            if (!opSearchTerm && opInput && !opInput.value) return;
+            opSearchTerm = '';
+            if (opInput) opInput.value = '';
+            setOpSearchUiState(false);
+            noDataMessage.textContent = 'No hay datos para esta Week';
+            if (typeof customerFilter._resetVals === 'function') customerFilter._resetVals();
+            if (weekSelect && weekSelect.value) {
+                handleWeekChange();
+            } else {
+                currentInternaData = [];
+                currentClienteData = [];
+                tablesContainer.classList.add('hidden');
+                noDataMessage.classList.add('hidden');
             }
         }
 
@@ -1232,31 +1482,51 @@
         function renderTable(tbody, data, tableType) {
             tbody.innerHTML = '';
 
+            // En búsqueda por OP se antepone la columna "Semana": todos los
+            // colSpan e índices de columna se corren una posición.
+            const showWeek = !!opSearchTerm;
+            const colOff = showWeek ? 1 : 0;
+
             if (data.length === 0) {
                 const row = tbody.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 25;
+                cell.colSpan = (tableType === 'INTERNA' ? 26 : 22) + colOff;
                 cell.textContent = 'No hay datos';
                 cell.style.textAlign = 'center';
                 cell.style.padding = '20px';
                 return;
             }
 
-            // Agrupar primero por Factory Code, luego por Customer
-            const groupedByFactory = {};
+            // Agrupar por Semana (solo en búsqueda por OP), luego por Factory Code
+            // y por Customer. Fuera de la búsqueda hay un único grupo sin semana.
+            const groupedByWeek = {};
             data.forEach(row => {
+                const weekKey = showWeek ? (row._opWeekKey || 'zzzz') : '';
                 const factory = row['Factory Code'] || 'Sin c�digo';
                 const customer = row['Customer'] || 'Sin cliente';
-                
-                if (!groupedByFactory[factory]) {
-                    groupedByFactory[factory] = {};
+                const op = normalizeFactoryOp(row.OP) || 'Sin OP';
+
+                if (!groupedByWeek[weekKey]) {
+                    groupedByWeek[weekKey] = {
+                        label: showWeek ? (row._opWeekLabel || 'S/D') : '',
+                        factories: {}
+                    };
                 }
-                
-                if (!groupedByFactory[factory][customer]) {
-                    groupedByFactory[factory][customer] = [];
+                const factories = groupedByWeek[weekKey].factories;
+
+                if (!factories[factory]) {
+                    factories[factory] = {};
                 }
-                
-                groupedByFactory[factory][customer].push(row);
+
+                if (!factories[factory][customer]) {
+                    factories[factory][customer] = {};
+                }
+
+                if (!factories[factory][customer][op]) {
+                    factories[factory][customer][op] = [];
+                }
+
+                factories[factory][customer][op].push(row);
             });
 
             const totals = {
@@ -1285,10 +1555,15 @@
                 A4: 0
             };
 
+            // Procesar cada Semana (un solo grupo vacío fuera de la búsqueda por OP)
+            Object.keys(groupedByWeek).sort().forEach(weekKey => {
+            const weekText = groupedByWeek[weekKey].label;
+            const groupedByFactory = groupedByWeek[weekKey].factories;
+
             // Procesar cada Factory Code
             Object.keys(groupedByFactory).sort().forEach(factory => {
                 const customers = groupedByFactory[factory];
-                
+
                 // Subtotal por Factory Code
                 const factorySubtotal = {
                     'Lot Size': 0,
@@ -1316,9 +1591,16 @@
                     A4: 0
                 };
 
-                // Procesar cada Customer dentro del Factory Code
+                // Ordenar primero por Customer y luego por OP.
+                const customerOps = [];
                 Object.keys(customers).sort().forEach(customer => {
-                    const rows = customers[customer];
+                    const ops = customers[customer];
+                    Object.keys(ops).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).forEach(op => {
+                        customerOps.push({ customer, op, rows: ops[op] });
+                    });
+                });
+
+                customerOps.forEach(({ customer, op, rows }) => {
                     const row = tbody.insertRow();
 
                     const lineSum = {
@@ -1373,8 +1655,10 @@
                         if (r.Intento === 4) lineSum.A4++;
                     });
 
+                    if (showWeek) row.insertCell().textContent = weekText;
                     row.insertCell().textContent = factory;
                     row.insertCell().textContent = customer;
+                    row.insertCell().textContent = op;
                     row.insertCell().textContent = formatNumber(lineSum['Lot Size']);
                     row.insertCell().textContent = formatNumber(lineSum['Sample Size']);
                     
@@ -1499,7 +1783,9 @@
                 subtotalRow.style.fontWeight = '600';
                 subtotalRow.setAttribute('style', 'background-color: #90ee90 !important; font-weight: 600;');
 
+                if (showWeek) subtotalRow.insertCell().textContent = weekText;
                 subtotalRow.insertCell().textContent = 'Total ' + factory;
+                subtotalRow.insertCell().textContent = '';
                 subtotalRow.insertCell().textContent = '';
                 subtotalRow.insertCell().textContent = formatNumber(factorySubtotal['Lot Size']);
                 subtotalRow.insertCell().textContent = formatNumber(factorySubtotal['Sample Size']);
@@ -1554,6 +1840,7 @@
                 totals.A3 += factorySubtotal.A3;
                 totals.A4 += factorySubtotal.A4;
             });
+            });
 
             const totalRow = tbody.insertRow();
             totalRow.className = 'total-row';
@@ -1562,7 +1849,9 @@
                 ? (totals['Tot. Def.'] / totals['Sample Size'] * 100).toFixed(2) + '%'
                 : '0.00%';
 
+            if (showWeek) totalRow.insertCell().textContent = '';
             totalRow.insertCell().textContent = 'Total general';
+            totalRow.insertCell().textContent = '';
             totalRow.insertCell().textContent = '';
             totalRow.insertCell().textContent = formatNumber(totals['Lot Size']);
             totalRow.insertCell().textContent = formatNumber(totals['Sample Size']);
@@ -1609,7 +1898,7 @@
             const defectuosoLabelCell = defectuosoRow.insertCell();
             defectuosoLabelCell.textContent = 'DEFECTUOSO';
             defectuosoLabelCell.style.fontWeight = '700';
-            defectuosoLabelCell.colSpan = 4;
+            defectuosoLabelCell.colSpan = 5 + colOff;
             
             // Columna 5 (Tot. Def.) - Base para divisiones
             const sampleSizeTotal = totals['Sample Size']; // Columna 4
@@ -1692,7 +1981,7 @@
             const percentRow = tbody.insertRow();
             percentRow.setAttribute('style', 'background-color: #4a4a4a !important; color: white !important;');
             const percentEmptyCell = percentRow.insertCell();
-            percentEmptyCell.colSpan = 5;
+            percentEmptyCell.colSpan = 6 + colOff;
             percentEmptyCell.textContent = '';
 
             // Calcular porcentajes individuales (cada columna / Tot. Def.)
@@ -1764,8 +2053,8 @@
 
             // Calcular porcentaje num�rico de cada defecto (cada defecto / Tot. Def.)
             const defectPercents = defectKeys.map((key, idx) => ({
-                idx: idx,           // posici�n dentro de defectKeys (0-14)
-                colIdx: idx + 5,    // �ndice de columna en la tabla (5-19)
+                idx: idx,                    // posici�n dentro de defectKeys (0-14)
+                colIdx: idx + 6 + colOff,    // �ndice de columna en la tabla (6-20, +1 con "Semana")
                 value: totDefTotal > 0 ? (totals[key] / totDefTotal * 100) : 0
             }));
 
@@ -2614,6 +2903,11 @@
             createStyledSheet(wb, 'clienteTable', 'CLIENTE');
             
             // Descargar archivo
+            if (opSearchTerm) {
+                const opTag = opSearchTerm.replace(/[^\w.-]+/g, '_');
+                XLSX.writeFile(wb, `Resumen_Auditoria_OP_${opTag}.xlsx`);
+                return;
+            }
             const selectedWeek = weekSelect.value || 'resumen';
             XLSX.writeFile(wb, `Resumen_Auditoria_Week_${selectedWeek}.xlsx`);
         }
@@ -2621,13 +2915,17 @@
         function createStyledSheet(wb, tableId, sheetName) {
             const table = document.getElementById(tableId);
             const ws = XLSX.utils.table_to_sheet(table);
-            
+
+            // En búsqueda por OP la tabla lleva "Semana" al inicio: todos los
+            // índices fijos de columna se corren una posición.
+            const colOff = opSearchTerm ? 1 : 0;
+
             // Obtener el rango de la hoja
             let range = XLSX.utils.decode_range(ws['!ref']);
-            
+
             // Asegurar que el rango incluya todas las columnas necesarias
             // Para INTERNA: hasta columna Y (�ndice 24), para CLIENTE: hasta U (�ndice 20)
-            const maxCol = sheetName === 'INTERNA' ? 24 : 20;
+            const maxCol = (sheetName === 'INTERNA' ? 25 : 21) + colOff;
             if (range.e.c < maxCol) {
                 range.e.c = maxCol;
                 ws['!ref'] = XLSX.utils.encode_range(range);
@@ -2703,8 +3001,10 @@
                     if (R === 0) {
                         ws[cellAddress].s = headerStyle;
                     } else {
-                        // Detectar filas especiales
-                        if (C === 0 && typeof cellValue === 'string') {
+                        // Detectar filas especiales. Con la columna "Semana" la
+                        // etiqueta cae en C=colOff, salvo DEFECTUOSO/porcentajes
+                        // que arrancan en C=0 por su colspan.
+                        if ((C === 0 || C === colOff) && typeof cellValue === 'string') {
                             if (cellValue.startsWith('Total ')) {
                                 // Fila de subtotal
                                 for (let col = 0; col <= range.e.c; col++) {
@@ -2723,7 +3023,7 @@
                                     const addr = XLSX.utils.encode_cell({ r: R, c: col });
                                     ws[addr].s = JSON.parse(JSON.stringify(totalStyle));
                                     // Aplicar formato porcentaje con 2 decimales solo desde columna E (4) hasta T (19)
-                                    if (col >= 4 && col <= 19) {
+                                    if (col >= 5 + colOff && col <= 20 + colOff) {
                                         let cellVal = ws[addr].v !== undefined ? ws[addr].v : 0;
                                         // Convertir tanto strings como n�meros
                                         if (typeof cellVal === 'string') {
@@ -2738,7 +3038,7 @@
                                         ws[addr].s.numFmt = '0.00%';
                                     }
                                     // Para INTERNA: Columna V (�ndice 21) - formato % sin decimales
-                                    else if (col === 21 && sheetName === 'INTERNA') {
+                                    else if (col === 22 + colOff && sheetName === 'INTERNA') {
                                         let cellVal = ws[addr].v !== undefined ? ws[addr].v : 0;
                                         if (typeof cellVal === 'string') {
                                             cellVal = cellVal.replace('%', '').trim();
@@ -2759,7 +3059,7 @@
                                 for (let col = 0; col <= range.e.c; col++) {
                                     const addr = XLSX.utils.encode_cell({ r: R, c: col });
                                     // Aplicar formato porcentaje sin decimales solo desde columna D (3) hasta T (19)
-                                    if (col >= 3 && col <= 19) {
+                                    if (col >= 4 + colOff && col <= 20 + colOff) {
                                         let cellVal = ws[addr].v !== undefined ? ws[addr].v : 0;
                                         // Convertir tanto strings como n�meros
                                         if (typeof cellVal === 'string') {
@@ -2774,7 +3074,7 @@
                                         ws[addr].s.numFmt = '0%';
                                     }
                                     // Para INTERNA: Columna V (�ndice 21) - formato % sin decimales
-                                    else if (col === 21 && sheetName === 'INTERNA') {
+                                    else if (col === 22 + colOff && sheetName === 'INTERNA') {
                                         let cellVal = ws[addr].v !== undefined ? ws[addr].v : 0;
                                         if (typeof cellVal === 'string') {
                                             cellVal = cellVal.replace('%', '').trim();
@@ -2791,7 +3091,7 @@
                         
                         
                         // Hacer que los ceros tengan color blanco en filas de datos normales (no totales, no DEFECTUOSO) columnas E a Y (�ndices 4 a 24)
-                        const firstCellAddr = XLSX.utils.encode_cell({ r: R, c: 0 });
+                        const firstCellAddr = XLSX.utils.encode_cell({ r: R, c: colOff });
                         const firstCellValue = ws[firstCellAddr] ? ws[firstCellAddr].v : '';
                         const isDataRow = firstCellValue && 
                                          typeof firstCellValue === 'string' && 
@@ -2799,7 +3099,7 @@
                                          firstCellValue !== 'Total general' && 
                                          firstCellValue !== 'DEFECTUOSO';
                         
-                        if (isDataRow && C >= 4 && C <= 24) {
+                        if (isDataRow && C >= 5 + colOff && C <= 25 + colOff) {
                             if (ws[cellAddress].v === 0 || ws[cellAddress].v === '0') {
                                 // En lugar de eliminar el contenido, poner el texto en color blanco
                                 if (!ws[cellAddress].s.font) {
@@ -2815,37 +3115,42 @@
             // Ajustar anchos de columna
             const colWidths = [];
             // Definir columnas especiales con ancho 7.33: D(3), G(6), J(9), K(10), L(11), M(12), N(13), P(15), R(17), U(20)
-            const colsWith733 = [3, 6, 9, 10, 11, 12, 13, 15, 17, 20];
+            const colsWith733 = [4, 7, 10, 11, 12, 13, 14, 16, 18, 21];
             
             for (let C = 0; C <= range.e.c; ++C) {
-                if (C < 2) {
+                const Cb = C - colOff; // �ndice sin la columna "Semana"
+                if (Cb < 0) {
+                    colWidths.push({ wch: 9 }); // Semana (solo en b�squeda por OP)
+                } else if (Cb < 2) {
                     colWidths.push({ wch: 15 }); // Factory Code y Customer
-                } else if (colsWith733.includes(C)) {
+                } else if (Cb === 2) {
+                    colWidths.push({ wch: 10 }); // OP
+                } else if (colsWith733.includes(Cb)) {
                     colWidths.push({ wch: 7.33 }); // Columnas D, G, J, K, L, M, N, P, R, U
-                } else if (C >= 2 && C <= 20) {
+                } else if (Cb >= 3 && Cb <= 21) {
                     colWidths.push({ wch: 6 }); // Resto de columnas C a U (�ndices 2 a 20)
-                } else if (C >= 21 && C <= 24 && sheetName === 'INTERNA') {
+                } else if (Cb >= 22 && Cb <= 25 && sheetName === 'INTERNA') {
                     colWidths.push({ wch: 4.5 }); // Columnas V, W, X, Y (�ndices 21-24) solo para INTERNA
                 } else {
                     colWidths.push({ wch: 12 }); // Resto
                 }
             }
             ws['!cols'] = colWidths;
-            
+
             // Para CLIENTE: eliminar columnas V, W, X (�ndices 21, 22, 23)
             if (sheetName === 'CLIENTE') {
                 // Eliminar celdas de las columnas V, W, X
                 for (let R = range.s.r; R <= range.e.r; ++R) {
-                    for (let C = 21; C <= 23; ++C) {
+                    for (let C = 22 + colOff; C <= 24 + colOff; ++C) {
                         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
                         delete ws[cellAddress];
                     }
                 }
                 // Ajustar el rango para terminar en columna U (�ndice 20)
-                range.e.c = 20;
+                range.e.c = 21 + colOff;
                 ws['!ref'] = XLSX.utils.encode_range(range);
                 // Ajustar anchos de columna
-                ws['!cols'] = colWidths.slice(0, 21);
+                ws['!cols'] = colWidths.slice(0, 22 + colOff);
             }
             
             XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -2908,6 +3213,9 @@
         // Restaura la última selección de filtros sobre los defaults que ya dejó
         // processSheetData; false si no había nada guardado.
         function restoreSavedFilters() {
+            // Con una b�squeda por OP activa las tablas ya se rehicieron en
+            // processSheetData; no hay que pisarlas con los filtros de Week.
+            if (opSearchTerm) return false;
             const saved = readSavedFilters();
             if (!saved) return false;
             try {

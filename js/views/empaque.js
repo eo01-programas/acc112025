@@ -535,7 +535,7 @@
           FactoryCode: factory,
           Customer: customer,
           Reports: new Set(),
-          LotBoxes: new Set(),
+          LotBox: 0,
           TotalCajas: 0,
           A1: 0, A2: 0, A3: 0, A4: 0
         };
@@ -547,7 +547,7 @@
       const g = groups.get(key);
 
       if(r.Report) g.Reports.add(r.Report);
-      if(r.LotBox) g.LotBoxes.add(r.LotBox);
+      g.LotBox += r.LotBox;
       
       g.TotalCajas += r.TotalCajas;
       // agregar dinámicamente los defectos
@@ -565,7 +565,6 @@
     const out = Array.from(groups.values()).map(g=>{
       const totalReports = g.Reports.size;     // Cuenta de Nº Report (únicos)
       const TT = g.A1 + g.A2 + g.A3 + g.A4;    // total intentos
-      const lotBoxCount = g.LotBoxes.size;
       // TotDef = suma de todas las columnas de defectos detectadas
       const defKeys3 = (window.__DEFECT_KEYS || []);
       const TotDef = defKeys3.reduce((acc,k)=> acc + (g[k] || 0), 0);
@@ -573,7 +572,7 @@
       const baseOut = {
         FactoryCode: g.FactoryCode,
         Customer: g.Customer,
-        LotBox: lotBoxCount,
+        LotBox: g.LotBox,
         TotalCajas: g.TotalCajas,
         TotDef: TotDef,
         PctDef: PctDef,
@@ -916,7 +915,7 @@
           FactoryCode: factory,
           Customer: customer,
           Reports: new Set(),
-          LotBoxes: new Set(),
+          LotBox: 0,
           TotalCajas: 0,
           A1: 0, A2: 0, A3: 0, A4: 0
         };
@@ -927,7 +926,7 @@
       const g = groups.get(key);
 
       if(r.Report) g.Reports.add(r.Report);
-      if(r.LotBox) g.LotBoxes.add(r.LotBox);
+      g.LotBox += r.LotBox;
       
       g.TotalCajas += r.TotalCajas;
       const defKeysLocal2 = (window.__DEFECT_KEYS || []);
@@ -944,14 +943,13 @@
     const out = Array.from(groups.values()).map(g=>{
       const totalReports = g.Reports.size;
       const TT = g.A1 + g.A2 + g.A3 + g.A4;
-      const lotBoxCount = g.LotBoxes.size;
       const defKeysLocal3 = (window.__DEFECT_KEYS || []);
       const TotDef = defKeysLocal3.reduce((acc,k)=> acc + (g[k] || 0), 0);
       const PctDef = g.TotalCajas > 0 ? Math.round((TotDef / g.TotalCajas) * 100) : 0;
       const baseOut = {
         FactoryCode: g.FactoryCode,
         Customer: g.Customer,
-        LotBox: lotBoxCount,
+        LotBox: g.LotBox,
         TotalCajas: g.TotalCajas,
         TotDef: TotDef,
         PctDef: PctDef,
@@ -1420,7 +1418,7 @@
         const Result = asText(getField(row, ["Result","RESULT","Resultado"]));
         const Intento = asText(getField(row, ["Intento","Intent","Attempt","AttemptNo","Attempt #"]));
         const Report = asText(getField(row, ["Nº Report","N° Report","No Report","Report","Report No","N Report"]));
-        const LotBox = asText(getField(row, ["Lot Box","LotBox","Lote"]));
+        const LotBox = parseFloat(getField(row, ["Lot Box","LotBox","Lote"])) || 0;
         const TotalCajas = parseFloat(getField(row, ["Total Cajas","TotalCajas","Total Boxes"])) || 0;
 
         const out = { Week, FactoryCode, Customer, Result, Intento, Report, LotBox, TotalCajas };

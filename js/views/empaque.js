@@ -138,9 +138,25 @@
 
   // Helper para parsear fecha de Audit Date
   function parseAuditDate(s) {
+    if (s instanceof Date) return isNaN(s.getTime()) ? null : s;
     const t = String(s || "").trim();
     if (!t) return null;
-    // Soportar formatos: "12/15/2024", "2024-12-15", etc.
+
+    // GViz entrega las fechas como texto: "Date(2025,10,10)".
+    // El segundo componente es el mes base cero (10 = noviembre).
+    const gvizDate = t.match(/^Date\(([^)]+)\)$/);
+    if (gvizDate) {
+      const parts = gvizDate[1].split(',').map(v => Number(v.trim()));
+      if (parts.length >= 3 && parts.every(Number.isFinite)) {
+        const d = new Date(
+          parts[0], parts[1], parts[2],
+          parts[3] || 0, parts[4] || 0, parts[5] || 0, parts[6] || 0
+        );
+        return !isNaN(d.getTime()) ? d : null;
+      }
+    }
+
+    // Fallback para formatos estándar como "12/15/2024" o "2024-12-15".
     const d = new Date(t);
     return !isNaN(d.getTime()) ? d : null;
   }
@@ -193,29 +209,24 @@
 
   // Poblar Year Select basado en datos
   function populateYearSelect() {
-    const years = new Set();
-    for (const r of grid) {
-      const w = asText(r.Week);
-      if (w) years.add(new Date().getFullYear()); // usar año actual por ahora
-    }
+    const years = new Set(grid.map(r => r.Year).filter(Number.isFinite));
     const yearArray = Array.from(years).sort((a, b) => b - a);
     const currentYear = new Date().getFullYear();
-    
-    document.getElementById('yearSelect').innerHTML = `<option value="">Cargando...</option>`;
+
+    yearSelect.innerHTML = '';
     if (yearArray.length === 0) {
       yearArray.push(currentYear);
     }
-    
+
     yearArray.forEach(y => {
       const opt = document.createElement("option");
       opt.value = y;
       opt.textContent = y;
-      document.getElementById('yearSelect').appendChild(opt);
+      yearSelect.appendChild(opt);
     });
-    
-    if (!document.getElementById('yearSelect').value && yearArray.length > 0) {
-      document.getElementById('yearSelect').value = yearArray[0];
-    }
+
+    // Año actual por defecto si tiene datos; en caso contrario, el más reciente.
+    yearSelect.value = yearArray.includes(currentYear) ? String(currentYear) : String(yearArray[0]);
   }
 
   function populatePeriodSelect() {
@@ -244,15 +255,16 @@
     
     const selectedYear = parseInt(yearSelect.value, 10);
     const selectedPeriod = periodSelect.value;
+    const rowsForYear = grid.filter(r => r.Year === selectedYear);
     
     weekSelect.innerHTML = `<option value="">Seleccione...</option>`;
     
     if (selectedPeriod === "sem") {
       // Mostrar solo semanas que tienen datos
       const weeksWithData = new Set();
-      for (const r of grid) {
+      for (const r of rowsForYear) {
         const weekNum = parseInt(asWeek(r.Week), 10);
-        if (!isNaN(weekNum) && weekNum >= 1 && weekNum <= 52) {
+        if (!isNaN(weekNum) && weekNum >= 1 && weekNum <= 53) {
           weeksWithData.add(weekNum);
         }
       }
@@ -266,9 +278,9 @@
         weekSelect.appendChild(opt);
       });
       
-      // Auto-seleccionar semana actual si existe, sino la primera disponible
+      // Auto-seleccionar semana actual si existe; si no, la última disponible.
       const currentWeek = getCurrentWeek();
-      if (weeksWithData.has(currentWeek)) {
+      if (selectedYear === new Date().getFullYear() && weeksWithData.has(currentWeek)) {
         weekSelect.value = currentWeek;
       } else if (sortedWeeks.length > 0) {
         weekSelect.value = sortedWeeks[sortedWeeks.length - 1]; // última semana disponible
@@ -276,14 +288,9 @@
     } else if (selectedPeriod === "mes") {
       // Mostrar solo meses que tienen datos
       const monthsWithData = new Set();
-      for (const r of grid) {
-        const weekNum = parseInt(asWeek(r.Week), 10);
-        if (!isNaN(weekNum)) {
-          // Mapeo proporcional: distribuir 52 semanas en 12 meses
-          const estimatedMonth = Math.ceil((weekNum * 12) / 52);
-          if (estimatedMonth >= 1 && estimatedMonth <= 12) {
-            monthsWithData.add(estimatedMonth);
-          }
+      for (const r of rowsForYear) {
+        if (Number.isFinite(r.Month) && r.Month >= 1 && r.Month <= 12) {
+          monthsWithData.add(r.Month);
         }
       }
       
@@ -300,14 +307,14 @@
       
       // Auto-seleccionar mes actual si existe, sino el último disponible
       const currentMonth = getCurrentMonth();
-      if (monthsWithData.has(currentMonth)) {
+      if (selectedYear === new Date().getFullYear() && monthsWithData.has(currentMonth)) {
         weekSelect.value = currentMonth;
       } else if (sortedMonths.length > 0) {
         weekSelect.value = sortedMonths[sortedMonths.length - 1]; // último mes disponible
       }
     }
     
-    weekSelect.disabled = false;
+    weekSelect.disabled = weekSelect.options.length <= 1;
   }
 
   // =========================================================
@@ -516,8 +523,10 @@
     const groups = new Map();
     const activeFactories = getActiveFactories();
     const activeCustomers = getActiveCustomers();
+    const selectedYear = parseInt(yearSelect.value, 10);
 
     for(const r of grid){
+      if(r.Year !== selectedYear) continue;
       if(r.Week !== selectedWeek) continue;
 
       const factory = r.FactoryCode || "Sin código";
@@ -883,22 +892,14 @@
   }
 
   function buildSummaryByMonth(selectedMonth) {
-    // Para filtrar por mes, mapeamos las semanas (1-52) a meses (1-12)
-    // Distribución realista: 52 semanas / 12 meses ≈ 4.33 semanas por mes
-    // Fórmula: estimatedMonth = Math.ceil((weekNum * 12) / 52)
-    
     const groups = new Map();
     const activeFactories = getActiveFactories();
     const activeCustomers = getActiveCustomers();
+    const selectedYear = parseInt(yearSelect.value, 10);
 
     for(const r of grid){
-      // Convertir Week a mes con mapeo más realista
-      const weekNum = parseInt(asWeek(r.Week), 10);
-      if(isNaN(weekNum)) continue;
-      
-      // Mapeo proporcional: distribuir 52 semanas en 12 meses
-      const estimatedMonth = Math.ceil((weekNum * 12) / 52);
-      if(estimatedMonth !== selectedMonth) continue;
+      if(r.Year !== selectedYear) continue;
+      if(r.Month !== selectedMonth) continue;
 
       const factory = r.FactoryCode || "Sin código";
       
@@ -1051,12 +1052,17 @@
   let trendsChartRef = null;
 
   function getLastWeeksTotals(limit = 6, factory = 'all', selectedCustomers = [], weeksList = null){
+    const selectedYear = parseInt(yearSelect.value, 10);
+    const rowsForYear = (grid || []).filter(r => r.Year === selectedYear);
     // Determine weeks to use: if weeksList provided use it, otherwise derive last `limit` weeks from `grid` data
     let weeksToUse = [];
     if(Array.isArray(weeksList) && weeksList.length){
       weeksToUse = weeksList.slice();
     } else {
-      const weeks = Array.from(new Set((grid || []).map(r => asWeek(r.Week)).filter(Boolean)));
+      const weeks = Array.from(new Set(rowsForYear.map(r => asWeek(r.Week)).filter(w => {
+        const n = parseInt(w, 10);
+        return Number.isFinite(n) && n >= 1 && n <= 53;
+      })));
       weeks.sort((a,b)=>{ const na=parseInt(a,10), nb=parseInt(b,10); if(!Number.isNaN(na) && !Number.isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
       if(weeks.length === 0){
         // fallback static if no data
@@ -1075,7 +1081,7 @@
       let intentoOnes = 0;
       let intentoAny = 0;
 
-      for(const r of grid){
+      for(const r of rowsForYear){
         const w = asWeek(r.Week);
         if(String(w) !== String(weekNum)) continue;
         // aplicar factory filter
@@ -1213,11 +1219,13 @@
   }
 
   function populateChartFilters(){
+    const selectedYear = parseInt(yearSelect.value, 10);
+    const rowsForYear = grid.filter(r => r.Year === selectedYear);
     // poblar factory select con factories únicos
-    const factories = Array.from(new Set(grid.map(r=> r.FactoryCode).filter(Boolean))).sort();
+    const factories = Array.from(new Set(rowsForYear.map(r=> r.FactoryCode).filter(Boolean))).sort();
     chartFactoryFilter.innerHTML = '<option value="all">Todos</option>' + factories.map(f=> `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
     // poblar customers en modal usando el mismo estilo del dropdown principal
-    const customers = Array.from(new Set(grid.map(r=> r.Customer).filter(Boolean))).sort();
+    const customers = Array.from(new Set(rowsForYear.map(r=> r.Customer).filter(Boolean))).sort();
     modalSelectedCustomers = new Set(customers); // seleccionar todos por defecto
     if(chartCustomerDropdown){
       chartCustomerDropdown.innerHTML = '';
@@ -1272,7 +1280,14 @@
   }
 
   function populateModalWeekFilters(){
-    const weeks = Array.from(new Set((grid || []).map(r=> asWeek(r.Week)).filter(Boolean)));
+    const selectedYear = parseInt(yearSelect.value, 10);
+    const weeks = Array.from(new Set((grid || [])
+      .filter(r => r.Year === selectedYear)
+      .map(r => asWeek(r.Week))
+      .filter(w => {
+        const n = parseInt(w, 10);
+        return Number.isFinite(n) && n >= 1 && n <= 53;
+      })));
     weeks.sort((a,b)=>{ const na=parseInt(a,10), nb=parseInt(b,10); if(!Number.isNaN(na) && !Number.isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
 
     const fromSel = document.getElementById('weekFromFilter');
@@ -1412,6 +1427,9 @@
 
       // Mapear fila y agregar dinámicamente columnas de defectos
       grid = raw.map(row=>{
+        const AuditDate = parseAuditDate(getField(row, ["Audit Date","AuditDate","Fecha Auditoria","Fecha Auditoría"]));
+        const Year = AuditDate ? AuditDate.getFullYear() : null;
+        const Month = AuditDate ? AuditDate.getMonth() + 1 : null;
         const Week = asWeek(getField(row, ["Week","WEEK","Semana"]));
         const FactoryCode = asText(getField(row, ["Factory Code","FactoryCode","Factory"]));
         const Customer = asText(getField(row, ["Customer","CUSTOMER","Cliente"]));
@@ -1421,7 +1439,7 @@
         const LotBox = parseFloat(getField(row, ["Lot Box","LotBox","Lote"])) || 0;
         const TotalCajas = parseFloat(getField(row, ["Total Cajas","TotalCajas","Total Boxes"])) || 0;
 
-        const out = { Week, FactoryCode, Customer, Result, Intento, Report, LotBox, TotalCajas };
+        const out = { AuditDate, Year, Month, Week, FactoryCode, Customer, Result, Intento, Report, LotBox, TotalCajas };
 
         // extraer dinámicamente cada columna de defecto
         defectColumns.forEach((colName, i) => {
@@ -1479,30 +1497,23 @@
   // Last Week/Month switch handler
   lastWeekSwitch.addEventListener("change", function(){
     const periodType = getPeriodType();
-    const weeks = Array.from(weekSelect.options).map(o => o.value).filter(Boolean);
-    
+    const periods = Array.from(weekSelect.options).map(o => o.value).filter(Boolean);
+
     if(this.checked){
-      if (periodType === "mes") {
-        // Seleccionar mes anterior
-        const currentMonth = parseInt(weekSelect.value, 10);
-        const prevMonth = currentMonth > 1 ? currentMonth - 1 : 12;
-        weekSelect.value = prevMonth;
-      } else {
-        // Seleccionar semana anterior
-        if(weeks.length > 1){
-          weekSelect.value = weeks[weeks.length - 2];
-        }
+      // Seleccionar el período disponible inmediatamente anterior dentro del año.
+      let currentIndex = periods.indexOf(weekSelect.value);
+      if(currentIndex < 0) currentIndex = periods.length - 1;
+      if(currentIndex > 0){
+        weekSelect.value = periods[currentIndex - 1];
       }
     } else {
-      if (periodType === "mes") {
-        // Seleccionar mes actual
-        const currentMonth = getCurrentMonth();
-        weekSelect.value = currentMonth;
-      } else {
-        // Seleccionar semana actual
-        if(weeks.length){
-          weekSelect.value = weeks[weeks.length - 1];
-        }
+      // Volver al período actual si existe para el año actual; si no, al último disponible.
+      const selectedYear = parseInt(yearSelect.value, 10);
+      const currentPeriod = periodType === "mes" ? getCurrentMonth() : getCurrentWeek();
+      if(selectedYear === new Date().getFullYear() && periods.includes(String(currentPeriod))){
+        weekSelect.value = String(currentPeriod);
+      } else if(periods.length){
+        weekSelect.value = periods[periods.length - 1];
       }
     }
     populateCustomerFilter();
@@ -1551,19 +1562,19 @@
   // Customer filter handlers
   function populateCustomerFilter(){
     const selectedWeek = weekSelect.value;
+    const selectedYear = parseInt(yearSelect.value, 10);
     const activeFactories = getActiveFactories();
     const periodType = getPeriodType();
 
     // Filtrar solo los customers que están en los datos visibles
     const visibleCustomers = new Set();
     for(const r of grid){
+      if(r.Year !== selectedYear) continue;
+
       // Si hay un filtro de semana/mes seleccionado, aplicarlo correctamente
       if(selectedWeek){
         if(periodType === 'mes'){
-          const weekNum = parseInt(asWeek(r.Week), 10);
-          if(isNaN(weekNum)) continue;
-          const estimatedMonth = Math.ceil((weekNum * 12) / 52);
-          if(estimatedMonth !== parseInt(selectedWeek, 10)) continue;
+          if(r.Month !== parseInt(selectedWeek, 10)) continue;
         } else {
           // periodo por semana (comportamiento original)
           if(r.Week !== selectedWeek) continue;

@@ -2214,9 +2214,9 @@
             const nfDefLbl = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const COLOR_BAP = '#5b8fd9';   // barras (azul) — par validado CVD con el rojo
             const COLOR_DEF = '#d64550';   // línea (rojo)
-            // Etiquetas propias: UNA por punto. %BAP en blanco dentro del tope de
-            // la barra; %Def. sobre cada punto con halo blanco para que se lea
-            // aunque cruce por delante de una barra.
+            // Etiquetas propias: UNA por punto. %BAP centrado en la barra;
+            // %Def. sobre cada punto con halo blanco para que se lea aunque
+            // cruce por delante de una barra.
             const dataLabelPlugin = {
                 id: 'dataLabelPlugin',
                 afterDatasetsDraw(chart) {
@@ -2231,27 +2231,21 @@
                             const raw = dataset.data[i];
                             if (raw === null || raw === undefined) continue;
                             if (meta.type === 'bar') {
-                                c.font = '600 12px "Segoe UI", Calibri, sans-serif';
-                                const barH = (el.base || 0) - el.y;
-                                if (barH >= 26) {
-                                    c.textBaseline = 'top';
-                                    c.fillStyle = '#ffffff';
-                                    c.fillText(nfBapLbl.format(raw) + '%', el.x, el.y + 8);
-                                } else {
-                                    // barra muy corta: etiqueta encima, en tinta
-                                    c.textBaseline = 'bottom';
-                                    c.fillStyle = '#1f3a5f';
-                                    c.fillText(nfBapLbl.format(raw) + '%', el.x, el.y - 5);
-                                }
+                                c.font = '700 15px "Segoe UI", Calibri, sans-serif';
+                                const baseY = Number.isFinite(el.base) ? el.base : chart.chartArea.bottom;
+                                const labelY = el.y + ((baseY - el.y) / 2);
+                                c.textBaseline = 'middle';
+                                c.fillStyle = '#ffffff';
+                                c.fillText(nfBapLbl.format(raw) + '%', el.x, labelY);
                             } else {
                                 const txt = nfDefLbl.format(raw) + '%';
-                                c.font = '600 11px "Segoe UI", Calibri, sans-serif';
+                                c.font = '700 14px "Segoe UI", Calibri, sans-serif';
                                 c.textBaseline = 'bottom';
-                                c.lineWidth = 3;
+                                c.lineWidth = 4;
                                 c.strokeStyle = 'rgba(255,255,255,0.9)';
-                                c.strokeText(txt, el.x, el.y - 9);
+                                c.strokeText(txt, el.x, el.y - 10);
                                 c.fillStyle = COLOR_DEF;
-                                c.fillText(txt, el.x, el.y - 9);
+                                c.fillText(txt, el.x, el.y - 10);
                             }
                         }
                     });
@@ -2284,13 +2278,13 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    layout: { padding: { top: 6 } },
+                    layout: { padding: { top: 24 } },
                     interaction: { mode: 'index', intersect: false },
                     scales: {
                         x: {
                             grid: { display: false },
                             border: { display: false },
-                            ticks: { color: '#64748b', font: { size: 12 } }
+                            ticks: { color: '#000000', font: { size: 14, weight: '700' } }
                         },
                         yDef: {
                             type: 'linear', position: 'left', beginAtZero: true, grace: '10%',

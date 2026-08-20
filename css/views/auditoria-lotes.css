@@ -12,21 +12,14 @@ body[data-view="auditoria-lotes"] {
             box-sizing: border-box;
         }
 
-        /* Escala fit-to-screen: reproduce al 100% de zoom del navegador el
-           aspecto aprobado al 80%, para que ambos paneles (tabla + donuts)
-           quepan sin scroll vertical en Chrome (mismo patrón que factory-code).
-           Se aplica solo al contenido principal: los modales, tooltips y
-           overlays cuelgan de <body> y conservan su tamaño y coordenadas. */
-        body[data-view="auditoria-lotes"] .page-header,
-        body[data-view="auditoria-lotes"] .plants-carousel {
-            zoom: 0.8;
-        }
+        /* Escala nativa para mantener el panel legible con el navegador al 100%. */
 
         .card {
             max-width: 900px;
             margin: 18px auto;
             background: #fff;
             padding: 18px;
+            box-sizing: border-box;
             border-radius: 8px;
             box-shadow: 0 6px 20px rgba(10, 20, 40, 0.08)
         }
@@ -747,11 +740,13 @@ body[data-view="auditoria-lotes"] {
            los lados reducidas y atenuadas (efecto profundidad). */
         .plants-carousel {
             position: relative;
+            width: 100%;
         }
 
         .carousel-viewport {
             overflow: hidden;
-            max-width: 2000px;
+            width: 100%;
+            max-width: none;
             margin: 0 auto;
         }
 
@@ -765,7 +760,7 @@ body[data-view="auditoria-lotes"] {
         }
 
         .cards-row .card {
-            flex: 0 0 70%;
+            flex: 0 0 90%;
             max-width: none;
             margin: 0;
             transform: scale(.92);
@@ -845,9 +840,75 @@ body[data-view="auditoria-lotes"] {
             cursor: default;
         }
 
+        @media (max-width: 1400px) {
+            .cards-row .card {
+                flex-basis: 92%;
+            }
+        }
+
         @media (max-width: 1200px) {
+            .header-title {
+                position: relative;
+                flex-wrap: wrap;
+                padding-right: 52px;
+            }
+
+            .header-title h1 {
+                flex: 1 0 100%;
+                font-size: 24px;
+            }
+
+            .header-title > div {
+                margin-left: 0 !important;
+                gap: 8px !important;
+                flex-wrap: wrap;
+            }
+
+            .header-title .back-btn {
+                position: absolute;
+                top: 0;
+                right: 0;
+            }
+
+            .cards-row .card {
+                flex-basis: 94%;
+            }
+        }
+
+        @media (max-width: 900px) {
+            body[data-view="auditoria-lotes"] {
+                padding-inline: 8px;
+            }
+
             .charts.charts-cofaco {
                 grid-template-columns: 1fr
+            }
+
+            .cards-row {
+                gap: 10px;
+            }
+
+            .cards-row .card {
+                flex-basis: 96%;
+                padding: 14px;
+            }
+
+            .cards-row .card table {
+                width: 100%;
+                font-size: 13px;
+            }
+
+            .carousel-arrow {
+                width: 42px;
+                height: 42px;
+            }
+
+            .carousel-arrow.left {
+                left: 4px;
+            }
+
+            .carousel-arrow.right {
+                right: 4px;
             }
         }
 

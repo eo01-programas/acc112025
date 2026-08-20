@@ -189,7 +189,7 @@
         .main-content {
             flex: 1;
             display: grid;
-            grid-template-columns: 2fr 1.32fr;
+            grid-template-columns: 52fr 48fr;
             grid-template-rows: auto minmax(350px, 1fr);
             gap: 10px;
             overflow: hidden;

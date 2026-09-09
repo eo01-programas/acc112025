@@ -2128,7 +2128,7 @@
         }
 
         function computeSeriesForOptions(opts) {
-            // opts: {type:'Sem'|'Mes', ubic:'Todos'|value, grupo:'Todos'|'COSTURA'|'COSTURA DIA'|'COSTURA NOCHE'|'ACABADOS', lastN:8, equipo:number, anchor:{year,value,type}}
+            // opts: {type:'Sem'|'Mes', ubic:'Todos'|value, grupo:'Todos'|'COSTURA'|'COSTURA DIA'|'COSTURA NOCHE'|'ACABADOS'|'PROCESO', lastN:8, equipo:number, anchor:{year,value,type}}
             const sheet = window.sheetData || [];
             const periodo = opts.type || 'Sem'; const lastN = opts.lastN || 8;
             const periods = opts.anchor ? lastNPeriodsAnchored(periodo, lastN, opts.anchor) : lastNPeriods(periodo, lastN);
@@ -2175,7 +2175,8 @@
                 if (grupo === 'COSTURA') return num >= 1 && num <= 29;
                 if (grupo === 'COSTURA DIA') return num >= 1 && num <= 19;
                 if (grupo === 'COSTURA NOCHE') return num >= 20 && num <= 29;
-                if (grupo === 'ACABADOS') return num >= 30 && num <= 69;
+                if (grupo === 'ACABADOS') return num >= 30 && num <= 40;
+                if (grupo === 'PROCESO') return num >= 41 && num <= 69;
                 return true;
             }
 
@@ -2412,7 +2413,7 @@
                         <label style="font-weight:700">Ubicación:</label>
                         <select id="perfUbic" style="padding:6px;border:1px solid #ccd;border-radius:6px">${ubicOptions.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
                         <label style="font-weight:700">Grupo:</label>
-                        <select id="perfGrupo" style="padding:6px;border:1px solid #ccd;border-radius:6px"><option value="Todos">Todos</option><option value="COSTURA">COSTURA (todos)</option><option value="COSTURA DIA">COSTURA DIA</option><option value="COSTURA NOCHE">COSTURA NOCHE</option><option value="ACABADOS">ACABADOS</option></select>
+                        <select id="perfGrupo" style="padding:6px;border:1px solid #ccd;border-radius:6px"><option value="Todos">Todos</option><option value="COSTURA">COSTURA (todos)</option><option value="COSTURA DIA">COSTURA DIA</option><option value="COSTURA NOCHE">COSTURA NOCHE</option><option value="ACABADOS">ACABADOS</option><option value="PROCESO">PROCESO</option></select>
                         <button id="perfApply" style="padding:6px 10px;border-radius:6px;background:#2b6cb0;color:#fff;border:none;cursor:pointer">Aplicar</button>
                     </div>
                 </fieldset>

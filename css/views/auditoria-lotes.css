@@ -448,17 +448,17 @@ body[data-view="auditoria-lotes"] {
         }
 
         .charts.charts-cofaco .group-charts.group-acabados .donut-row,
-        .charts.charts-cofaco .group-charts.group-citis .donut-row {
+        .charts.charts-cofaco .group-charts.group-proceso .donut-row {
             gap: 14px
         }
 
-        /* ACABADOS: donas medianas-grandes; Citis: donas compactas */
+        /* ACABADOS: donas medianas-grandes; Proceso: donas compactas */
         .charts.charts-cofaco .group-charts.group-acabados .donut {
             width: 132px;
             height: 132px
         }
 
-        .charts.charts-cofaco .group-charts.group-citis .donut {
+        .charts.charts-cofaco .group-charts.group-proceso .donut {
             width: 116px;
             height: 116px
         }
@@ -467,40 +467,40 @@ body[data-view="auditoria-lotes"] {
             font-size: 20px
         }
 
-        .charts.charts-cofaco .group-charts.group-citis .donut .center {
+        .charts.charts-cofaco .group-charts.group-proceso .donut .center {
             font-size: 16px
         }
 
         .charts.charts-cofaco .group-charts.group-acabados .donut .center .sublabel,
-        .charts.charts-cofaco .group-charts.group-citis .donut .center .sublabel {
+        .charts.charts-cofaco .group-charts.group-proceso .donut .center .sublabel {
             font-size: 10px;
             margin-top: 4px
         }
 
         .charts.charts-cofaco .group-charts.group-acabados .donut .small-label,
-        .charts.charts-cofaco .group-charts.group-citis .donut .small-label {
+        .charts.charts-cofaco .group-charts.group-proceso .donut .small-label {
             font-size: 11px
         }
 
         .charts.charts-cofaco .group-charts.group-acabados .donut .small-label .tag,
-        .charts.charts-cofaco .group-charts.group-citis .donut .small-label .tag {
+        .charts.charts-cofaco .group-charts.group-proceso .donut .small-label .tag {
             font-size: 11px
         }
 
         .charts.charts-cofaco .group-charts.group-acabados .donut .label-left,
-        .charts.charts-cofaco .group-charts.group-citis .donut .label-left {
+        .charts.charts-cofaco .group-charts.group-proceso .donut .label-left {
             left: -2px;
             top: 4px
         }
 
         .charts.charts-cofaco .group-charts.group-acabados .donut .label-right,
-        .charts.charts-cofaco .group-charts.group-citis .donut .label-right {
+        .charts.charts-cofaco .group-charts.group-proceso .donut .label-right {
             right: -18px;
             top: 4px
         }
 
         .charts.charts-cofaco .group-charts.group-acabados .donut .label-bottom,
-        .charts.charts-cofaco .group-charts.group-citis .donut .label-bottom {
+        .charts.charts-cofaco .group-charts.group-proceso .donut .label-bottom {
             left: 16%;
             bottom: 8px
         }

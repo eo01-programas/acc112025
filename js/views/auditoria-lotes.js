@@ -181,6 +181,8 @@
         let FILTER_YEAR = (new Date()).getFullYear();
         let PERIOD_TYPE = 'Sem'; // 'Sem' or 'Mes'
         let PERIOD_VALUE = null; // week number or month index (1-12)
+        // Periodos que muestra el gráfico de "Performance Auditorias Lotes Produccion"
+        const PERF_LAST_N = 7;
 
         // Util: calcula semana ISO (1-53)
         function getISOWeek(d) {
@@ -2029,6 +2031,28 @@
             return null;
         }
 
+        // Igual que findHeaderByNormLike pero exigiendo coincidencia EXACTA del
+        // nombre normalizado. Evita que 'total' capture 'Total Defectos' o que
+        // 'cant' capture 'Cant Auditada' (que arruinaría el denominador del %Def).
+        function findHeaderExactNorm(names) {
+            if (!window.sheetHeaders || !Array.isArray(window.sheetHeaders)) return null;
+            const n = h => (h || '').toString().replace(/\u00A0/g, ' ').trim().toLowerCase().replace(/\s+/g, ' ');
+            for (const name of names) {
+                const ph = window.sheetHeaders.find(h => n(h) === name);
+                if (ph) return ph;
+            }
+            return null;
+        }
+
+        // Lee una celda numérica respetando el 0 como valor válido. Antes se usaba
+        // `row[hdr] || row[fallback]`, y una fila con Cant Muestra = 0 terminaba
+        // tomando Cant Auditada, inflando el denominador del %Def.
+        function cellNum(row, hdr, fallbackHdr) {
+            let v = hdr ? row[hdr] : undefined;
+            if ((v === undefined || v === null || v === '') && fallbackHdr) v = row[fallbackHdr];
+            return toNum(v);
+        }
+
         function periodKeyForDate(dt, type) {
             if (!(dt instanceof Date)) return null;
             if (type === 'Mes') {
@@ -2113,15 +2137,28 @@
             const cm = (window.colMap && typeof window.colMap === 'object') ? window.colMap : null;
             const ubicHdr = (cm && cm.ubic) ? cm.ubic : findHeaderByNormLike(['ubic', 'ubicaci', 'location', 'sede']);
             const equipoHdr = (cm && cm.equipo) ? cm.equipo : findHeaderByNormLike(['equipo', 'eqp', 'maq']);
-            const defHdr = (cm && cm.defectos) ? cm.defectos : findHeaderByNormLike(['defect', 'total defect', 'total_defec', 't.def', 't.defectos', 'total']);
-            const cantHdr = (cm && cm.cant) ? cm.cant : findHeaderByNormLike(['cant muestra', 'cant_muestra', 'muestra', 'cant']);
-            const a1Hdr = (cm && cm.a1) ? cm.a1 : findHeaderByNormLike(['a 1', 'a1', 'a_1']);
-            const totalAudHdr = (cm && cm.total) ? cm.total : findHeaderByNormLike(['total', 'total aud', 'total_aud']);
+            // Los patrones "contiene" son peligrosos aquí: 'total' encuentra primero
+            // 'Total Defectos' y 'cant' encuentra primero 'Cant Auditada'. Por eso se
+            // intenta primero la coincidencia EXACTA de cabecera.
+            const defHdr = (cm && cm.defectos) ? cm.defectos : (findHeaderExactNorm(['total defectos', 'total defect']) || findHeaderByNormLike(['total defect', 'total_defec', 't.def', 't.defectos', 'defect']));
+            const cantHdr = (cm && cm.cant) ? cm.cant : (findHeaderExactNorm(['cant muestra', 'cant_muestra']) || findHeaderByNormLike(['cant muestra', 'cant_muestra', 'muestra']));
+            const a1Hdr = (cm && cm.a1) ? cm.a1 : (findHeaderExactNorm(['a 1', 'a1', 'a_1']) || findHeaderByNormLike(['a 1', 'a1', 'a_1']));
+            const totalAudHdr = (cm && cm.total) ? cm.total : (findHeaderExactNorm(['total', 'total aud', 'total_aud']) || findHeaderByNormLike(['total aud', 'total_aud']));
             const a2Hdr = findHeaderByNormLike(['a 2', 'a2', 'a_2']);
             const a3Hdr = findHeaderByNormLike(['a 3', 'a3', 'a_3']);
             const a4Hdr = findHeaderByNormLike(['a 4', 'a4', 'a_4']);
             const loteHdr = findHeaderByNormLike(['lote no aprob', 'lote_no_aprob', 'lote no aprobado', 'lote no aprobado']);
+            // Cabeceras de respaldo resueltas UNA sola vez (antes se buscaban dentro
+            // del bucle, una vez por fila y por columna).
+            const defHdrFb = findHeaderExactNorm(['total defectos']) || null;
+            const cantHdrFb = findHeaderExactNorm(['cant muestra']) || null;
             try { console.debug('perf series using headers', { ubicHdr, equipoHdr, defHdr, cantHdr, a1Hdr, totalAudHdr }); } catch (e) { }
+            // Si una columna clave no se resolvió, el gráfico saldría en 0 sin avisar.
+            try {
+                const faltan = Object.entries({ 'Total Defectos': defHdr, 'Cant Muestra': cantHdr, 'A 1': a1Hdr, 'Total': totalAudHdr })
+                    .filter(([, v]) => !v).map(([k]) => k);
+                if (faltan.length) console.warn('Performance: columnas no encontradas en la hoja →', faltan.join(', '), '| cabeceras:', window.sheetHeaders);
+            } catch (e) { }
 
             // Prepare accumulators for each key
             const acc = {};
@@ -2155,15 +2192,15 @@
                 } else {
                     if (!matchesGrupo(row[equipoHdr], opts.grupo)) continue;
                 }
-                // accumulate
-                const defVal = toNum(row[defHdr] || row[findHeaderByNormLike(['defectos', 'total defectos'])]);
-                const samp = toNum(row[cantHdr] || row[findHeaderByNormLike(['cant', 'muestra'])]);
-                const a1v = toNum(row[a1Hdr] || 0);
-                const a2v = toNum(row[a2Hdr] || 0);
-                const a3v = toNum(row[a3Hdr] || 0);
-                const a4v = toNum(row[a4Hdr] || 0);
-                const lotev = toNum(row[loteHdr] || 0);
-                const totAud = toNum(row[totalAudHdr] || 0);
+                // accumulate (cellNum respeta el 0 y no salta a otra columna)
+                const defVal = cellNum(row, defHdr, defHdrFb);
+                const samp = cellNum(row, cantHdr, cantHdrFb);
+                const a1v = cellNum(row, a1Hdr, null);
+                const a2v = cellNum(row, a2Hdr, null);
+                const a3v = cellNum(row, a3Hdr, null);
+                const a4v = cellNum(row, a4Hdr, null);
+                const lotev = cellNum(row, loteHdr, null);
+                const totAud = cellNum(row, totalAudHdr, null);
                 acc[k].def += defVal;
                 acc[k].sample += samp;
                 acc[k].a1 += a1v;
@@ -2396,7 +2433,41 @@
                 }
             };
             // function to apply filters dynamically
-            const applyFilters = () => { const type = document.getElementById('perfPeriodType').value; const ubic = document.getElementById('perfUbic').value; const grupo = document.getElementById('perfGrupo').value; const res = computeSeriesForOptions({ type, ubic, grupo, lastN: 8 }); const ctx = document.getElementById('perfChartCanvas').getContext('2d'); renderPerfChartCanvas(ctx, res.labels, res.pctDef, res.pctBap); };
+            const applyFilters = () => {
+                const type = document.getElementById('perfPeriodType').value;
+                const ubic = document.getElementById('perfUbic').value;
+                const grupo = document.getElementById('perfGrupo').value;
+                // La ventana se ancla en el periodo seleccionado en la cabecera, no en
+                // la fecha del sistema: si hoy es una semana posterior a la última con
+                // datos, las semanas vacías del final se recortaban y quedaban menos
+                // barras de las pedidas.
+                const meta = window.latestFilteredData || {};
+                const anchorType = meta.filteredPeriodType || PERIOD_TYPE;
+                const anchorYear = Number(meta.filteredYear || FILTER_YEAR);
+                const anchorVal = Number(meta.filteredPeriodValue || PERIOD_VALUE);
+                let anchorForSeries = null;
+                // Solo sirve si el tipo de periodo del modal coincide con el de la
+                // cabecera (un nº de semana no se puede leer como mes).
+                if (type === anchorType && anchorVal && !isNaN(anchorVal)) {
+                    try {
+                        if (type === 'Sem') {
+                            // lastNPeriodsAnchored termina ANTES del ancla: se pasa el
+                            // periodo siguiente para incluir el seleccionado.
+                            const nextDate = dateOfISOWeek(anchorVal, anchorYear);
+                            nextDate.setDate(nextDate.getDate() + 7);
+                            const isoNext = getISOWeekYear(nextDate);
+                            anchorForSeries = { year: isoNext.year, value: isoNext.week, type: 'Sem' };
+                        } else {
+                            let yy = anchorYear; let mm = anchorVal + 1;
+                            if (mm > 12) { mm = 1; yy += 1; }
+                            anchorForSeries = { year: yy, value: mm, type: 'Mes' };
+                        }
+                    } catch (e) { anchorForSeries = null; }
+                }
+                const res = computeSeriesForOptions({ type, ubic, grupo, lastN: PERF_LAST_N, anchor: anchorForSeries });
+                const ctx = document.getElementById('perfChartCanvas').getContext('2d');
+                renderPerfChartCanvas(ctx, res.labels, res.pctDef, res.pctBap);
+            };
             // attach apply to button
             document.getElementById('perfApply').onclick = applyFilters;
             // attach change events to each filter for dynamic updates

@@ -6,7 +6,7 @@
    Arranques diferidos (DOMContentLoaded / ready) -> ejecucion inmediata.
    ============================================================ */
 (function () {
-    var TEMPLATE = "    \u003c!-- Loading Modal --\u003e\r\n    \u003cdiv id=\"loadingModal\" class=\"loading-overlay\"\u003e\r\n        \u003cdiv class=\"loading-spinner\"\u003e\r\n            \u003cdiv class=\"spinner\"\u003e\u003c/div\u003e\r\n            \u003cdiv class=\"loading-text\"\u003eCargando datos...\u003c/div\u003e\r\n        \u003c/div\u003e\r\n    \u003c/div\u003e\r\n\r\n    \u003cdiv class=\"page-header\" style=\"max-width:100%;margin:0 auto 6px;padding:2px 12px;border-radius:4px;box-sizing:border-box;\"\u003e\r\n        \u003cdiv class=\"header-title\"\u003e\r\n            \u003ch1\u003eAUDITORIA LOTES DE PRODUCCION\u003c/h1\u003e\r\n            \u003cdiv style=\"display:flex;gap:12px;align-items:center;margin-left:auto\"\u003e\r\n                \u003clabel style=\"font-weight:600\"\u003eAño:\u003c/label\u003e\r\n                \u003cselect id=\"yearSelect\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\u003c/select\u003e\r\n                \u003clabel style=\"font-weight:600\"\u003ePeriodo:\u003c/label\u003e\r\n                \u003cselect id=\"periodType\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\r\n                    \u003coption value=\"Sem\"\u003eSem\u003c/option\u003e\r\n                    \u003coption value=\"Mes\"\u003eMes\u003c/option\u003e\r\n                \u003c/select\u003e\r\n                \u003cselect id=\"periodSelect\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\u003c/select\u003e\r\n                \u003cbutton id=\"perfBtn\" class=\"perf-btn\" title=\"Performance Auditorias\" aria-label=\"Performance Auditorias\"\r\n                    type=\"button\"\u003e\r\n                    \u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"\r\n                        focusable=\"false\"\u003e\r\n                        \u003crect x=\"3\" y=\"11\" width=\"4\" height=\"8\" rx=\"1\" fill=\"white\" /\u003e\r\n                        \u003crect x=\"9\" y=\"7\" width=\"4\" height=\"12\" rx=\"1\" fill=\"white\" /\u003e\r\n                        \u003crect x=\"15\" y=\"3\" width=\"4\" height=\"16\" rx=\"1\" fill=\"white\" /\u003e\r\n                    \u003c/svg\u003e\r\n                \u003c/button\u003e\r\n                \u003cspan id=\"statusBadge\" class=\"badge badge-loading\"\u003eCargando datos...\u003c/span\u003e\r\n            \u003c/div\u003e\r\n            \u003ca href=\"#/\" class=\"back-btn\" title=\"Inicio\"\u003e🏠\u003c/a\u003e\r\n        \u003c/div\u003e\r\n    \u003c/div\u003e\r\n    \u003cdiv class=\"plants-carousel\"\u003e\r\n        \u003cbutton id=\"plantPrev\" class=\"carousel-arrow left\" type=\"button\" title=\"Planta anterior\" aria-label=\"Planta anterior\"\u003e\u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\" focusable=\"false\"\u003e\u003cpath d=\"M15 6l-6 6 6 6\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/\u003e\u003c/svg\u003e\u003c/button\u003e\r\n        \u003cbutton id=\"plantNext\" class=\"carousel-arrow right\" type=\"button\" title=\"Planta siguiente\" aria-label=\"Planta siguiente\"\u003e\u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\" focusable=\"false\"\u003e\u003cpath d=\"M9 6l6 6-6 6\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/\u003e\u003c/svg\u003e\u003c/button\u003e\r\n        \u003cdiv class=\"carousel-viewport\"\u003e\r\n            \u003cdiv class=\"cards-row\" id=\"plantsTrack\"\u003e\r\n        \u003cdiv class=\"card cofaco-card\"\u003e\r\n            \u003cdiv style=\"display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap\"\u003e\r\n                \u003cbutton id=\"infoBtn\" class=\"info-btn\" title=\"Top 5 peores líneas\"\r\n                    aria-label=\"Top 5 peores líneas\"\u003ei\u003c/button\u003e\r\n                \u003ch1 style=\"margin:0\"\u003eCOFACO\u003c/h1\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"result\"\u003e\r\n                \u003ctable\u003e\r\n                    \u003cthead\u003e\r\n                        \u003ctr\u003e\r\n                            \u003cth\u003eGrupo\u003c/th\u003e\r\n                            \u003cth\u003eCant Muestra\u003c/th\u003e\r\n                            \u003cth\u003eTotal Defectos\u003c/th\u003e\r\n                            \u003cth\u003e%Def.\u003c/th\u003e\r\n                            \u003cth\u003eTotal\u003c/th\u003e\r\n                            \u003cth\u003eA 1\u003c/th\u003e\r\n                            \u003cth\u003e%BAP\u003c/th\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/thead\u003e\r\n                    \u003ctbody\u003e\r\n                        \u003ctr id=\"costura-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"costura-1-19-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-19)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"costura-20-29-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 20-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"acabados-row\"\u003e\r\n                            \u003ctd\u003eACABADOS (Eq 30-40)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"proceso-41-69-row\"\u003e\r\n                             \u003ctd\u003eProceso (Eq 41-69)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/tbody\u003e\r\n                \u003c/table\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"chartsWrapper\" class=\"charts-wrapper\" style=\"display:none;margin-top:8px\"\u003e\r\n                \u003cdiv id=\"chartsContainer\"\u003e\u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n\r\n        \u003cdiv class=\"card\"\u003e\r\n            \u003cdiv style=\"display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap\"\u003e\r\n                \u003cbutton id=\"infoBtnCT\" class=\"info-btn\" title=\"Top 5 peores líneas Cititex\"\r\n                    aria-label=\"Top 5 peores líneas Cititex\"\u003ei\u003c/button\u003e\r\n                \u003ch1 style=\"margin:0\"\u003eCITITEX\u003c/h1\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"resultCT\"\u003e\r\n                \u003ctable\u003e\r\n                    \u003cthead\u003e\r\n                        \u003ctr\u003e\r\n                            \u003cth\u003eGrupo\u003c/th\u003e\r\n                            \u003cth\u003eCant Muestra\u003c/th\u003e\r\n                            \u003cth\u003eTotal Defectos\u003c/th\u003e\r\n                            \u003cth\u003e%Def.\u003c/th\u003e\r\n                            \u003cth\u003eTotal\u003c/th\u003e\r\n                            \u003cth\u003eA 1\u003c/th\u003e\r\n                            \u003cth\u003e%BAP\u003c/th\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/thead\u003e\r\n                    \u003ctbody\u003e\r\n                        \u003ctr id=\"ct-costura-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"ct-costura-1-14-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-14)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"ct-costura-15-29-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 15-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/tbody\u003e\r\n                \u003c/table\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"chartsWrapperCT\" class=\"charts-wrapper\" style=\"display:none;margin-top:8px\"\u003e\r\n                \u003cdiv id=\"chartsContainerCT\"\u003e\u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv id=\"plantDots\" class=\"carousel-dots\"\u003e\u003c/div\u003e\r\n    \u003c/div\u003e\r\n";
+    var TEMPLATE = "    \u003c!-- Loading Modal --\u003e\r\n    \u003cdiv id=\"loadingModal\" class=\"loading-overlay\"\u003e\r\n        \u003cdiv class=\"loading-spinner\"\u003e\r\n            \u003cdiv class=\"spinner\"\u003e\u003c/div\u003e\r\n            \u003cdiv class=\"loading-text\"\u003eCargando datos...\u003c/div\u003e\r\n        \u003c/div\u003e\r\n    \u003c/div\u003e\r\n\r\n    \u003cdiv class=\"page-header\" style=\"max-width:100%;margin:0 auto 6px;padding:2px 12px;border-radius:4px;box-sizing:border-box;\"\u003e\r\n        \u003cdiv class=\"header-title\"\u003e\r\n            \u003ch1\u003eAUDITORIA LOTES DE PRODUCCION\u003c/h1\u003e\r\n            \u003cdiv style=\"display:flex;gap:12px;align-items:center;margin-left:auto\"\u003e\r\n                \u003clabel style=\"font-weight:600\"\u003eAño:\u003c/label\u003e\r\n                \u003cselect id=\"yearSelect\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\u003c/select\u003e\r\n                \u003clabel style=\"font-weight:600\"\u003ePeriodo:\u003c/label\u003e\r\n                \u003cselect id=\"periodType\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\r\n                    \u003coption value=\"Sem\"\u003eSem\u003c/option\u003e\r\n                    \u003coption value=\"Mes\"\u003eMes\u003c/option\u003e\r\n                \u003c/select\u003e\r\n                \u003cselect id=\"periodSelect\" style=\"padding:6px;border:1px solid #ccd;border-radius:6px\"\u003e\u003c/select\u003e\r\n                \u003cbutton id=\"perfBtn\" class=\"perf-btn\" title=\"Performance Auditorias\" aria-label=\"Performance Auditorias\"\r\n                    type=\"button\"\u003e\r\n                    \u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"\r\n                        focusable=\"false\"\u003e\r\n                        \u003crect x=\"3\" y=\"11\" width=\"4\" height=\"8\" rx=\"1\" fill=\"white\" /\u003e\r\n                        \u003crect x=\"9\" y=\"7\" width=\"4\" height=\"12\" rx=\"1\" fill=\"white\" /\u003e\r\n                        \u003crect x=\"15\" y=\"3\" width=\"4\" height=\"16\" rx=\"1\" fill=\"white\" /\u003e\r\n                    \u003c/svg\u003e\r\n                \u003c/button\u003e\r\n                \u003cspan id=\"statusBadge\" class=\"badge badge-loading\"\u003eCargando datos...\u003c/span\u003e\r\n            \u003c/div\u003e\r\n            \u003ca href=\"#/\" class=\"back-btn\" title=\"Inicio\"\u003e🏠\u003c/a\u003e\r\n        \u003c/div\u003e\r\n    \u003c/div\u003e\r\n    \u003cdiv class=\"plants-carousel\"\u003e\r\n        \u003cbutton id=\"plantPrev\" class=\"carousel-arrow left\" type=\"button\" title=\"Planta anterior\" aria-label=\"Planta anterior\"\u003e\u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\" focusable=\"false\"\u003e\u003cpath d=\"M15 6l-6 6 6 6\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/\u003e\u003c/svg\u003e\u003c/button\u003e\r\n        \u003cbutton id=\"plantNext\" class=\"carousel-arrow right\" type=\"button\" title=\"Planta siguiente\" aria-label=\"Planta siguiente\"\u003e\u003csvg viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\" focusable=\"false\"\u003e\u003cpath d=\"M9 6l6 6-6 6\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/\u003e\u003c/svg\u003e\u003c/button\u003e\r\n        \u003cdiv class=\"carousel-viewport\"\u003e\r\n            \u003cdiv class=\"cards-row\" id=\"plantsTrack\"\u003e\r\n        \u003cdiv class=\"card cofaco-card\"\u003e\r\n            \u003cdiv style=\"display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap\"\u003e\r\n                \u003cbutton id=\"infoBtn\" class=\"info-btn\" title=\"Top 5 peores líneas\"\r\n                    aria-label=\"Top 5 peores líneas\"\u003ei\u003c/button\u003e\r\n                \u003ch1 style=\"margin:0\"\u003eCOFACO\u003c/h1\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"result\"\u003e\r\n                \u003ctable\u003e\r\n                    \u003cthead\u003e\r\n                        \u003ctr\u003e\r\n                            \u003cth\u003eGrupo\u003c/th\u003e\r\n                            \u003cth\u003eCant Muestra\u003c/th\u003e\r\n                            \u003cth\u003eTotal Defectos\u003c/th\u003e\r\n                            \u003cth\u003e%Def.\u003c/th\u003e\r\n                            \u003cth\u003eTotal\u003c/th\u003e\r\n                            \u003cth\u003eA 1\u003c/th\u003e\r\n                            \u003cth\u003e%BAP\u003c/th\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/thead\u003e\r\n                    \u003ctbody\u003e\r\n                        \u003ctr id=\"costura-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"costura-1-19-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-19)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"costura-20-29-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 20-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"acabados-row\"\u003e\r\n                            \u003ctd\u003eACABADOS (Eq 30-40)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"proceso-41-69-row\"\u003e\r\n                             \u003ctd\u003eProceso (Eq 41-69)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/tbody\u003e\r\n                \u003c/table\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"chartsWrapper\" class=\"charts-wrapper\" style=\"display:none;margin-top:8px\"\u003e\r\n                \u003cdiv id=\"chartsContainer\"\u003e\u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n\r\n        \u003cdiv class=\"card\"\u003e\r\n            \u003cdiv style=\"display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap\"\u003e\r\n                \u003cbutton id=\"infoBtnCT\" class=\"info-btn\" title=\"Top 5 peores líneas Cititex\"\r\n                    aria-label=\"Top 5 peores líneas Cititex\"\u003ei\u003c/button\u003e\r\n                \u003ch1 style=\"margin:0\"\u003eCITITEX\u003c/h1\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"resultCT\"\u003e\r\n                \u003ctable\u003e\r\n                    \u003cthead\u003e\r\n                        \u003ctr\u003e\r\n                            \u003cth\u003eGrupo\u003c/th\u003e\r\n                            \u003cth\u003eCant Muestra\u003c/th\u003e\r\n                            \u003cth\u003eTotal Defectos\u003c/th\u003e\r\n                            \u003cth\u003e%Def.\u003c/th\u003e\r\n                            \u003cth\u003eTotal\u003c/th\u003e\r\n                            \u003cth\u003eA 1\u003c/th\u003e\r\n                            \u003cth\u003e%BAP\u003c/th\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/thead\u003e\r\n                    \u003ctbody\u003e\r\n                        \u003ctr id=\"ct-costura-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"ct-costura-1-14-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 1-14)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"ct-costura-15-29-row\"\u003e\r\n                            \u003ctd\u003eCOSTURA (Eq 15-29)\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                        \u003ctr id=\"ct-estanos-row\"\u003e\r\n                            \u003ctd\u003eESTAÑOS\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                            \u003ctd\u003e–\u003c/td\u003e\r\n                        \u003c/tr\u003e\r\n                    \u003c/tbody\u003e\r\n                \u003c/table\u003e\r\n            \u003c/div\u003e\r\n\r\n            \u003cdiv id=\"chartsWrapperCT\" class=\"charts-wrapper\" style=\"display:none;margin-top:8px\"\u003e\r\n                \u003cdiv id=\"chartsContainerCT\"\u003e\u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n            \u003c/div\u003e\r\n        \u003c/div\u003e\r\n        \u003cdiv id=\"plantDots\" class=\"carousel-dots\"\u003e\u003c/div\u003e\r\n    \u003c/div\u003e\r\n";
 
     // Caché de datos entre visitas (el IIFE persiste aunque mount() se re-ejecute
     // y su estado interno se pierda) y clave de persistencia de filtros.
@@ -183,6 +183,25 @@
         let PERIOD_VALUE = null; // week number or month index (1-12)
         // Periodos que muestra el gráfico de "Performance Auditorias Lotes Produccion"
         const PERF_LAST_N = 7;
+        // CITITEX: las auditorías registradas por estos usuarios son ESTAÑOS y no
+        // forman parte de los grupos de COSTURA.
+        const ESTANOS_USERS = ['audit_con_c1', 'audit_con_c2'];
+        // Rango de equipos de ESTAÑOS, calculado desde la columna Equipo al cargar.
+        let ESTANOS_RANGE = { min: null, max: null };
+
+        // Comparación EXACTA a propósito: 'audit_con_c10'..'audit_con_c13' existen en
+        // la hoja y NO son ESTAÑOS, así que un startsWith los incluiría por error.
+        function esUsuarioEstanos(val) {
+            if (val === null || val === undefined) return false;
+            return ESTANOS_USERS.indexOf(String(val).trim().toLowerCase()) !== -1;
+        }
+
+        // Texto '#-#' para las etiquetas de ESTAÑOS ('–' si aún no hay datos).
+        function estanosRangoTxt() {
+            const r = ESTANOS_RANGE;
+            if (!r || r.min === null || r.max === null) return '–';
+            return r.min + '-' + r.max;
+        }
 
         // Util: calcula semana ISO (1-53)
         function getISOWeek(d) {
@@ -1230,7 +1249,31 @@
                 const citisDefSVG = makeDonutSVG(pctCitisDef, 80, 12, '#2b6cb0', '#e6eef8');
                 const citi1BapSVG = makeDonutSVG(pctCiti1Bap, 80, 12, '#48bb78', '#e6eef8');
                 const citisBapSVG = makeDonutSVG(pctCitisBap, 80, 12, '#48bb78', '#e6eef8');
+                // ESTAÑOS: grupo propio a la izquierda (mismo patrón que ACABADOS en COFACO)
+                const est = sumsCT.estanos || { cant: 0, defectos: 0, total: 0, a1: 0 };
+                const pctEstDef = (est.cant && est.cant > 0) ? (est.defectos / est.cant * 100) : 0;
+                const pctEstBap = (est.total && est.total > 0) ? (est.a1 / est.total * 100) : 0;
+                const estDefSVG = makeDonutSVG(pctEstDef, 160, 18, '#2b6cb0', '#e6eef8');
+                const estBapSVG = makeDonutSVG(pctEstBap, 160, 18, '#48bb78', '#e6eef8');
+                const estanosHtml = `<div class="group-charts group-estanos">
+                                <h3>ESTAÑOS (Equipos ${estanosRangoTxt()})</h3>
+                                <div class="donut-row">
+                                    <div class="donut" aria-hidden>
+                                        ${estDefSVG}
+                                        <div class="center"><div class="mainPct">${nfPct.format(pctEstDef)}%</div><div class="sublabel">%Def.</div></div>
+                                        <div class="small-label label-left"><span class="tag">T.Def:</span>${nfNum.format(est.defectos)}</div>
+                                        <div class="small-label label-bottom"><span class="tag">Cant.Muestra:</span>${nfNum.format(est.cant)}</div>
+                                    </div>
+                                    <div class="donut" aria-hidden>
+                                        ${estBapSVG}
+                                        <div class="center"><div class="mainPct">${nfBap.format(pctEstBap)}%</div><div class="sublabel">%BAP</div></div>
+                                        <div class="small-label label-left"><span class="num-a1">${nfNum.format(est.a1)}</span> <span class="tag-a1">:A1</span></div>
+                                        <div class="small-label label-right"><span class="num-taud">${nfNum.format(est.total)}</span> <span class="tag-aud">:T.Aud</span></div>
+                                    </div>
+                                </div>
+                            </div>`;
                 const html = `<div class="charts charts-ct">
+                            <div class="charts-col charts-col-left">
                             <div class="group-charts">
                                 <h3>COSTURA (Equipos 1-29)</h3>
                                 <div class="donut-row">
@@ -1274,6 +1317,8 @@
                                     </div>
                                 </div>
                             </div>
+                            </div>
+                            <div class="charts-col charts-col-right">${estanosHtml}</div>
                         </div>`;
                 container.innerHTML = html;
                 // Click on %Def donut -> open defects modal for Cititex
@@ -1444,13 +1489,21 @@
         // poder compartirla o recargar con F5 sin perder la selección. replaceState
         // no dispara hashchange, así que el router no vuelve a montar la vista.
         function persistFilters() {
-            const state = { year: FILTER_YEAR, pt: PERIOD_TYPE, p: PERIOD_VALUE };
+            // ¿La selección es el último periodo disponible? Si lo es NO se fija: al
+            // volver a entrar se sigue a los datos (si ya hay SEM36, abre en SEM36) en
+            // vez de quedarse anclado a la semana que se miró la última vez.
+            let atLatest = true;
+            try {
+                const sel = document.getElementById('periodSelect');
+                if (sel && sel.options.length > 0) atLatest = (sel.selectedIndex === sel.options.length - 1);
+            } catch (e) {}
+            const state = { year: FILTER_YEAR, pt: PERIOD_TYPE, p: PERIOD_VALUE, latest: atLatest };
             try { sessionStorage.setItem(FILTERS_STORE_KEY, JSON.stringify(state)); } catch (e) {}
             if (location.hash.indexOf('#/auditoria-lotes') !== 0) return;
             const params = new URLSearchParams();
             if (state.year) params.set('year', String(state.year));
             params.set('pt', state.pt || 'Sem');
-            if (state.p !== null && state.p !== undefined && state.p !== '') params.set('p', String(state.p));
+            if (!atLatest && state.p !== null && state.p !== undefined && state.p !== '') params.set('p', String(state.p));
             try { history.replaceState(null, '', '#/auditoria-lotes?' + params.toString()); } catch (e) {}
         }
 
@@ -1461,16 +1514,25 @@
             if (qIdx > -1 && location.hash.indexOf('#/auditoria-lotes') === 0) {
                 const params = new URLSearchParams(location.hash.slice(qIdx + 1));
                 if (params.get('year') || params.get('pt') || params.get('p')) {
+                    const p = params.get('p');
                     return {
                         year: parseInt(params.get('year'), 10) || null,
                         pt: params.get('pt') === 'Mes' ? 'Mes' : 'Sem',
-                        p: params.get('p') || null
+                        p: p || null,
+                        // La URL solo lleva 'p' cuando se fijó un periodo que NO era el último
+                        latest: !p
                     };
                 }
             }
             try {
                 const raw = sessionStorage.getItem(FILTERS_STORE_KEY);
-                if (raw) return JSON.parse(raw);
+                if (raw) {
+                    const st = JSON.parse(raw);
+                    // Lo guardado por versiones anteriores no trae 'latest'; se asume que
+                    // estaba en el último periodo para que no quede anclado a uno viejo.
+                    if (st && st.latest === undefined) st.latest = true;
+                    return st;
+                }
             } catch (e) {}
             return null;
         }
@@ -1536,6 +1598,7 @@
                     if (nh.includes('ubic')) map.ubic = h;
                     if (nh.includes('equipo')) map.equipo = h;
                     if (nh.includes('defect')) map.defectos = h;
+                    if (nh.includes('usuario')) map.usuario = h;
                     // 'total' ambiguous: prefer exact 'total' that's not 'total defectos'
                     if (nh === 'total') map.total = h;
                     if (nh.startsWith('a 1') || nh === 'a 1' || nh === 'a1' || nh === 'a  1') map.a1 = h;
@@ -1552,6 +1615,22 @@
 
                 // Expose the detected map globally so other components reuse the same column choices
                 try { window.colMap = map; } catch (e) { }
+
+                // Rango de equipos de ESTAÑOS: sale de la propia columna Equipo, sobre
+                // todas las filas cargadas (no solo el periodo filtrado) para que la
+                // etiqueta no cambie de semana a semana.
+                ESTANOS_RANGE = { min: null, max: null };
+                if (map.usuario && map.equipo) {
+                    data.forEach(row => {
+                        if (!esUsuarioEstanos(row[map.usuario])) return;
+                        const ub = map.ubic ? (row[map.ubic] || '').toString().trim().toLowerCase() : '';
+                        if (!ub.includes('cititex')) return;
+                        const n = parseInt((row[map.equipo] || '').toString().replace(/[^0-9\-]/g, ''), 10);
+                        if (isNaN(n)) return;
+                        if (ESTANOS_RANGE.min === null || n < ESTANOS_RANGE.min) ESTANOS_RANGE.min = n;
+                        if (ESTANOS_RANGE.max === null || n > ESTANOS_RANGE.max) ESTANOS_RANGE.max = n;
+                    });
+                }
 
                 // If fecha not detected, try to auto-detect by sampling columns
                 function detectDateColumn(data, headers) {
@@ -1587,11 +1666,12 @@
                     acabados: { cant: 0, defectos: 0, total: 0, a1: 0 },
                     proceso_41_69: { cant: 0, defectos: 0, total: 0, a1: 0 }
                 };
-                // Cititex sums (solo COSTURA Eq 1-29)
+                // Cititex sums (COSTURA Eq 1-29 + ESTAÑOS por usuario que registra)
                 const sumsCT = {
                     costura: { cant: 0, defectos: 0, total: 0, a1: 0 },
                     costura_1_14: { cant: 0, defectos: 0, total: 0, a1: 0 },
-                    costura_15_29: { cant: 0, defectos: 0, total: 0, a1: 0 }
+                    costura_15_29: { cant: 0, defectos: 0, total: 0, a1: 0 },
+                    estanos: { cant: 0, defectos: 0, total: 0, a1: 0 }
                 };
 
                 // Build a mapping from expected defect column canonical names -> header (if present)
@@ -1634,6 +1714,7 @@
                 // per-equipo aggregation container
                 const perEquipo = {};
                 const perEquipoCT = {};
+                const perEquipoEST = {}; // CITITEX / ESTAÑOS (Audit_con_c1, Audit_con_c2)
 
                 // Preprocess: parse dates for all rows and collect available years/months/weeks
                 let totalRows = 0;
@@ -1797,6 +1878,7 @@
                     const ubicRaw = map.ubic ? (row[map.ubic] || '').toString().trim().toLowerCase() : '';
                     const isCofaco = ubicRaw.includes('cofaco');
                     const isCititex = ubicRaw.includes('cititex');
+                    const isEstanos = (isCititex && map.usuario) ? esUsuarioEstanos(row[map.usuario]) : false;
 
                     // --- COFACO accumulation ---
                     if (isCofaco) {
@@ -1820,32 +1902,45 @@
                         }
                     }
 
-                    // --- CITITEX accumulation (solo COSTURA Eq 1-29) ---
-                    if (isCititex && group === 'costura') {
+                    // --- CITITEX accumulation ---
+                    // Las filas de Audit_con_c1 / Audit_con_c2 son ESTAÑOS y quedan
+                    // fuera de los grupos de COSTURA (si no, se contarían dos veces:
+                    // sus equipos 1-11 caen dentro del rango de COSTURA).
+                    if (isCititex) {
                         const cant = toNum(row[map.cant]);
                         const defectos = toNum(row[map.defectos]);
                         const total = toNum(row[map.total]);
                         const a1 = toNum(row[map.a1]);
-                        sumsCT.costura.cant += cant;
-                        sumsCT.costura.defectos += defectos;
-                        sumsCT.costura.total += total;
-                        sumsCT.costura.a1 += a1;
-                        if (equipoNum >= 1 && equipoNum <= 14) {
-                            sumsCT.costura_1_14.cant += cant;
-                            sumsCT.costura_1_14.defectos += defectos;
-                            sumsCT.costura_1_14.total += total;
-                            sumsCT.costura_1_14.a1 += a1;
-                        } else if (equipoNum >= 15 && equipoNum <= 29) {
-                            sumsCT.costura_15_29.cant += cant;
-                            sumsCT.costura_15_29.defectos += defectos;
-                            sumsCT.costura_15_29.total += total;
-                            sumsCT.costura_15_29.a1 += a1;
+                        if (isEstanos) {
+                            sumsCT.estanos.cant += cant;
+                            sumsCT.estanos.defectos += defectos;
+                            sumsCT.estanos.total += total;
+                            sumsCT.estanos.a1 += a1;
+                        } else if (group === 'costura') {
+                            sumsCT.costura.cant += cant;
+                            sumsCT.costura.defectos += defectos;
+                            sumsCT.costura.total += total;
+                            sumsCT.costura.a1 += a1;
+                            if (equipoNum >= 1 && equipoNum <= 14) {
+                                sumsCT.costura_1_14.cant += cant;
+                                sumsCT.costura_1_14.defectos += defectos;
+                                sumsCT.costura_1_14.total += total;
+                                sumsCT.costura_1_14.a1 += a1;
+                            } else if (equipoNum >= 15 && equipoNum <= 29) {
+                                sumsCT.costura_15_29.cant += cant;
+                                sumsCT.costura_15_29.defectos += defectos;
+                                sumsCT.costura_15_29.total += total;
+                                sumsCT.costura_15_29.a1 += a1;
+                            }
                         }
                     }
 
                     // --- per-equipo accumulation (route by ubicación) ---
+                    // ESTAÑOS va a su propio mapa: sus equipos (1-11) chocan con los de
+                    // COSTURA, así que dejarlos en perEquipoCT haría que el detalle por
+                    // equipo no cuadrara con los totales de COSTURA.
                     if (!isNaN(equipoNum)) {
-                        const targetPE = isCititex ? perEquipoCT : perEquipo;
+                        const targetPE = isEstanos ? perEquipoEST : (isCititex ? perEquipoCT : perEquipo);
                         const k = String(equipoNum);
                         if (!targetPE[k]) {
                             const daily = {};
@@ -1973,7 +2068,7 @@
                     chartsWrapper.style.display = 'block';
                 }
                 // store latest filtered per-equipo data for modal use and render charts
-                window.latestFilteredData = { perEquipo: perEquipo, perEquipoCT: perEquipoCT, filteredYear: selectedYear, filteredPeriodType: PERIOD_TYPE, filteredPeriodValue: selectedVal };
+                window.latestFilteredData = { perEquipo: perEquipo, perEquipoCT: perEquipoCT, perEquipoEST: perEquipoEST, filteredYear: selectedYear, filteredPeriodType: PERIOD_TYPE, filteredPeriodValue: selectedVal };
                 renderCharts(sums);
 
                 // --- Fill CITITEX table ---
@@ -1989,6 +2084,9 @@
                     const bap = (data.total && data.total > 0) ? (data.a1 / data.total * 100) : null;
                     rowEl.cells[6].textContent = bap === null ? '–' : (nfBap.format(bap) + '%');
                 }
+                const ctEstanosRow = document.getElementById('ct-estanos-row');
+                if (ctEstanosRow && ctEstanosRow.cells[0]) ctEstanosRow.cells[0].textContent = 'ESTAÑOS (Eq ' + estanosRangoTxt() + ')';
+                fillCtRow(ctEstanosRow, sumsCT.estanos);
                 fillCtRow(ctRow, sumsCT.costura);
                 fillCtRow(document.getElementById('ct-costura-1-14-row'), sumsCT.costura_1_14);
                 fillCtRow(document.getElementById('ct-costura-15-29-row'), sumsCT.costura_15_29);
@@ -2553,7 +2651,10 @@
             PERIOD_TYPE = (saved.pt === 'Mes') ? 'Mes' : 'Sem';
             const ptSel = document.getElementById('periodType');
             if (ptSel) ptSel.value = PERIOD_TYPE;
-            if (saved.p !== null && saved.p !== undefined && saved.p !== '') PERIOD_VALUE = saved.p;
+            // Solo se restaura el periodo cuando se fijó a propósito en uno anterior al
+            // último. Si se estaba en el último, se deja en null y populatePeriodSelect
+            // elige el más reciente con datos.
+            if (!saved.latest && saved.p !== null && saved.p !== undefined && saved.p !== '') PERIOD_VALUE = saved.p;
         })();
 
         // Run once on load (will try non-published endpoints first)

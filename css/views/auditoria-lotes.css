@@ -505,6 +505,65 @@ body[data-view="auditoria-lotes"] {
             bottom: 8px
         }
 
+        /* CITITEX: fila COSTURA (Eq 15-29) resaltada en verde */
+        #ct-costura-15-29-row td {
+            background: rgb(235, 241, 222);
+            font-weight: 600
+        }
+
+        /* Cititex: COSTURA a la izquierda, ESTAÑOS a la derecha */
+        .charts.charts-ct {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+            gap: 24px;
+            align-items: start
+        }
+
+        .charts.charts-ct .charts-col-right .group-charts {
+            width: 100%;
+            max-width: 340px;
+            margin: 0 auto
+        }
+
+        /* ESTAÑOS: donas medianas, como ACABADOS en COFACO */
+        .charts.charts-ct .group-charts.group-estanos .donut-row {
+            gap: 14px
+        }
+
+        .charts.charts-ct .group-charts.group-estanos .donut {
+            width: 132px;
+            height: 132px
+        }
+
+        .charts.charts-ct .group-charts.group-estanos .donut .center {
+            font-size: 20px
+        }
+
+        .charts.charts-ct .group-charts.group-estanos .donut .center .sublabel {
+            font-size: 10px;
+            margin-top: 4px
+        }
+
+        .charts.charts-ct .group-charts.group-estanos .donut .small-label,
+        .charts.charts-ct .group-charts.group-estanos .donut .small-label .tag {
+            font-size: 11px
+        }
+
+        .charts.charts-ct .group-charts.group-estanos .donut .label-left {
+            left: -2px;
+            top: 4px
+        }
+
+        .charts.charts-ct .group-charts.group-estanos .donut .label-right {
+            right: -18px;
+            top: 4px
+        }
+
+        .charts.charts-ct .group-charts.group-estanos .donut .label-bottom {
+            left: 16%;
+            bottom: 8px
+        }
+
         /* Cititex: compact spacing between mini-donut groups */
         .charts.charts-ct .sub-row {
             justify-content: center;
@@ -880,7 +939,8 @@ body[data-view="auditoria-lotes"] {
                 padding-inline: 8px;
             }
 
-            .charts.charts-cofaco {
+            .charts.charts-cofaco,
+            .charts.charts-ct {
                 grid-template-columns: 1fr
             }
 
